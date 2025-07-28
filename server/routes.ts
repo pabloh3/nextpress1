@@ -36,6 +36,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User management routes (WordPress compatible)
+  app.get('/api/users', isAuthenticated, async (req, res) => {
+    try {
+      const { page = 1, per_page = 20, role } = req.query;
+      const limit = parseInt(per_page as string);
+      const offset = (parseInt(page as string) - 1) * limit;
+
+      const users = await storage.getUsers({
+        limit,
+        offset,
+        role: role as string
+      });
+
+      const total = await storage.getUsersCount(role as string);
+
+      res.json({
+        users,
+        total,
+        page: parseInt(page as string),
+        per_page: limit,
+        total_pages: Math.ceil(total / limit)
+      });
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get('/api/users/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  app.post('/api/users', isAuthenticated, async (req, res) => {
+    try {
+      const { createUserSchema } = await import("@shared/schema");
+      const userData = createUserSchema.parse(req.body);
+      
+      const user = await storage.createUser(userData);
+      res.status(201).json(user);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid user data", errors: error });
+      }
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.put('/api/users/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { createUserSchema } = await import("@shared/schema");
+      const userData = createUserSchema.partial().parse(req.body);
+      
+      const user = await storage.updateUser(req.params.id, userData);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid user data", errors: error });
+      }
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.delete('/api/users/:id', isAuthenticated, async (req, res) => {
+    try {
+      // Prevent deletion of current user
+      const currentUserId = (req as any).user?.claims?.sub;
+      if (req.params.id === currentUserId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      
+      await storage.deleteUser(req.params.id);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   // Dashboard stats
   app.get('/api/dashboard/stats', isAuthenticated, async (req, res) => {
     try {

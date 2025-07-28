@@ -184,10 +184,25 @@ export const insertMediaSchema = createInsertSchema(media).omit({
   updatedAt: true,
 });
 
+// Create user schema for validation
+export const createUserSchema = createInsertSchema(users, {
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Invalid email address"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  role: z.enum(["administrator", "editor", "author", "contributor", "subscriber"]),
+  status: z.enum(["active", "inactive", "pending"]),
+}).omit({ 
+  id: true,
+  createdAt: true,
+  updatedAt: true 
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type UpsertUser = typeof users.$inferInsert;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type CreateUser = z.infer<typeof createUserSchema>;
 
 export type Post = typeof posts.$inferSelect;
 export type InsertPost = z.infer<typeof insertPostSchema>;

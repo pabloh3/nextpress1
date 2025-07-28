@@ -29,6 +29,11 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUsers(options?: { limit?: number; offset?: number; role?: string }): Promise<User[]>;
+  getUsersCount(role?: string): Promise<number>;
+  createUser(user: Omit<UpsertUser, 'id'>): Promise<User>;
+  updateUser(id: string, user: Partial<UpsertUser>): Promise<User>;
+  deleteUser(id: string): Promise<void>;
   
   // Post operations
   getPosts(options?: { status?: string; type?: string; limit?: number; offset?: number }): Promise<Post[]>;
@@ -104,6 +109,55 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
+  }
+
+  async getUsers(options: { limit?: number; offset?: number; role?: string } = {}): Promise<User[]> {
+    const { limit = 20, offset = 0, role } = options;
+    let query = db.select().from(users);
+    
+    if (role) {
+      query = query.where(eq(users.role, role));
+    }
+    
+    return await query.orderBy(desc(users.createdAt)).limit(limit).offset(offset);
+  }
+
+  async getUsersCount(role?: string): Promise<number> {
+    let query = db.select({ count: count() }).from(users);
+    
+    if (role) {
+      query = query.where(eq(users.role, role));
+    }
+    
+    const [result] = await query;
+    return result.count;
+  }
+
+  async createUser(userData: Omit<UpsertUser, 'id'>): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...userData,
+        id: undefined, // Let database generate ID
+      })
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: string, userData: Partial<UpsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...userData,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
   }
 
   // Post operations

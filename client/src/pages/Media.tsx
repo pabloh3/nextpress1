@@ -43,7 +43,18 @@ export default function MediaPage() {
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      return await apiRequest('POST', '/api/media', formData);
+      const res = await fetch('/api/media', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error);
+      }
+      
+      return res;
     },
     onSuccess: async () => {
       toast({

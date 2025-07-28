@@ -32,7 +32,7 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel }: 
 
   // Fetch existing post if editing
   const { data: post, isLoading } = useQuery({
-    queryKey: ['/api/posts', postId],
+    queryKey: [`/api/posts/${postId}`],
     enabled: !!postId,
   });
 
@@ -67,7 +67,7 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel }: 
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
       if (postId) {
-        queryClient.invalidateQueries({ queryKey: ['/api/posts', postId] });
+        queryClient.invalidateQueries({ queryKey: [`/api/posts/${postId}`] });
       }
       
       onSave?.(savedPost);

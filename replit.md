@@ -42,6 +42,8 @@ Preferred communication style: Simple, everyday language.
    - Multi-renderer support (React, Next.js, custom)
    - Theme activation and management
    - WordPress-style template hierarchy
+   - Full Next.js-style rendering with SEO optimization
+   - Live post/page rendering at `/posts/:id` and `/pages/:id`
 
 3. **Storage Layer** (`server/storage.ts`)
    - Abstracted database operations
@@ -56,9 +58,16 @@ Preferred communication style: Simple, everyday language.
 ### Frontend Components
 - **Admin Interface**: WordPress-style admin panel with sidebar navigation
 - **Post Editor**: Rich text editing for posts and pages
+- **Media Library**: Complete file upload system with drag & drop
 - **Theme Management**: Visual theme browser and activation
 - **Settings Management**: Site configuration and options
 - **Dashboard**: Analytics and quick actions
+
+### Theme Rendering
+- **Next.js Theme**: Professional rendering system with modern styling
+- **SEO Optimization**: Complete meta tags, Open Graph, and Twitter cards
+- **Responsive Design**: Mobile-first approach with media queries
+- **Content Parsing**: Markdown-style formatting support
 
 ## Data Flow
 

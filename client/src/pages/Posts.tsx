@@ -169,7 +169,12 @@ export default function Posts() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => window.open(`/posts/${post.id}`, '_blank')}
+                              title="View Post"
+                            >
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button 

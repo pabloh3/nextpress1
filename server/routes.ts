@@ -103,7 +103,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      const postData = insertPostSchema.parse(req.body);
+      // Add authorId to request body before parsing
+      const requestData = { ...req.body, authorId: userId };
+      const postData = insertPostSchema.parse(requestData);
       
       // Generate slug if not provided
       if (!postData.slug) {
@@ -111,8 +113,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-|-$/g, '');
       }
-
-      postData.authorId = userId;
 
       const post = await storage.createPost(postData);
       hooks.doAction('save_post', post);

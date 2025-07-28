@@ -17,8 +17,8 @@ import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { User, CreateUser } from "@shared/schema";
-import { createUserSchema } from "@shared/schema";
+import type { User, CreateUser, UpdateUser } from "@shared/schema";
+import { createUserSchema, updateUserSchema } from "@shared/schema";
 
 export default function Users() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -35,6 +35,7 @@ export default function Users() {
       email: "",
       firstName: "",
       lastName: "",
+      password: "",
       role: "subscriber",
       status: "active"
     }
@@ -68,7 +69,7 @@ export default function Users() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateUser> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<UpdateUser> }) => {
       return await apiRequest('PUT', `/api/users/${id}`, data);
     },
     onSuccess: () => {
@@ -118,13 +119,15 @@ export default function Users() {
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
+    // Reset form with current user data but empty password
     form.reset({
-      username: user.username,
+      username: user.username || "",
       email: user.email || "",
       firstName: user.firstName || "",
       lastName: user.lastName || "",
-      role: user.role as any,
-      status: user.status as any
+      password: "", // Password field is empty for editing
+      role: (user.role as any) || "subscriber",
+      status: (user.status as any) || "active"
     });
     setIsDialogOpen(true);
   };
@@ -137,7 +140,12 @@ export default function Users() {
 
   const onSubmit = (data: CreateUser) => {
     if (editingUser) {
-      updateMutation.mutate({ id: editingUser.id, data });
+      // For updates, remove password if it's empty
+      const updateData = { ...data };
+      if (!updateData.password || updateData.password.trim() === "") {
+        delete updateData.password;
+      }
+      updateMutation.mutate({ id: editingUser.id, data: updateData });
     } else {
       createMutation.mutate(data);
     }
@@ -400,6 +408,26 @@ export default function Users() {
                   )}
                 />
               </div>
+              
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Password {editingUser && "(leave blank to keep current password)"}
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="password" 
+                        placeholder={editingUser ? "Enter new password (optional)" : "Enter password"} 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               
               <FormField
                 control={form.control}

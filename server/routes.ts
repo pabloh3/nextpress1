@@ -82,8 +82,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { createUserSchema } = await import("@shared/schema");
       const userData = createUserSchema.parse(req.body);
       
+      // Hash password if provided
+      if (userData.password) {
+        const bcrypt = await import('bcrypt');
+        userData.password = await bcrypt.hash(userData.password, 10);
+      }
+      
       const user = await storage.createUser(userData);
-      res.status(201).json(user);
+      
+      // Remove password from response
+      const { password, ...userResponse } = user;
+      res.status(201).json(userResponse);
     } catch (error) {
       console.error("Error creating user:", error);
       if (error instanceof Error && error.name === 'ZodError') {
@@ -95,11 +104,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/users/:id', isAuthenticated, async (req, res) => {
     try {
-      const { createUserSchema } = await import("@shared/schema");
-      const userData = createUserSchema.partial().parse(req.body);
+      const { updateUserSchema } = await import("@shared/schema");
+      const userData = updateUserSchema.parse(req.body);
+      
+      // Hash password if provided
+      if (userData.password) {
+        const bcrypt = await import('bcrypt');
+        userData.password = await bcrypt.hash(userData.password, 10);
+      }
       
       const user = await storage.updateUser(req.params.id, userData);
-      res.json(user);
+      
+      // Remove password from response
+      const { password, ...userResponse } = user;
+      res.json(userResponse);
     } catch (error) {
       console.error("Error updating user:", error);
       if (error instanceof Error && error.name === 'ZodError') {

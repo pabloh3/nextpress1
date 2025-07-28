@@ -57,12 +57,27 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  // Generate username from email or use fallback
+  const email = claims["email"];
+  let username = email ? email.split('@')[0] : `user_${claims["sub"]}`;
+  
+  // Sanitize username to remove special characters
+  username = username.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+  
+  // Ensure username is unique by checking if it exists
+  const existingUser = await storage.getUserByUsername(username);
+  if (existingUser && existingUser.id !== claims["sub"]) {
+    // Append user ID to make it unique
+    username = `${username}_${claims["sub"]}`;
+  }
+
   await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
+    username: username,
   });
 }
 

@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import Posts from "@/pages/Posts";
 import Pages from "@/pages/Pages";
 import Media from "@/pages/Media";
+import Comments from "@/pages/Comments";
 import Themes from "@/pages/Themes";
 import Users from "@/pages/Users";
 import Settings from "@/pages/Settings";
@@ -28,6 +29,7 @@ function Router() {
           <Route path="/posts" component={Posts} />
           <Route path="/pages" component={Pages} />
           <Route path="/media" component={Media} />
+          <Route path="/comments" component={Comments} />
           <Route path="/themes" component={Themes} />
           <Route path="/users" component={Users} />
           <Route path="/settings" component={Settings} />

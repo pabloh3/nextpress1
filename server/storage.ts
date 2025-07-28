@@ -364,6 +364,87 @@ export class DatabaseStorage implements IStorage {
     const [result] = await query;
     return result.count;
   }
+
+  // Comment operations
+  async getComments(postId?: number, options?: { status?: string; limit?: number; offset?: number }): Promise<Comment[]> {
+    const { status = 'approved', limit = 50, offset = 0 } = options || {};
+    
+    let query = db.select().from(comments).orderBy(desc(comments.createdAt));
+    
+    const conditions = [];
+    if (postId) {
+      conditions.push(eq(comments.postId, postId));
+    }
+    if (status) {
+      conditions.push(eq(comments.status, status));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.limit(limit).offset(offset);
+  }
+
+  async getComment(id: number): Promise<Comment | undefined> {
+    const [comment] = await db.select().from(comments).where(eq(comments.id, id));
+    return comment;
+  }
+
+  async createComment(comment: InsertComment): Promise<Comment> {
+    const [newComment] = await db.insert(comments).values(comment).returning();
+    return newComment;
+  }
+
+  async updateComment(id: number, comment: Partial<InsertComment>): Promise<Comment> {
+    const [updatedComment] = await db
+      .update(comments)
+      .set({ ...comment, updatedAt: new Date() })
+      .where(eq(comments.id, id))
+      .returning();
+    return updatedComment;
+  }
+
+  async deleteComment(id: number): Promise<void> {
+    await db.delete(comments).where(eq(comments.id, id));
+  }
+
+  async approveComment(id: number): Promise<Comment> {
+    const [approvedComment] = await db
+      .update(comments)
+      .set({ status: 'approved', updatedAt: new Date() })
+      .where(eq(comments.id, id))
+      .returning();
+    return approvedComment;
+  }
+
+  async spamComment(id: number): Promise<Comment> {
+    const [spamComment] = await db
+      .update(comments)
+      .set({ status: 'spam', updatedAt: new Date() })
+      .where(eq(comments.id, id))
+      .returning();
+    return spamComment;
+  }
+
+  async getCommentsCount(postId?: number, status?: string): Promise<number> {
+    let query = db.select({ count: count() }).from(comments);
+    
+    const conditions = [];
+    if (postId) {
+      conditions.push(eq(comments.postId, postId));
+    }
+    if (status) {
+      conditions.push(eq(comments.status, status));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    const [result] = await query;
+    return result.count;
+  }
 }
 
 export const storage = new DatabaseStorage();

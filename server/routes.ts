@@ -211,10 +211,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const commentData = insertCommentSchema.parse(req.body);
       const comment = await storage.createComment(commentData);
+      hooks.doAction('new_comment', comment);
       res.status(201).json(comment);
     } catch (error) {
       console.error("Error creating comment:", error);
       res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
+  app.get('/api/comments/:id', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const comment = await storage.getComment(id);
+      
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      res.json(comment);
+    } catch (error) {
+      console.error("Error fetching comment:", error);
+      res.status(500).json({ message: "Failed to fetch comment" });
+    }
+  });
+
+  app.put('/api/comments/:id', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const existingComment = await storage.getComment(id);
+      
+      if (!existingComment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+
+      const { content, status, authorName, authorEmail } = req.body;
+      const updatedComment = await storage.updateComment(id, {
+        content,
+        status,
+        authorName,
+        authorEmail
+      });
+
+      hooks.doAction('edit_comment', updatedComment);
+      res.json(updatedComment);
+    } catch (error) {
+      console.error("Error updating comment:", error);
+      res.status(500).json({ message: "Failed to update comment" });
+    }
+  });
+
+  app.delete('/api/comments/:id', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const existingComment = await storage.getComment(id);
+      
+      if (!existingComment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+
+      await storage.deleteComment(id);
+      hooks.doAction('delete_comment', id);
+      
+      res.json({ message: "Comment deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      res.status(500).json({ message: "Failed to delete comment" });
+    }
+  });
+
+  app.patch('/api/comments/:id/approve', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const comment = await storage.approveComment(id);
+      hooks.doAction('approve_comment', comment);
+      res.json(comment);
+    } catch (error) {
+      console.error("Error approving comment:", error);
+      res.status(500).json({ message: "Failed to approve comment" });
+    }
+  });
+
+  app.patch('/api/comments/:id/spam', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const comment = await storage.spamComment(id);
+      hooks.doAction('spam_comment', comment);
+      res.json(comment);
+    } catch (error) {
+      console.error("Error marking comment as spam:", error);
+      res.status(500).json({ message: "Failed to mark comment as spam" });
     }
   });
 

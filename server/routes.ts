@@ -2,9 +2,13 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertPostSchema, insertCommentSchema, insertThemeSchema, insertPluginSchema } from "@shared/schema";
+import { insertPostSchema, insertCommentSchema, insertThemeSchema, insertPluginSchema, insertMediaSchema } from "@shared/schema";
 import hooks from "./hooks";
 import themeManager from "./themes";
+import multer from "multer";
+import path from "path";
+import { promises as fs } from "fs";
+import express from "express";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -294,6 +298,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to set option" });
     }
   });
+
+  // Configure multer for file uploads
+  const uploadDir = path.join(process.cwd(), 'uploads');
+  
+  // Ensure upload directory exists
+  try {
+    await fs.access(uploadDir);
+  } catch {
+    await fs.mkdir(uploadDir, { recursive: true });
+  }
+
+  const upload = multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, uploadDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        const name = path.basename(file.originalname, ext);
+        cb(null, name + '-' + uniqueSuffix + ext);
+      }
+    }),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = [
+        'image/jpeg',
+        'image/jpg', 
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'video/mp4',
+        'video/webm',
+        'audio/mp3',
+        'audio/wav',
+        'application/pdf',
+        'text/plain'
+      ];
+      
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('File type not allowed'));
+      }
+    }
+  });
+
+  // Media API (WordPress compatible)
+  app.get('/api/media', async (req, res) => {
+    try {
+      const { page = 1, per_page = 20, mime_type } = req.query;
+      const limit = parseInt(per_page as string);
+      const offset = (parseInt(page as string) - 1) * limit;
+
+      const mediaItems = await storage.getMedia({
+        limit,
+        offset,
+        mimeType: mime_type as string
+      });
+
+      const total = await storage.getMediaCount(mime_type as string);
+
+      res.json({
+        media: mediaItems,
+        total,
+        page: parseInt(page as string),
+        per_page: limit,
+        total_pages: Math.ceil(total / limit)
+      });
+    } catch (error) {
+      console.error("Error fetching media:", error);
+      res.status(500).json({ message: "Failed to fetch media" });
+    }
+  });
+
+  app.get('/api/media/:id', async (req, res) => {
+    try {
+      const mediaItem = await storage.getMediaItem(parseInt(req.params.id));
+      if (!mediaItem) {
+        return res.status(404).json({ message: "Media not found" });
+      }
+      res.json(mediaItem);
+    } catch (error) {
+      console.error("Error fetching media item:", error);
+      res.status(500).json({ message: "Failed to fetch media item" });
+    }
+  });
+
+  app.post('/api/media', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const file = req.file;
+      
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const { alt, caption, description } = req.body;
+      
+      // Create URL for the uploaded file
+      const fileUrl = `/uploads/${file.filename}`;
+      
+      const mediaData = insertMediaSchema.parse({
+        filename: file.filename,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        url: fileUrl,
+        alt: alt || '',
+        caption: caption || '',
+        description: description || '',
+        authorId: userId
+      });
+
+      const mediaItem = await storage.createMedia(mediaData);
+      hooks.doAction('wp_handle_upload', mediaItem);
+
+      res.status(201).json(mediaItem);
+    } catch (error) {
+      console.error("Error uploading media:", error);
+      res.status(500).json({ message: "Failed to upload media" });
+    }
+  });
+
+  app.put('/api/media/:id', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { alt, caption, description } = req.body;
+      
+      const mediaItem = await storage.updateMedia(id, {
+        alt,
+        caption,
+        description
+      });
+      
+      hooks.doAction('wp_update_attachment_metadata', mediaItem);
+      res.json(mediaItem);
+    } catch (error) {
+      console.error("Error updating media:", error);
+      res.status(500).json({ message: "Failed to update media" });
+    }
+  });
+
+  app.delete('/api/media/:id', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Get media item to delete the file
+      const mediaItem = await storage.getMediaItem(id);
+      if (mediaItem) {
+        const filePath = path.join(uploadDir, mediaItem.filename);
+        try {
+          await fs.unlink(filePath);
+        } catch (error) {
+          console.warn("Could not delete file:", filePath, error);
+        }
+      }
+      
+      await storage.deleteMedia(id);
+      hooks.doAction('delete_attachment', id);
+      
+      res.json({ message: "Media deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting media:", error);
+      res.status(500).json({ message: "Failed to delete media" });
+    }
+  });
+
+  // Serve uploaded files
+  app.use('/uploads', express.static(uploadDir));
 
   const httpServer = createServer(app);
   

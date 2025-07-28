@@ -97,6 +97,22 @@ export const plugins = pgTable("plugins", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Media table (WordPress compatible)
+export const media = pgTable("media", {
+  id: serial("id").primaryKey(),
+  filename: varchar("filename").notNull(),
+  originalName: varchar("original_name").notNull(),
+  mimeType: varchar("mime_type").notNull(),
+  size: integer("size").notNull(), // Size in bytes
+  url: varchar("url").notNull(),
+  alt: varchar("alt"),
+  caption: text("caption"),
+  description: text("description"),
+  authorId: varchar("author_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Options table (WordPress compatible)
 export const options = pgTable("options", {
   id: serial("id").primaryKey(),
@@ -121,6 +137,10 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
   author: one(users, { fields: [comments.authorId], references: [users.id] }),
   parent: one(comments, { fields: [comments.parentId], references: [comments.id] }),
   children: many(comments),
+}));
+
+export const mediaRelations = relations(media, ({ one }) => ({
+  author: one(users, { fields: [media.authorId], references: [users.id] }),
 }));
 
 // Schemas for validation
@@ -158,6 +178,12 @@ export const insertOptionSchema = createInsertSchema(options).omit({
   id: true,
 });
 
+export const insertMediaSchema = createInsertSchema(media).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type UpsertUser = typeof users.$inferInsert;
@@ -177,3 +203,6 @@ export type InsertPlugin = z.infer<typeof insertPluginSchema>;
 
 export type Option = typeof options.$inferSelect;
 export type InsertOption = z.infer<typeof insertOptionSchema>;
+
+export type Media = typeof media.$inferSelect;
+export type InsertMedia = z.infer<typeof insertMediaSchema>;

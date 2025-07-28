@@ -5,6 +5,7 @@ import {
   themes,
   plugins,
   options,
+  media,
   type User,
   type UpsertUser,
   type Post,
@@ -17,6 +18,8 @@ import {
   type InsertPlugin,
   type Option,
   type InsertOption,
+  type Media,
+  type InsertMedia,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ilike, count } from "drizzle-orm";
@@ -66,6 +69,14 @@ export interface IStorage {
   getOption(name: string): Promise<Option | undefined>;
   setOption(option: InsertOption): Promise<Option>;
   deleteOption(name: string): Promise<void>;
+  
+  // Media operations
+  getMedia(options?: { limit?: number; offset?: number; mimeType?: string }): Promise<Media[]>;
+  getMediaItem(id: number): Promise<Media | undefined>;
+  createMedia(mediaItem: InsertMedia): Promise<Media>;
+  updateMedia(id: number, mediaItem: Partial<InsertMedia>): Promise<Media>;
+  deleteMedia(id: number): Promise<void>;
+  getMediaCount(mimeType?: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -305,6 +316,53 @@ export class DatabaseStorage implements IStorage {
 
   async deleteOption(name: string): Promise<void> {
     await db.delete(options).where(eq(options.name, name));
+  }
+
+  // Media operations
+  async getMedia(options?: { limit?: number; offset?: number; mimeType?: string }): Promise<Media[]> {
+    const { limit = 50, offset = 0, mimeType } = options || {};
+    
+    let query = db.select().from(media).orderBy(desc(media.createdAt));
+    
+    if (mimeType) {
+      query = query.where(eq(media.mimeType, mimeType));
+    }
+    
+    return await query.limit(limit).offset(offset);
+  }
+
+  async getMediaItem(id: number): Promise<Media | undefined> {
+    const [mediaItem] = await db.select().from(media).where(eq(media.id, id));
+    return mediaItem;
+  }
+
+  async createMedia(mediaItem: InsertMedia): Promise<Media> {
+    const [newMedia] = await db.insert(media).values(mediaItem).returning();
+    return newMedia;
+  }
+
+  async updateMedia(id: number, mediaItem: Partial<InsertMedia>): Promise<Media> {
+    const [updatedMedia] = await db
+      .update(media)
+      .set({ ...mediaItem, updatedAt: new Date() })
+      .where(eq(media.id, id))
+      .returning();
+    return updatedMedia;
+  }
+
+  async deleteMedia(id: number): Promise<void> {
+    await db.delete(media).where(eq(media.id, id));
+  }
+
+  async getMediaCount(mimeType?: string): Promise<number> {
+    let query = db.select({ count: count() }).from(media);
+    
+    if (mimeType) {
+      query = query.where(eq(media.mimeType, mimeType));
+    }
+    
+    const [result] = await query;
+    return result.count;
   }
 }
 

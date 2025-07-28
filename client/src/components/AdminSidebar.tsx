@@ -8,7 +8,6 @@ import {
   Paintbrush, 
   Settings, 
   Plug, 
-  Link as LinkIcon, 
   Users, 
   Cog 
 } from "lucide-react";
@@ -29,7 +28,6 @@ const menuItems: MenuItem[] = [
   { label: "Themes", path: "/themes", icon: Paintbrush, section: "Appearance" },
   { label: "Customize", path: "/customize", icon: Settings, section: "Appearance" },
   { label: "Plugins", path: "/plugins", icon: Plug, section: "System" },
-  { label: "Hooks System", path: "/hooks", icon: LinkIcon, section: "System" },
   { label: "Users", path: "/users", icon: Users, section: "System" },
   { label: "Settings", path: "/settings", icon: Cog, section: "System" },
 ];

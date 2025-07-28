@@ -38,8 +38,10 @@ export default function Login() {
         title: "Success",
         description: "Logged in successfully",
       });
-      // Redirect to dashboard
-      setLocation('/');
+      // Small delay to ensure session is saved, then redirect
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
     } catch (error) {
       toast({
         title: "Error",

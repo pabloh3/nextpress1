@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(60, 4.8%, 95.9%);
+  --secondary-foreground: hsl(24, 9.8%, 10%);
+  --accent: hsl(60, 4.8%, 95.9%);
+  --accent-foreground: hsl(24, 9.8%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+  
+  /* WordPress-inspired custom colors */
+  --wp-blue: hsl(200, 100%, 33%);
+  --wp-blue-dark: hsl(200, 100%, 23%);
+  --wp-blue-light: hsl(195, 100%, 41%);
+  --wp-gray: hsl(210, 11%, 15%);
+  --wp-gray-light: hsl(0, 0%, 95%);
+  --wp-success: hsl(123, 38%, 57%);
+  --wp-warning: hsl(45, 100%, 51%);
+  --wp-error: hsl(0, 79%, 63%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .wp-admin-bar {
+    background: var(--wp-gray);
+  }
+  
+  .sidebar-hover:hover {
+    background-color: hsl(210, 11%, 10%);
+  }
+  
+  .content-fade-in {
+    animation: fadeIn 0.3s ease-in;
+  }
+  
+  .wp-blue {
+    color: var(--wp-blue);
+  }
+  
+  .bg-wp-blue {
+    background-color: var(--wp-blue);
+  }
+  
+  .bg-wp-blue-dark {
+    background-color: var(--wp-blue-dark);
+  }
+  
+  .bg-wp-blue-light {
+    background-color: var(--wp-blue-light);
+  }
+  
+  .bg-wp-gray {
+    background-color: var(--wp-gray);
+  }
+  
+  .bg-wp-gray-light {
+    background-color: var(--wp-gray-light);
+  }
+  
+  .text-wp-blue {
+    color: var(--wp-blue);
+  }
+  
+  .text-wp-blue-light {
+    color: var(--wp-blue-light);
+  }
+  
+  .text-wp-gray {
+    color: var(--wp-gray);
+  }
+  
+  .text-wp-success {
+    color: var(--wp-success);
+  }
+  
+  .text-wp-warning {
+    color: var(--wp-warning);
+  }
+  
+  .text-wp-error {
+    color: var(--wp-error);
+  }
+  
+  .border-wp-blue-light {
+    border-color: var(--wp-blue-light);
+  }
+  
+  .hover\:bg-wp-blue-dark:hover {
+    background-color: var(--wp-blue-dark);
+  }
+  
+  .hover\:text-wp-blue:hover {
+    color: var(--wp-blue);
+  }
+  
+  .hover\:text-wp-blue-light:hover {
+    color: var(--wp-blue-light);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

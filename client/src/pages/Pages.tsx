@@ -73,6 +73,10 @@ export default function Pages() {
     setEditingPage(undefined);
   };
 
+  const handleView = (pageId: number) => {
+    window.open(`/pages/${pageId}`, '_blank');
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
       publish: "default",
@@ -169,7 +173,12 @@ export default function Pages() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleView(page.id)}
+                              title="View Page"
+                            >
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button 

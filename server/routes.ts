@@ -101,20 +101,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/posts', isAuthenticated, async (req: any, res) => {
     try {
-      console.log('POST /api/posts - Full request user object:', JSON.stringify(req.user, null, 2));
-      console.log('POST /api/posts - Is authenticated:', req.isAuthenticated());
-      console.log('POST /api/posts - Session:', JSON.stringify(req.session, null, 2));
+      const userId = req.user.claims.sub;
       
-      const userId = req.user?.claims?.sub;
-      
-      if (!userId) {
-        console.error('POST /api/posts - No user ID found, user object:', req.user);
-        return res.status(401).json({ message: "User ID not found in session" });
-      }
-      
-      // Add authorId to request body before validation
-      const bodyWithAuthor = { ...req.body, authorId: userId };
-      const postData = insertPostSchema.parse(bodyWithAuthor);
+      const postData = insertPostSchema.parse(req.body);
       
       // Generate slug if not provided
       if (!postData.slug) {
@@ -122,6 +111,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-|-$/g, '');
       }
+
+      postData.authorId = userId;
 
       const post = await storage.createPost(postData);
       hooks.doAction('save_post', post);

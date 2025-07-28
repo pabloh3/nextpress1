@@ -13,9 +13,25 @@ export default function AdminTopBar() {
         <span className="text-gray-300 text-xs">
           Hello, <span>{user?.firstName || user?.username || "Admin"}</span>
         </span>
-        <a href="/api/logout" className="text-gray-300 hover:text-white text-xs">
+        <button 
+          onClick={async () => {
+            try {
+              // Try local logout first
+              const response = await fetch('/api/auth/logout', { method: 'POST' });
+              if (response.ok) {
+                window.location.href = '/';
+              } else {
+                throw new Error('Local logout failed');
+              }
+            } catch {
+              // Fallback to Replit logout if local logout fails
+              window.location.href = '/api/logout';
+            }
+          }}
+          className="text-gray-300 hover:text-white text-xs cursor-pointer"
+        >
           Log Out
-        </a>
+        </button>
       </div>
     </div>
   );

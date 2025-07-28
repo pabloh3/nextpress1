@@ -17,19 +17,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize hooks
   hooks.doAction('init');
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Local authentication routes
+  app.post('/api/auth/login', async (req, res) => {
     try {
-      console.log('Auth route - User object:', JSON.stringify(req.user, null, 2));
-      const userId = req.user?.claims?.sub;
+      const { username, password } = req.body;
       
-      if (!userId) {
-        console.error('No user ID found in auth request');
-        return res.status(500).json({ message: "User ID not found" });
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
       }
+
+      const user = await storage.getUserByUsername(username);
+      if (!user || !user.password) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const bcrypt = await import('bcrypt');
+      const isValidPassword = await bcrypt.compare(password, user.password);
       
-      const user = await storage.getUser(userId);
-      res.json(user);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      if (user.status !== 'active') {
+        return res.status(401).json({ message: "Account is not active" });
+      }
+
+      // Create session for local user
+      (req as any).session.localUser = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      };
+
+      const { password: _, ...userResponse } = user;
+      res.json(userResponse);
+    } catch (error) {
+      console.error("Error during local login:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { createUserSchema } = await import("@shared/schema");
+      const userData = createUserSchema.parse(req.body);
+
+      // Check if username or email already exists
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      const existingEmail = await storage.getUserByEmail(userData.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
+      // Hash password
+      const bcrypt = await import('bcrypt');
+      userData.password = await bcrypt.hash(userData.password, 10);
+
+      const user = await storage.createUser(userData);
+      
+      // Create session for new user
+      (req as any).session.localUser = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      };
+
+      const { password, ...userResponse } = user;
+      res.status(201).json(userResponse);
+    } catch (error) {
+      console.error("Error during registration:", error);
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid user data", errors: error });
+      }
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    (req as any).session.destroy((err: any) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  // Auth routes (combined local and Replit auth)
+  app.get('/api/auth/user', async (req: any, res) => {
+    try {
+      // Check for local session first
+      if (req.session?.localUser) {
+        const user = await storage.getUser(req.session.localUser.id);
+        if (user) {
+          const { password, ...userResponse } = user;
+          return res.json(userResponse);
+        }
+      }
+
+      // Check for Replit auth
+      if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+        console.log('Auth route - User object:', JSON.stringify(req.user, null, 2));
+        const userId = req.user.claims.sub;
+        const user = await storage.getUser(userId);
+        if (user) {
+          return res.json(user);
+        }
+      }
+
+      res.status(401).json({ message: "Unauthorized" });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });

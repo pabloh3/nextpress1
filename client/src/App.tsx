@@ -15,12 +15,18 @@ import Users from "@/pages/Users";
 import Settings from "@/pages/Settings";
 import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
     <Switch>
+      {/* Auth routes - always available */}
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
+      
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (

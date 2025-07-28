@@ -77,12 +77,19 @@ export default function Landing() {
                 <BookOpen className="w-4 h-4 mr-2" />
                 Docs
               </Button>
-              <a href="/api/login">
-                <Button className="bg-wp-blue hover:bg-wp-blue-dark text-white">
-                  Login to Admin
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </a>
+              <div className="flex items-center space-x-2">
+                <a href="/login">
+                  <Button variant="outline" className="border-wp-blue text-wp-blue hover:bg-wp-blue hover:text-white">
+                    NextPress Login
+                  </Button>
+                </a>
+                <a href="/api/login">
+                  <Button className="bg-wp-blue hover:bg-wp-blue-dark text-white">
+                    Login with Replit
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -108,16 +115,19 @@ export default function Landing() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-16">
-            <a href="/api/login">
-              <Button size="lg" className="bg-wp-blue hover:bg-wp-blue-dark text-white px-8 py-3">
-                Get Started
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </a>
-            <Button size="lg" variant="outline" className="border-gray-300 px-8 py-3">
-              <Globe className="w-5 h-5 mr-2" />
-              View Demo Site
-            </Button>
+            <div className="flex items-center space-x-4">
+              <a href="/login">
+                <Button size="lg" className="bg-wp-blue hover:bg-wp-blue-dark text-white px-8 py-3">
+                  Get Started
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </a>
+              <a href="/register">
+                <Button size="lg" variant="outline" className="border-wp-blue text-wp-blue hover:bg-wp-blue hover:text-white px-8 py-3">
+                  Create Account
+                </Button>
+              </a>
+            </div>
           </div>
 
           {/* Tech Stack */}

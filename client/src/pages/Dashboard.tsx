@@ -168,8 +168,8 @@ export default function Dashboard() {
                         Customize
                       </Button>
                       <Link href="/themes" className="flex-1">
-                        <Button variant="outline" className="w-full border-gray-300 hover:border-gray-400 text-gray-700">
-                          Change
+                        <Button variant="outline" className="w-full border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-900 hover:bg-gray-50">
+                          Browse Themes
                         </Button>
                       </Link>
                     </div>

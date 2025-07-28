@@ -16,7 +16,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      console.log('Auth route - User object:', JSON.stringify(req.user, null, 2));
+      const userId = req.user?.claims?.sub;
+      
+      if (!userId) {
+        console.error('No user ID found in auth request');
+        return res.status(500).json({ message: "User ID not found" });
+      }
+      
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -95,6 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/posts', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      
       const postData = insertPostSchema.parse(req.body);
       
       // Generate slug if not provided

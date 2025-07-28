@@ -83,7 +83,7 @@ export default function Settings() {
 
   const systemInfo = [
     { label: "NextPress Version", value: "1.0.0" },
-    { label: "Node.js Version", value: process.env.NODE_VERSION || "18.x" },
+    { label: "Node.js Version", value: "20.x" },
     { label: "Database", value: "PostgreSQL" },
     { label: "WordPress API", value: "Compatible" },
     { label: "Hook System", value: "Active" },

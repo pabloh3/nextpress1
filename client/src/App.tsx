@@ -17,6 +17,7 @@ import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import PageBuilderEditor from "@/pages/PageBuilderEditor";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -40,6 +41,12 @@ function Router() {
           <Route path="/users" component={Users} />
           <Route path="/settings" component={Settings} />
           <Route path="/home" component={Home} />
+          <Route path="/page-builder/:type/:id" component={({ params }: any) => (
+            <PageBuilderEditor postId={params.id} type={params.type as 'post' | 'page'} />
+          )} />
+          <Route path="/page-builder" component={() => (
+            <PageBuilderEditor />
+          )} />
         </>
       )}
       <Route component={NotFound} />

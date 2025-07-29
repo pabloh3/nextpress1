@@ -51,6 +51,12 @@ export const posts = pgTable("posts", {
   authorId: varchar("author_id").references(() => users.id).notNull(),
   featuredImage: varchar("featured_image"),
   publishedAt: timestamp("published_at"),
+  
+  // Page Builder fields
+  builderData: jsonb("builder_data"), // Page builder content (blocks)
+  usePageBuilder: boolean("use_page_builder").default(false), // Whether to use page builder or classic editor
+  templateId: integer("template_id").references(() => templates.id), // Associated template
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -121,6 +127,34 @@ export const options = pgTable("options", {
   autoload: boolean("autoload").default(true),
 });
 
+// Page Builder Templates table
+export const templates = pgTable("templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  type: varchar("type").notNull(), // 'header', 'footer', 'page', 'section'
+  description: text("description"),
+  blocks: jsonb("blocks").notNull().default([]), // Array of block configurations
+  settings: jsonb("settings").default({}), // Template-level settings
+  isGlobal: boolean("is_global").default(false), // If true, applies to all pages
+  authorId: varchar("author_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Page Builder Blocks table (for reusable blocks)
+export const blocks = pgTable("blocks", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  type: varchar("type").notNull(), // 'text', 'heading', 'image', 'button', 'video', 'spacer', 'divider', etc.
+  config: jsonb("config").notNull(), // Block configuration and content
+  styles: jsonb("styles").default({}), // CSS styles
+  customCss: text("custom_css"), // Custom CSS code
+  isReusable: boolean("is_reusable").default(false),
+  authorId: varchar("author_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
@@ -130,6 +164,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const postsRelations = relations(posts, ({ one, many }) => ({
   author: one(users, { fields: [posts.authorId], references: [users.id] }),
   comments: many(comments),
+  template: one(templates, { fields: [posts.templateId], references: [templates.id] }),
 }));
 
 export const commentsRelations = relations(comments, ({ one, many }) => ({
@@ -141,6 +176,14 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
 
 export const mediaRelations = relations(media, ({ one }) => ({
   author: one(users, { fields: [media.authorId], references: [users.id] }),
+}));
+
+export const templatesRelations = relations(templates, ({ one }) => ({
+  author: one(users, { fields: [templates.authorId], references: [users.id] }),
+}));
+
+export const blocksRelations = relations(blocks, ({ one }) => ({
+  author: one(users, { fields: [blocks.authorId], references: [users.id] }),
 }));
 
 // Schemas for validation
@@ -179,6 +222,18 @@ export const insertOptionSchema = createInsertSchema(options).omit({
 });
 
 export const insertMediaSchema = createInsertSchema(media).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTemplateSchema = createInsertSchema(templates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBlockSchema = createInsertSchema(blocks).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -240,3 +295,79 @@ export type InsertOption = z.infer<typeof insertOptionSchema>;
 
 export type Media = typeof media.$inferSelect;
 export type InsertMedia = z.infer<typeof insertMediaSchema>;
+
+export type Template = typeof templates.$inferSelect;
+export type InsertTemplate = z.infer<typeof insertTemplateSchema>;
+
+export type Block = typeof blocks.$inferSelect;
+export type InsertBlock = z.infer<typeof insertBlockSchema>;
+
+// Block configuration types
+export interface BlockConfig {
+  id: string;
+  type: string;
+  content: any;
+  styles: Record<string, any>;
+  settings: Record<string, any>;
+}
+
+// Common block types
+export interface TextBlockConfig extends BlockConfig {
+  type: 'text';
+  content: {
+    text: string;
+    tag?: 'p' | 'span' | 'div';
+  };
+}
+
+export interface HeadingBlockConfig extends BlockConfig {
+  type: 'heading';
+  content: {
+    text: string;
+    level: 1 | 2 | 3 | 4 | 5 | 6;
+  };
+}
+
+export interface ImageBlockConfig extends BlockConfig {
+  type: 'image';
+  content: {
+    src: string;
+    alt: string;
+    caption?: string;
+  };
+}
+
+export interface ButtonBlockConfig extends BlockConfig {
+  type: 'button';
+  content: {
+    text: string;
+    url: string;
+    target?: '_blank' | '_self';
+  };
+}
+
+export interface VideoBlockConfig extends BlockConfig {
+  type: 'video';
+  content: {
+    src: string;
+    poster?: string;
+    autoplay?: boolean;
+    controls?: boolean;
+  };
+}
+
+export interface SpacerBlockConfig extends BlockConfig {
+  type: 'spacer';
+  content: {
+    height: number;
+  };
+}
+
+export interface DividerBlockConfig extends BlockConfig {
+  type: 'divider';
+  content: {
+    style: 'solid' | 'dashed' | 'dotted';
+    width: number;
+    color: string;
+  };
+}

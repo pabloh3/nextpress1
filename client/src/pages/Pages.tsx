@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, Paintbrush } from "lucide-react";
 import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
 import PostEditor from "@/components/PostEditor";
@@ -75,6 +75,10 @@ export default function Pages() {
 
   const handleView = (pageId: number) => {
     window.open(`/pages/${pageId}`, '_blank');
+  };
+
+  const handlePageBuilder = (pageId: number) => {
+    window.location.href = `/page-builder/page/${pageId}`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -185,8 +189,17 @@ export default function Pages() {
                               variant="ghost" 
                               size="sm"
                               onClick={() => handleEdit(page.id)}
+                              title="Edit with Classic Editor"
                             >
                               <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handlePageBuilder(page.id)}
+                              title="Edit with Page Builder"
+                            >
+                              <Paintbrush className="w-4 h-4" />
                             </Button>
                             <Button 
                               variant="ghost" 

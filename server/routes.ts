@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertPostSchema, insertCommentSchema, insertThemeSchema, insertPluginSchema, insertMediaSchema } from "@shared/schema";
+import { insertPostSchema, insertCommentSchema, insertThemeSchema, insertPluginSchema, insertMediaSchema, insertTemplateSchema, insertBlockSchema } from "@shared/schema";
 import hooks from "./hooks";
 import themeManager from "./themes";
 import multer from "multer";
@@ -866,6 +866,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error rendering home:", error);
       const html = themeManager.render404();
       res.status(500).send(html);
+    }
+  });
+
+  // Templates API
+  app.get('/api/templates', isAuthenticated, async (req, res) => {
+    try {
+      const { type, isGlobal, page = 1, per_page = 10 } = req.query;
+      const limit = parseInt(per_page as string);
+      const offset = (parseInt(page as string) - 1) * limit;
+
+      const templates = await storage.getTemplates({
+        type: type as string,
+        isGlobal: isGlobal === 'true' ? true : isGlobal === 'false' ? false : undefined,
+        limit,
+        offset
+      });
+
+      const total = await storage.getTemplatesCount(type as string);
+
+      res.json({
+        templates,
+        total,
+        page: parseInt(page as string),
+        per_page: limit,
+        total_pages: Math.ceil(total / limit)
+      });
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+      res.status(500).json({ message: "Failed to fetch templates" });
+    }
+  });
+
+  app.get('/api/templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const template = await storage.getTemplate(parseInt(req.params.id));
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching template:", error);
+      res.status(500).json({ message: "Failed to fetch template" });
+    }
+  });
+
+  app.post('/api/templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const templateData = insertTemplateSchema.parse({ ...req.body, authorId: userId });
+      
+      const template = await storage.createTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating template:", error);
+      res.status(500).json({ message: "Failed to create template" });
+    }
+  });
+
+  app.put('/api/templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const templateData = insertTemplateSchema.partial().parse(req.body);
+      
+      const template = await storage.updateTemplate(id, templateData);
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating template:", error);
+      res.status(500).json({ message: "Failed to update template" });
+    }
+  });
+
+  app.delete('/api/templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteTemplate(id);
+      res.json({ message: "Template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting template:", error);
+      res.status(500).json({ message: "Failed to delete template" });
+    }
+  });
+
+  // Blocks API
+  app.get('/api/blocks', isAuthenticated, async (req, res) => {
+    try {
+      const { type, isReusable, page = 1, per_page = 10 } = req.query;
+      const limit = parseInt(per_page as string);
+      const offset = (parseInt(page as string) - 1) * limit;
+
+      const blocks = await storage.getBlocks({
+        type: type as string,
+        isReusable: isReusable === 'true' ? true : isReusable === 'false' ? false : undefined,
+        limit,
+        offset
+      });
+
+      const total = await storage.getBlocksCount(type as string);
+
+      res.json({
+        blocks,
+        total,
+        page: parseInt(page as string),
+        per_page: limit,
+        total_pages: Math.ceil(total / limit)
+      });
+    } catch (error) {
+      console.error("Error fetching blocks:", error);
+      res.status(500).json({ message: "Failed to fetch blocks" });
+    }
+  });
+
+  app.get('/api/blocks/:id', isAuthenticated, async (req, res) => {
+    try {
+      const block = await storage.getBlock(parseInt(req.params.id));
+      if (!block) {
+        return res.status(404).json({ message: "Block not found" });
+      }
+      res.json(block);
+    } catch (error) {
+      console.error("Error fetching block:", error);
+      res.status(500).json({ message: "Failed to fetch block" });
+    }
+  });
+
+  app.post('/api/blocks', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const blockData = insertBlockSchema.parse({ ...req.body, authorId: userId });
+      
+      const block = await storage.createBlock(blockData);
+      res.status(201).json(block);
+    } catch (error) {
+      console.error("Error creating block:", error);
+      res.status(500).json({ message: "Failed to create block" });
+    }
+  });
+
+  app.put('/api/blocks/:id', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const blockData = insertBlockSchema.partial().parse(req.body);
+      
+      const block = await storage.updateBlock(id, blockData);
+      res.json(block);
+    } catch (error) {
+      console.error("Error updating block:", error);
+      res.status(500).json({ message: "Failed to update block" });
+    }
+  });
+
+  app.delete('/api/blocks/:id', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteBlock(id);
+      res.json({ message: "Block deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting block:", error);
+      res.status(500).json({ message: "Failed to delete block" });
     }
   });
 

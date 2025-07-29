@@ -6,6 +6,8 @@ import {
   plugins,
   options,
   media,
+  templates,
+  blocks,
   type User,
   type UpsertUser,
   type Post,
@@ -20,6 +22,10 @@ import {
   type InsertOption,
   type Media,
   type InsertMedia,
+  type Template,
+  type InsertTemplate,
+  type Block,
+  type InsertBlock,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ilike, count } from "drizzle-orm";
@@ -83,6 +89,22 @@ export interface IStorage {
   updateMedia(id: number, mediaItem: Partial<InsertMedia>): Promise<Media>;
   deleteMedia(id: number): Promise<void>;
   getMediaCount(mimeType?: string): Promise<number>;
+  
+  // Template operations
+  getTemplates(options?: { type?: string; isGlobal?: boolean; limit?: number; offset?: number }): Promise<Template[]>;
+  getTemplate(id: number): Promise<Template | undefined>;
+  createTemplate(template: InsertTemplate): Promise<Template>;
+  updateTemplate(id: number, template: Partial<InsertTemplate>): Promise<Template>;
+  deleteTemplate(id: number): Promise<void>;
+  getTemplatesCount(type?: string): Promise<number>;
+  
+  // Block operations
+  getBlocks(options?: { type?: string; isReusable?: boolean; limit?: number; offset?: number }): Promise<Block[]>;
+  getBlock(id: number): Promise<Block | undefined>;
+  createBlock(block: InsertBlock): Promise<Block>;
+  updateBlock(id: number, block: Partial<InsertBlock>): Promise<Block>;
+  deleteBlock(id: number): Promise<void>;
+  getBlocksCount(type?: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -500,6 +522,116 @@ export class DatabaseStorage implements IStorage {
     
     if (conditions.length > 0) {
       query = query.where(and(...conditions));
+    }
+    
+    const [result] = await query;
+    return result.count;
+  }
+
+  // Template operations
+  async getTemplates(options?: { type?: string; isGlobal?: boolean; limit?: number; offset?: number }): Promise<Template[]> {
+    const { type, isGlobal, limit = 50, offset = 0 } = options || {};
+    
+    let query = db.select().from(templates).orderBy(desc(templates.createdAt));
+    
+    const conditions = [];
+    if (type) {
+      conditions.push(eq(templates.type, type));
+    }
+    if (isGlobal !== undefined) {
+      conditions.push(eq(templates.isGlobal, isGlobal));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.limit(limit).offset(offset);
+  }
+
+  async getTemplate(id: number): Promise<Template | undefined> {
+    const [template] = await db.select().from(templates).where(eq(templates.id, id));
+    return template;
+  }
+
+  async createTemplate(template: InsertTemplate): Promise<Template> {
+    const [newTemplate] = await db.insert(templates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateTemplate(id: number, template: Partial<InsertTemplate>): Promise<Template> {
+    const [updatedTemplate] = await db
+      .update(templates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(templates.id, id))
+      .returning();
+    return updatedTemplate;
+  }
+
+  async deleteTemplate(id: number): Promise<void> {
+    await db.delete(templates).where(eq(templates.id, id));
+  }
+
+  async getTemplatesCount(type?: string): Promise<number> {
+    let query = db.select({ count: count() }).from(templates);
+    
+    if (type) {
+      query = query.where(eq(templates.type, type));
+    }
+    
+    const [result] = await query;
+    return result.count;
+  }
+
+  // Block operations
+  async getBlocks(options?: { type?: string; isReusable?: boolean; limit?: number; offset?: number }): Promise<Block[]> {
+    const { type, isReusable, limit = 50, offset = 0 } = options || {};
+    
+    let query = db.select().from(blocks).orderBy(desc(blocks.createdAt));
+    
+    const conditions = [];
+    if (type) {
+      conditions.push(eq(blocks.type, type));
+    }
+    if (isReusable !== undefined) {
+      conditions.push(eq(blocks.isReusable, isReusable));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.limit(limit).offset(offset);
+  }
+
+  async getBlock(id: number): Promise<Block | undefined> {
+    const [block] = await db.select().from(blocks).where(eq(blocks.id, id));
+    return block;
+  }
+
+  async createBlock(block: InsertBlock): Promise<Block> {
+    const [newBlock] = await db.insert(blocks).values(block).returning();
+    return newBlock;
+  }
+
+  async updateBlock(id: number, block: Partial<InsertBlock>): Promise<Block> {
+    const [updatedBlock] = await db
+      .update(blocks)
+      .set({ ...block, updatedAt: new Date() })
+      .where(eq(blocks.id, id))
+      .returning();
+    return updatedBlock;
+  }
+
+  async deleteBlock(id: number): Promise<void> {
+    await db.delete(blocks).where(eq(blocks.id, id));
+  }
+
+  async getBlocksCount(type?: string): Promise<number> {
+    let query = db.select({ count: count() }).from(blocks);
+    
+    if (type) {
+      query = query.where(eq(blocks.type, type));
     }
     
     const [result] = await query;

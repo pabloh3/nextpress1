@@ -75,15 +75,17 @@ class ThemeManager {
     const { post, page, site } = data;
     const content = post || page;
     
-    if (!content) {
-      return this.render404();
-    }
-
     switch (template) {
       case 'single-post':
       case 'post':
+        if (!content) {
+          return this.render404();
+        }
         return this.renderSinglePost(content, site);
       case 'page':
+        if (!content) {
+          return this.render404();
+        }
         return this.renderSinglePage(content, site);
       case 'home':
       case 'index':
@@ -91,6 +93,9 @@ class ThemeManager {
       case 'landing':
         return this.renderLandingPage(site);
       default:
+        if (!content) {
+          return this.render404();
+        }
         return this.renderSinglePost(content, site);
     }
   }
@@ -1433,7 +1438,7 @@ class ThemeManager {
       throw new Error('No active theme found');
     }
 
-    const renderer = this.renderers.get(activeTheme.renderer);
+    const renderer = this.renderers.get(activeTheme.renderer || 'nextjs');
     if (!renderer) {
       throw new Error(`Renderer '${activeTheme.renderer}' not found`);
     }

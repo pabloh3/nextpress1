@@ -847,7 +847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/home', async (req, res) => {
     try {
-      const posts = await storage.getPosts(1, 10, 'published');
+      const posts = await storage.getPosts(1, 10);
       
       const siteSettings = {
         name: 'NextPress',
@@ -856,7 +856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const html = await themeManager.renderContent('home', {
-        posts: posts.posts,
+        posts: posts,
         site: siteSettings
       });
 

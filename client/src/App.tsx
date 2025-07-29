@@ -27,28 +27,21 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       
-      {/* Admin routes - only for authenticated users */}
-      {isAuthenticated && (
+      {isLoading || !isAuthenticated ? (
+        <Route path="/" component={Landing} />
+      ) : (
         <>
-          <Route path="/admin" component={Dashboard} />
-          <Route path="/admin/posts" component={Posts} />
-          <Route path="/admin/pages" component={Pages} />
-          <Route path="/admin/media" component={Media} />
-          <Route path="/admin/comments" component={Comments} />
-          <Route path="/admin/themes" component={Themes} />
-          <Route path="/admin/users" component={Users} />
-          <Route path="/admin/settings" component={Settings} />
-          <Route path="/admin/home" component={Home} />
+          <Route path="/" component={Dashboard} />
+          <Route path="/posts" component={Posts} />
+          <Route path="/pages" component={Pages} />
+          <Route path="/media" component={Media} />
+          <Route path="/comments" component={Comments} />
+          <Route path="/themes" component={Themes} />
+          <Route path="/users" component={Users} />
+          <Route path="/settings" component={Settings} />
+          <Route path="/home" component={Home} />
         </>
       )}
-      
-      {/* Fallback for non-admin routes - let server handle them */}
-      <Route path="/*" component={() => { 
-        // Redirect to server-rendered page
-        window.location.href = window.location.pathname;
-        return null;
-      }} />
-      
       <Route component={NotFound} />
     </Switch>
   );

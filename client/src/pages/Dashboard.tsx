@@ -65,7 +65,7 @@ export default function Dashboard() {
                 </Button>
               </Link>
               <Link href="/themes">
-                <Button variant="outline" className="border-blue-300 text-black hover:bg-white hover:text-black">
+                <Button variant="outline" className="border-blue-300 text-white hover:bg-wp-blue-dark">
                   Browse Themes
                 </Button>
               </Link>

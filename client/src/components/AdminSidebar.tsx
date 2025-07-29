@@ -20,16 +20,16 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { label: "Dashboard", path: "/admin", icon: Gauge },
-  { label: "Posts", path: "/admin/posts", icon: FileText, section: "Content" },
-  { label: "Pages", path: "/admin/pages", icon: File, section: "Content" },
-  { label: "Media", path: "/admin/media", icon: Image, section: "Content" },
-  { label: "Comments", path: "/admin/comments", icon: MessageCircle, section: "Content" },
-  { label: "Themes", path: "/admin/themes", icon: Paintbrush, section: "Appearance" },
-  { label: "Customize", path: "/admin/customize", icon: Settings, section: "Appearance" },
-  { label: "Plugins", path: "/admin/plugins", icon: Plug, section: "System" },
-  { label: "Users", path: "/admin/users", icon: Users, section: "System" },
-  { label: "Settings", path: "/admin/settings", icon: Cog, section: "System" },
+  { label: "Dashboard", path: "/", icon: Gauge },
+  { label: "Posts", path: "/posts", icon: FileText, section: "Content" },
+  { label: "Pages", path: "/pages", icon: File, section: "Content" },
+  { label: "Media", path: "/media", icon: Image, section: "Content" },
+  { label: "Comments", path: "/comments", icon: MessageCircle, section: "Content" },
+  { label: "Themes", path: "/themes", icon: Paintbrush, section: "Appearance" },
+  { label: "Customize", path: "/customize", icon: Settings, section: "Appearance" },
+  { label: "Plugins", path: "/plugins", icon: Plug, section: "System" },
+  { label: "Users", path: "/users", icon: Users, section: "System" },
+  { label: "Settings", path: "/settings", icon: Cog, section: "System" },
 ];
 
 export default function AdminSidebar() {

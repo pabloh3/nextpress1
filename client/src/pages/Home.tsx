@@ -111,13 +111,13 @@ export default function Home() {
               </p>
             </div>
             <div className="flex items-center space-x-3">
-              <Link href="/admin/posts">
+              <Link href="/posts">
                 <Button className="bg-wp-blue hover:bg-wp-blue-dark text-white">
                   <Plus className="w-4 h-4 mr-2" />
                   New Post
                 </Button>
               </Link>
-              <Link href="/admin/settings">
+              <Link href="/settings">
                 <Button variant="outline">
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
@@ -228,7 +228,7 @@ export default function Home() {
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                       <p>No posts yet.</p>
-                      <Link href="/admin/posts">
+                      <Link href="/posts">
                         <Button variant="link" className="text-wp-blue">
                           Create your first post
                         </Button>
@@ -248,10 +248,10 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {[
-                    { icon: FileText, label: "Write a Post", href: "/admin/posts", color: "text-wp-blue" },
-                    { icon: FileText, label: "Create a Page", href: "/admin/pages", color: "text-green-500" },
-                    { icon: MessageCircle, label: "Moderate Comments", href: "/admin/comments", color: "text-yellow-500" },
-                    { icon: Users, label: "Manage Users", href: "/admin/users", color: "text-purple-500" }
+                    { icon: FileText, label: "Write a Post", href: "/posts", color: "text-wp-blue" },
+                    { icon: FileText, label: "Create a Page", href: "/pages", color: "text-green-500" },
+                    { icon: MessageCircle, label: "Moderate Comments", href: "/comments", color: "text-yellow-500" },
+                    { icon: Users, label: "Manage Users", href: "/users", color: "text-purple-500" }
                   ].map((action, index) => {
                     const Icon = action.icon;
                     return (

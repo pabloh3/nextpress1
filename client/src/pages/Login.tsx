@@ -38,10 +38,8 @@ export default function Login() {
         title: "Success",
         description: "Logged in successfully",
       });
-      // Small delay to ensure session is saved, then redirect
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
+      // Redirect to dashboard
+      setLocation('/');
     } catch (error) {
       toast({
         title: "Error",
@@ -68,9 +66,9 @@ export default function Login() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username or Email</FormLabel>
+                    <FormLabel>Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your username or email" {...field} />
+                      <Input placeholder="Enter your username" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

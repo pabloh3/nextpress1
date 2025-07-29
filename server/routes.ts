@@ -26,39 +26,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username and password are required" });
       }
 
-      console.log('Login attempt for:', username);
-
-      // Try to find user by username or email
-      let user = await storage.getUserByUsername(username);
-      if (!user) {
-        user = await storage.getUserByEmail(username);
-      }
-
-      if (!user) {
-        console.log('User not found for:', username);
+      const user = await storage.getUserByUsername(username);
+      if (!user || !user.password) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      if (!user.password) {
-        console.log('User has no password set:', username);
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      console.log('Found user, checking password...');
       const bcrypt = await import('bcrypt');
       const isValidPassword = await bcrypt.compare(password, user.password);
       
       if (!isValidPassword) {
-        console.log('Password does not match for user:', username);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       if (user.status !== 'active') {
-        console.log('User account is not active:', username);
         return res.status(401).json({ message: "Account is not active" });
       }
-
-      console.log('Login successful for user:', username);
 
       // Create session for local user
       (req as any).session.localUser = {
@@ -94,9 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Hash password
       const bcrypt = await import('bcrypt');
-      const hashedPassword = await bcrypt.hash(userData.password, 10);
-      userData.password = hashedPassword;
-      console.log('Password hashed for new user:', userData.username);
+      userData.password = await bcrypt.hash(userData.password, 10);
 
       const user = await storage.createUser(userData);
       
@@ -231,9 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password if provided
       if (userData.password) {
         const bcrypt = await import('bcrypt');
-        const hashedPassword = await bcrypt.hash(userData.password, 10);
-        userData.password = hashedPassword;
-        console.log('Password updated and hashed for user:', req.params.id);
+        userData.password = await bcrypt.hash(userData.password, 10);
       }
       
       const user = await storage.updateUser(req.params.id, userData);
@@ -845,43 +823,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public homepage route - served by NextPress theme system
-  app.get('/', async (req, res) => {
-    try {
-      // Check if user is authenticated
-      const isAuthenticated = req.user || (req as any).session?.localUser;
-      
-      // If authenticated, serve the React app (Dashboard)
-      if (isAuthenticated) {
-        return res.redirect('/admin');
-      }
-      
-      // For public visitors, serve the NextPress theme homepage
-      const posts = await storage.getPosts({ page: 1, limit: 10, status: 'published' });
-      
-      const siteSettings = {
-        name: 'NextPress',
-        description: 'A modern WordPress alternative',
-        url: `${req.protocol}://${req.get('host')}`
-      };
-
-      const html = await themeManager.renderContent('home', {
-        posts: posts,
-        site: siteSettings
-      });
-
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-    } catch (error) {
-      console.error("Error rendering homepage:", error);
-      const html = themeManager.render404();
-      res.status(500).send(html);
-    }
-  });
-
   app.get('/home', async (req, res) => {
     try {
-      const posts = await storage.getPosts({ page: 1, limit: 10, status: 'published' });
+      const posts = await storage.getPosts(1, 10, 'published');
       
       const siteSettings = {
         name: 'NextPress',
@@ -890,7 +834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const html = await themeManager.renderContent('home', {
-        posts: posts,
+        posts: posts.posts,
         site: siteSettings
       });
 
@@ -901,12 +845,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const html = themeManager.render404();
       res.status(500).send(html);
     }
-  });
-
-  // Admin route - serves the React app for authenticated users
-  app.get('/admin*', (req, res, next) => {
-    // Let the static file handler serve the React app
-    next();
   });
 
   // Serve uploaded files

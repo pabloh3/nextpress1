@@ -311,7 +311,7 @@ class ThemeManager {
                 </div>
                 
                 <div class="post-content">
-                    ${this.parseContent(post.content || '')}
+                    ${this.parseContent(post.content)}
                 </div>
             </article>
         </main>
@@ -340,27 +340,8 @@ class ThemeManager {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${siteTitle}</title>
     <meta name="description" content="${siteDescription}">
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="${siteTitle}">
-    <meta property="og:description" content="${siteDescription}">
-    <meta property="og:url" content="${site?.url || ''}">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="${siteTitle}">
-    <meta property="twitter:description" content="${siteDescription}">
-    
     <style>
-        :root {
-            --wp-blue: hsl(200, 100%, 33%);
-            --wp-blue-dark: hsl(200, 100%, 23%);
-            --wp-blue-light: hsl(195, 100%, 41%);
-            --wp-gray: hsl(210, 11%, 15%);
-            --wp-gray-light: hsl(0, 0%, 95%);
-        }
-        
+        /* Same base styles as single post */
         * {
             margin: 0;
             padding: 0;
@@ -371,511 +352,117 @@ class ThemeManager {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
             line-height: 1.6;
             color: #333;
-            background: linear-gradient(135deg, var(--wp-gray-light) 0%, #fff 100%);
-            min-height: 100vh;
+            background: #fff;
         }
         
-        /* Header */
-        .header {
-            border-bottom: 1px solid #e5e7eb;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(8px);
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-        
-        .header-container {
-            max-width: 1280px;
+        .container {
+            max-width: 800px;
             margin: 0 auto;
-            padding: 0 1rem;
+            padding: 2rem 1rem;
         }
         
-        .header-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 4rem;
-        }
-        
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #eee;
         }
         
         .site-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--wp-gray);
-        }
-        
-        .version-badge {
-            background: var(--wp-blue);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-        
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            font-weight: 500;
-            text-decoration: none;
-            transition: all 0.2s;
-            border: 1px solid transparent;
-            cursor: pointer;
-            font-size: 0.875rem;
-        }
-        
-        .btn-outline {
-            border: 1px solid #d1d5db;
-            color: #374151;
-            background: white;
-        }
-        
-        .btn-outline:hover {
-            background: #f9fafb;
-        }
-        
-        .btn-primary {
-            background: var(--wp-blue);
-            color: white;
-            border: 1px solid var(--wp-blue);
-        }
-        
-        .btn-primary:hover {
-            background: var(--wp-blue-dark);
-            border-color: var(--wp-blue-dark);
-        }
-        
-        /* Hero Section */
-        .hero {
-            padding: 5rem 1rem;
-            text-align: center;
-        }
-        
-        .hero-container {
-            max-width: 1280px;
-            margin: 0 auto;
-        }
-        
-        .hero-badge {
-            display: inline-block;
-            background: hsl(200, 100%, 33%, 0.1);
-            color: var(--wp-blue);
-            border: 1px solid hsl(200, 100%, 33%, 0.2);
-            padding: 0.5rem 1rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            margin-bottom: 1rem;
-        }
-        
-        .hero-title {
-            font-size: 3rem;
-            font-weight: 700;
-            color: var(--wp-gray);
-            margin-bottom: 1.5rem;
-            line-height: 1.1;
-        }
-        
-        .hero-title .highlight {
-            color: var(--wp-blue);
-        }
-        
-        .hero-description {
-            font-size: 1.25rem;
-            color: #6b7280;
-            max-width: 48rem;
-            margin: 0 auto 2rem auto;
-        }
-        
-        .hero-buttons {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 4rem;
-        }
-        
-        .btn-lg {
-            padding: 0.75rem 2rem;
-            font-size: 1rem;
-        }
-        
-        .tech-stack {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            margin-bottom: 4rem;
-        }
-        
-        .tech-label {
-            font-size: 0.875rem;
-            color: #6b7280;
-            margin-right: 1rem;
-        }
-        
-        .tech-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: white;
-        }
-        
-        .tech-nodejs { background: #68a063; }
-        .tech-react { background: #61dafb; color: #000; }
-        .tech-postgresql { background: #336791; }
-        .tech-express { background: #000; }
-        .tech-typescript { background: #3178c6; }
-        .tech-tailwind { background: #06b6d4; }
-        
-        /* Features Section */
-        .features {
-            padding: 5rem 1rem;
-            background: white;
-        }
-        
-        .features-container {
-            max-width: 1280px;
-            margin: 0 auto;
-        }
-        
-        .features-header {
-            text-align: center;
-            margin-bottom: 4rem;
-        }
-        
-        .features-title {
             font-size: 2rem;
             font-weight: 700;
-            color: var(--wp-gray);
-            margin-bottom: 1rem;
-        }
-        
-        .features-description {
-            font-size: 1.125rem;
-            color: #6b7280;
-            max-width: 32rem;
-            margin: 0 auto;
-        }
-        
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-        
-        .feature-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            padding: 1.5rem;
-            transition: border-color 0.2s;
-        }
-        
-        .feature-card:hover {
-            border-color: hsl(200, 100%, 33%, 0.3);
-        }
-        
-        .feature-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-        
-        .feature-icon {
-            padding: 0.5rem;
-            background: hsl(200, 100%, 33%, 0.1);
-            border-radius: 0.5rem;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .feature-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--wp-gray);
-        }
-        
-        .feature-description {
-            color: #6b7280;
-        }
-        
-        /* Footer */
-        .footer {
-            background: var(--wp-gray);
-            color: white;
-            padding: 3rem 1rem;
-        }
-        
-        .footer-container {
-            max-width: 1280px;
-            margin: 0 auto;
-        }
-        
-        .footer-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-        
-        .footer-section h3 {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-        
-        .footer-section p {
-            color: #d1d5db;
-            font-size: 0.875rem;
-        }
-        
-        .footer-section h4 {
-            font-weight: 500;
-            margin-bottom: 1rem;
-        }
-        
-        .footer-section ul {
-            list-style: none;
-        }
-        
-        .footer-section ul li {
-            color: #d1d5db;
-            font-size: 0.875rem;
             margin-bottom: 0.5rem;
+            color: #1a1a1a;
         }
         
-        .footer-bottom {
-            border-top: 1px solid #4b5563;
-            padding-top: 2rem;
+        .site-description {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .posts-grid {
+            display: grid;
+            gap: 2rem;
+        }
+        
+        .post-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: shadow 0.2s;
+        }
+        
+        .post-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .post-card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1a1a1a;
+        }
+        
+        .post-card-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .post-card-title a:hover {
+            color: #3b82f6;
+        }
+        
+        .post-card-meta {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        .post-card-excerpt {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .no-posts {
             text-align: center;
-            font-size: 0.875rem;
-            color: #d1d5db;
-        }
-        
-        /* Responsive */
-        @media (min-width: 640px) {
-            .hero-buttons {
-                flex-direction: row;
-            }
-            
-            .header-right {
-                gap: 1rem;
-            }
-        }
-        
-        @media (max-width: 640px) {
-            .hero-title {
-                font-size: 2rem;
-            }
-            
-            .header-content {
-                padding: 0 1rem;
-            }
-            
-            .header-right .btn {
-                padding: 0.375rem 0.75rem;
-                font-size: 0.75rem;
-            }
+            padding: 3rem 0;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-container">
-            <div class="header-content">
-                <div class="header-left">
-                    <h1 class="site-title">NextPress</h1>
-                    <span class="version-badge">v1.0.0</span>
+    <div class="container">
+        <header>
+            <h1 class="site-title">${siteTitle}</h1>
+            <p class="site-description">${siteDescription}</p>
+        </header>
+        
+        <main>
+            ${posts.length > 0 ? `
+                <div class="posts-grid">
+                    ${posts.map(post => `
+                        <article class="post-card">
+                            <h2 class="post-card-title">
+                                <a href="/posts/${post.id}">${post.title}</a>
+                            </h2>
+                            <div class="post-card-meta">
+                                ${new Date(post.createdAt).toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                })}
+                            </div>
+                            ${post.excerpt ? `<p class="post-card-excerpt">${post.excerpt}</p>` : ''}
+                        </article>
+                    `).join('')}
                 </div>
-                <div class="header-right">
-                    <a href="#" class="btn btn-outline">
-                        📚 Docs
-                    </a>
-                    <a href="/login" class="btn btn-outline">
-                        NextPress Login
-                    </a>
-                    <a href="/api/login" class="btn btn-primary">
-                        Login with Replit →
-                    </a>
+            ` : `
+                <div class="no-posts">
+                    <p>No posts published yet.</p>
                 </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-container">
-            <div class="hero-badge">WordPress-Compatible CMS</div>
-            <h1 class="hero-title">
-                WordPress, Reimagined<br>
-                <span class="highlight">in JavaScript</span>
-            </h1>
-            <p class="hero-description">
-                NextPress is a complete WordPress clone built with modern JavaScript technologies. 
-                All WordPress APIs, hooks, and database operations are preserved, giving you the 
-                power of WordPress with the performance of Node.js.
-            </p>
-            
-            <div class="hero-buttons">
-                <a href="/login" class="btn btn-primary btn-lg">
-                    Get Started →
-                </a>
-                <a href="/register" class="btn btn-outline btn-lg">
-                    Create Account
-                </a>
-            </div>
-
-            <div class="tech-stack">
-                <span class="tech-label">Built with:</span>
-                <span class="tech-badge tech-nodejs">Node.js</span>
-                <span class="tech-badge tech-react">React</span>
-                <span class="tech-badge tech-postgresql">PostgreSQL</span>
-                <span class="tech-badge tech-express">Express</span>
-                <span class="tech-badge tech-typescript">TypeScript</span>
-                <span class="tech-badge tech-tailwind">Tailwind</span>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section class="features">
-        <div class="features-container">
-            <div class="features-header">
-                <h2 class="features-title">Everything WordPress, Nothing Compromised</h2>
-                <p class="features-description">
-                    NextPress maintains 100% compatibility with WordPress while delivering 
-                    modern performance and developer experience.
-                </p>
-            </div>
-
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-header">
-                        <div class="feature-icon">⚡</div>
-                        <h3 class="feature-title">WordPress Compatible APIs</h3>
-                    </div>
-                    <p class="feature-description">
-                        All REST API endpoints match WordPress specifications exactly, ensuring seamless migration and compatibility.
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-header">
-                        <div class="feature-icon">🗄️</div>
-                        <h3 class="feature-title">WordPress Database Schema</h3>
-                    </div>
-                    <p class="feature-description">
-                        Identical database structure and operations to WordPress, supporting all your existing data.
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-header">
-                        <div class="feature-icon">🚀</div>
-                        <h3 class="feature-title">Modern JavaScript Stack</h3>
-                    </div>
-                    <p class="feature-description">
-                        Built with Node.js, React, and TypeScript for superior performance and developer experience.
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-header">
-                        <div class="feature-icon">🔧</div>
-                        <h3 class="feature-title">Hook System</h3>
-                    </div>
-                    <p class="feature-description">
-                        WordPress-compatible actions and filters implemented in JavaScript for maximum extensibility.
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-header">
-                        <div class="feature-icon">🎨</div>
-                        <h3 class="feature-title">Multi-Renderer Themes</h3>
-                    </div>
-                    <p class="feature-description">
-                        Support for Next.js, React, and custom rendering engines in a single theme system.
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-header">
-                        <div class="feature-icon">🔌</div>
-                        <h3 class="feature-title">Plugin Architecture</h3>
-                    </div>
-                    <p class="feature-description">
-                        Extensible plugin system with WordPress-compatible hooks and activation patterns.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-container">
-            <div class="footer-grid">
-                <div class="footer-section">
-                    <h3>NextPress</h3>
-                    <p>WordPress-compatible CMS built with modern JavaScript technologies.</p>
-                </div>
-                <div class="footer-section">
-                    <h4>Features</h4>
-                    <ul>
-                        <li>WordPress API Compatible</li>
-                        <li>Modern Theme Engine</li>
-                        <li>Hook System</li>
-                        <li>Plugin Architecture</li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Resources</h4>
-                    <ul>
-                        <li>Documentation</li>
-                        <li>API Reference</li>
-                        <li>Theme Development</li>
-                        <li>Plugin Development</li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Community</h4>
-                    <ul>
-                        <li>GitHub</li>
-                        <li>Discord</li>
-                        <li>Forum</li>
-                        <li>Support</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="footer-bottom">
-                <p>&copy; 2025 NextPress. WordPress-compatible CMS powered by JavaScript.</p>
-            </div>
-        </div>
-    </footer>
+            `}
+        </main>
+    </div>
 </body>
 </html>`;
   }

@@ -845,9 +845,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/home', async (req, res) => {
+  // Public homepage route - served by NextPress theme system
+  app.get('/', async (req, res) => {
     try {
-      const posts = await storage.getPosts(1, 10, 'published');
+      // Check if user is authenticated
+      const isAuthenticated = req.user || (req as any).session?.localUser;
+      
+      // If authenticated, serve the React app (Dashboard)
+      if (isAuthenticated) {
+        return res.redirect('/admin');
+      }
+      
+      // For public visitors, serve the NextPress theme homepage
+      const posts = await storage.getPosts({ page: 1, limit: 10, status: 'published' });
       
       const siteSettings = {
         name: 'NextPress',
@@ -856,7 +866,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const html = await themeManager.renderContent('home', {
-        posts: posts.posts,
+        posts: posts,
+        site: siteSettings
+      });
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Error rendering homepage:", error);
+      const html = themeManager.render404();
+      res.status(500).send(html);
+    }
+  });
+
+  app.get('/home', async (req, res) => {
+    try {
+      const posts = await storage.getPosts({ page: 1, limit: 10, status: 'published' });
+      
+      const siteSettings = {
+        name: 'NextPress',
+        description: 'A modern WordPress alternative',
+        url: `${req.protocol}://${req.get('host')}`
+      };
+
+      const html = await themeManager.renderContent('home', {
+        posts: posts,
         site: siteSettings
       });
 
@@ -867,6 +901,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const html = themeManager.render404();
       res.status(500).send(html);
     }
+  });
+
+  // Admin route - serves the React app for authenticated users
+  app.get('/admin*', (req, res, next) => {
+    // Let the static file handler serve the React app
+    next();
   });
 
   // Serve uploaded files

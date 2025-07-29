@@ -874,7 +874,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(html);
     } catch (error) {
       console.error("Error rendering homepage:", error);
-      console.error("Stack trace:", error.stack);
       const html = themeManager.render404();
       res.status(500).send(html);
     }

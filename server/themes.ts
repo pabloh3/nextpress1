@@ -72,28 +72,23 @@ class ThemeManager {
 
   // Next.js specific rendering method
   renderNextJsTemplate(template: string, data: any): string {
-    const { post, page, site, posts } = data;
+    const { post, page, site } = data;
     const content = post || page;
+    
+    if (!content) {
+      return this.render404();
+    }
 
     switch (template) {
       case 'single-post':
       case 'post':
-        if (!content) {
-          return this.render404();
-        }
         return this.renderSinglePost(content, site);
       case 'page':
-        if (!content) {
-          return this.render404();
-        }
         return this.renderSinglePage(content, site);
       case 'home':
       case 'index':
-        return this.renderHomePage(posts || [], site);
+        return this.renderHomePage(data.posts || [], site);
       default:
-        if (!content) {
-          return this.render404();
-        }
         return this.renderSinglePost(content, site);
     }
   }
@@ -955,34 +950,26 @@ class ThemeManager {
 
   // Render content using active theme
   async renderContent(template: string, data: any): Promise<string> {
-    try {
-      const activeTheme = await this.getActiveTheme();
-      
-      if (!activeTheme) {
-        console.error('No active theme found');
-        return this.render404();
-      }
-
-      const renderer = this.renderers.get(activeTheme.renderer);
-      
-      if (!renderer) {
-        console.error(`Renderer '${activeTheme.renderer}' not found`);
-        return this.render404();
-      }
-
-      // Apply theme filters
-      const filteredData = hooks.applyFilters('theme_data', data, activeTheme);
-      const filteredTemplate = hooks.applyFilters('theme_template', template, activeTheme);
-      
-      // Render content
-      const content = await renderer.render(filteredTemplate, filteredData);
-      
-      // Apply content filters
-      return hooks.applyFilters('theme_content', content, activeTheme);
-    } catch (error) {
-      console.error('Error in renderContent:', error);
-      return this.render404();
+    const activeTheme = await this.getActiveTheme();
+    
+    if (!activeTheme) {
+      throw new Error('No active theme found');
     }
+
+    const renderer = this.renderers.get(activeTheme.renderer);
+    if (!renderer) {
+      throw new Error(`Renderer '${activeTheme.renderer}' not found`);
+    }
+
+    // Apply theme filters
+    const filteredData = hooks.applyFilters('theme_data', data, activeTheme);
+    const filteredTemplate = hooks.applyFilters('theme_template', template, activeTheme);
+
+    // Render content
+    const content = await renderer.render(filteredTemplate, filteredData);
+    
+    // Apply content filters
+    return hooks.applyFilters('theme_content', content, activeTheme);
   }
 
   // Get theme templates

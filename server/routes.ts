@@ -869,6 +869,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/landing', async (req, res) => {
+    try {
+      const siteSettings = {
+        name: 'NextPress',
+        description: 'A modern WordPress alternative',
+        url: `${req.protocol}://${req.get('host')}`
+      };
+
+      const html = await themeManager.renderContent('landing', {
+        site: siteSettings
+      });
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Error rendering landing:", error);
+      const html = themeManager.render404();
+      res.status(500).send(html);
+    }
+  });
+
   // Serve uploaded files
   app.use('/uploads', express.static(uploadDir));
 

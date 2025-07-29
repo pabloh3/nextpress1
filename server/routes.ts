@@ -847,7 +847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/home', async (req, res) => {
     try {
-      const posts = await storage.getPosts({ limit: 10 });
+      const posts = await storage.getPosts(1, 10, 'published');
       
       const siteSettings = {
         name: 'NextPress',
@@ -856,7 +856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const html = await themeManager.renderContent('home', {
-        posts: posts,
+        posts: posts.posts,
         site: siteSettings
       });
 
@@ -869,55 +869,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/landing', async (req, res) => {
-    try {
-      const siteSettings = {
-        name: 'NextPress',
-        description: 'A modern WordPress alternative',
-        url: `${req.protocol}://${req.get('host')}`
-      };
-
-      const html = await themeManager.renderContent('landing', {
-        site: siteSettings
-      });
-
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-    } catch (error) {
-      console.error("Error rendering landing:", error);
-      const html = themeManager.render404();
-      res.status(500).send(html);
-    }
-  });
-
   // Serve uploaded files
   app.use('/uploads', express.static(uploadDir));
-
-  // Homepage route - must be after all other routes but before return
-  // This will be handled before Vite middleware gets a chance to process it
-  app.get('/', async (req, res) => {
-    try {
-      const siteSettings = {
-        name: 'NextPress',
-        description: 'A modern WordPress alternative',
-        url: `${req.protocol}://${req.get('host')}`
-      };
-
-      const posts = await storage.getPosts({ limit: 6 });
-
-      const html = await themeManager.renderContent('home', {
-        site: siteSettings,
-        posts: posts
-      });
-
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-    } catch (error) {
-      console.error("Error rendering homepage:", error);
-      const html = themeManager.render404();
-      res.status(500).send(html);
-    }
-  });
 
   const httpServer = createServer(app);
   

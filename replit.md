@@ -50,18 +50,23 @@ Preferred communication style: Simple, everyday language.
    - WordPress-compatible CRUD operations
    - Type-safe database interactions
 
-4. **Authentication** (`server/replitAuth.ts`)
-   - OpenID Connect integration
-   - Session-based authentication
-   - User management with WordPress roles
+4. **Authentication** (`server/replitAuth.ts`, `server/routes.ts`)
+   - **Dual Authentication System**: Supports both Replit Auth and local NextPress credentials
+   - **Local Authentication**: Username/email + password with bcrypt hashing
+   - **OpenID Connect**: Replit integration for external authentication
+   - **Session Management**: Express sessions with PostgreSQL store
+   - **Security**: Bcrypt password hashing with salt rounds of 10
+   - **User Management**: WordPress-compatible roles and permissions
 
 ### Frontend Components
 - **Admin Interface**: WordPress-style admin panel with sidebar navigation
+- **Authentication Pages**: Local login/register forms with validation
 - **Post Editor**: Rich text editing for posts and pages
 - **Media Library**: Complete file upload system with drag & drop
 - **Theme Management**: Visual theme browser and activation
 - **Settings Management**: Site configuration and options
 - **Dashboard**: Analytics and quick actions
+- **User Management**: Complete CRUD operations with password controls
 
 ### Theme Rendering
 - **Next.js Theme**: Professional rendering system with modern styling

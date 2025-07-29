@@ -26,21 +26,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username and password are required" });
       }
 
-      const user = await storage.getUserByUsername(username);
-      if (!user || !user.password) {
+      console.log('Login attempt for:', username);
+
+      // Try to find user by username or email
+      let user = await storage.getUserByUsername(username);
+      if (!user) {
+        user = await storage.getUserByEmail(username);
+      }
+
+      if (!user) {
+        console.log('User not found for:', username);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      if (!user.password) {
+        console.log('User has no password set:', username);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      console.log('Found user, checking password...');
       const bcrypt = await import('bcrypt');
       const isValidPassword = await bcrypt.compare(password, user.password);
       
       if (!isValidPassword) {
+        console.log('Password does not match for user:', username);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       if (user.status !== 'active') {
+        console.log('User account is not active:', username);
         return res.status(401).json({ message: "Account is not active" });
       }
+
+      console.log('Login successful for user:', username);
 
       // Create session for local user
       (req as any).session.localUser = {
@@ -76,7 +94,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Hash password
       const bcrypt = await import('bcrypt');
-      userData.password = await bcrypt.hash(userData.password, 10);
+      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      userData.password = hashedPassword;
+      console.log('Password hashed for new user:', userData.username);
 
       const user = await storage.createUser(userData);
       
@@ -211,7 +231,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password if provided
       if (userData.password) {
         const bcrypt = await import('bcrypt');
-        userData.password = await bcrypt.hash(userData.password, 10);
+        const hashedPassword = await bcrypt.hash(userData.password, 10);
+        userData.password = hashedPassword;
+        console.log('Password updated and hashed for user:', req.params.id);
       }
       
       const user = await storage.updateUser(req.params.id, userData);

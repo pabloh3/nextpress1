@@ -38,10 +38,8 @@ export default function Register() {
         title: "Success",
         description: "Account created successfully",
       });
-      // Small delay to ensure session is saved, then redirect
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
+      // Redirect to dashboard
+      setLocation('/');
     } catch (error) {
       toast({
         title: "Error",

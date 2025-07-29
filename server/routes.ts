@@ -26,39 +26,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username and password are required" });
       }
 
-      console.log('Login attempt for:', username);
-
-      // Try to find user by username or email
-      let user = await storage.getUserByUsername(username);
-      if (!user) {
-        user = await storage.getUserByEmail(username);
-      }
-
-      if (!user) {
-        console.log('User not found for:', username);
+      const user = await storage.getUserByUsername(username);
+      if (!user || !user.password) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      if (!user.password) {
-        console.log('User has no password set:', username);
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      console.log('Found user, checking password...');
       const bcrypt = await import('bcrypt');
       const isValidPassword = await bcrypt.compare(password, user.password);
       
       if (!isValidPassword) {
-        console.log('Password does not match for user:', username);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       if (user.status !== 'active') {
-        console.log('User account is not active:', username);
         return res.status(401).json({ message: "Account is not active" });
       }
-
-      console.log('Login successful for user:', username);
 
       // Create session for local user
       (req as any).session.localUser = {
@@ -94,9 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Hash password
       const bcrypt = await import('bcrypt');
-      const hashedPassword = await bcrypt.hash(userData.password, 10);
-      userData.password = hashedPassword;
-      console.log('Password hashed for new user:', userData.username);
+      userData.password = await bcrypt.hash(userData.password, 10);
 
       const user = await storage.createUser(userData);
       
@@ -231,9 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password if provided
       if (userData.password) {
         const bcrypt = await import('bcrypt');
-        const hashedPassword = await bcrypt.hash(userData.password, 10);
-        userData.password = hashedPassword;
-        console.log('Password updated and hashed for user:', req.params.id);
+        userData.password = await bcrypt.hash(userData.password, 10);
       }
       
       const user = await storage.updateUser(req.params.id, userData);
@@ -780,76 +758,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting media:", error);
       res.status(500).json({ message: "Failed to delete media" });
-    }
-  });
-
-  // Templates API
-  app.get('/api/templates', isAuthenticated, async (req, res) => {
-    try {
-      const { type } = req.query;
-      const templates = await storage.getTemplates(type as string);
-      res.json({ templates });
-    } catch (error) {
-      console.error("Error fetching templates:", error);
-      res.status(500).json({ message: "Failed to fetch templates" });
-    }
-  });
-
-  app.get('/api/templates/:id', isAuthenticated, async (req, res) => {
-    try {
-      const template = await storage.getTemplate(parseInt(req.params.id));
-      if (!template) {
-        return res.status(404).json({ message: "Template not found" });
-      }
-      res.json(template);
-    } catch (error) {
-      console.error("Error fetching template:", error);
-      res.status(500).json({ message: "Failed to fetch template" });
-    }
-  });
-
-  app.post('/api/templates', isAuthenticated, async (req, res) => {
-    try {
-      const templateData = insertTemplateSchema.parse(req.body);
-      const template = await storage.createTemplate(templateData);
-      res.status(201).json(template);
-    } catch (error) {
-      console.error("Error creating template:", error);
-      res.status(500).json({ message: "Failed to create template" });
-    }
-  });
-
-  app.put('/api/templates/:id', isAuthenticated, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const templateData = insertTemplateSchema.partial().parse(req.body);
-      const template = await storage.updateTemplate(id, templateData);
-      res.json(template);
-    } catch (error) {
-      console.error("Error updating template:", error);
-      res.status(500).json({ message: "Failed to update template" });
-    }
-  });
-
-  app.delete('/api/templates/:id', isAuthenticated, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      await storage.deleteTemplate(id);
-      res.json({ message: "Template deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting template:", error);
-      res.status(500).json({ message: "Failed to delete template" });
-    }
-  });
-
-  app.post('/api/templates/:id/set-default', isAuthenticated, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      await storage.setDefaultTemplate(id);
-      res.json({ message: "Default template set successfully" });
-    } catch (error) {
-      console.error("Error setting default template:", error);
-      res.status(500).json({ message: "Failed to set default template" });
     }
   });
 

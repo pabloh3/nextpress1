@@ -4,6 +4,8 @@
 
 NextPress is a modern, TypeScript-based content management system that provides full WordPress API compatibility while leveraging modern web technologies. Built with React, Node.js, and PostgreSQL, it offers a familiar WordPress experience with improved performance and developer experience.
 
+**Recent Change (2025-01-28)**: Homepage now powered by NextPress CMS itself rather than the React SPA, implementing "eat your own dog food" philosophy.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -73,6 +75,8 @@ Preferred communication style: Simple, everyday language.
 - **SEO Optimization**: Complete meta tags, Open Graph, and Twitter cards
 - **Responsive Design**: Mobile-first approach with media queries
 - **Content Parsing**: Markdown-style formatting support
+- **Homepage Integration**: Root route (/) now serves CMS-powered content with recent posts
+- **Admin Separation**: /admin routes continue to serve React SPA for management interface
 
 ## Data Flow
 
@@ -117,3 +121,14 @@ Preferred communication style: Simple, everyday language.
 - Development vs production mode detection
 
 The system prioritizes WordPress compatibility while providing modern development experience, allowing existing WordPress users to migrate seamlessly while benefiting from improved performance and type safety.
+
+## Recent Changes
+
+### 2025-01-28: CMS-Powered Homepage Implementation
+- **Architecture Shift**: Moved from dual React SPA homepage to unified CMS-powered system
+- **Root Route**: `/` now serves NextPress CMS-rendered homepage with recent posts
+- **Theme Integration**: Enhanced renderHomePage method with professional design matching landing page
+- **Admin Preservation**: `/admin` routes continue to serve React SPA for management interface
+- **Content Display**: Homepage dynamically displays latest posts from the database
+- **SEO Enhancement**: Added complete meta tags, Open Graph, and Twitter card support
+- **Design Consistency**: Professional styling with hero section, posts grid, and footer

@@ -1233,10 +1233,28 @@ class ThemeManager {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${siteTitle}</title>
-    <meta name="description" content="${siteDescription}">
+    <title>${siteTitle} - Modern WordPress Alternative</title>
+    <meta name="description" content="${siteDescription} - Build fast, modern websites with our WordPress-compatible CMS.">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="${siteTitle} - Modern WordPress Alternative">
+    <meta property="og:description" content="${siteDescription}">
+    <meta property="og:url" content="${site?.url || ''}">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="${siteTitle} - Modern WordPress Alternative">
+    <meta property="twitter:description" content="${siteDescription}">
+    
     <style>
-        /* Same base styles as single post */
+        :root {
+            --wp-blue: #0073aa;
+            --wp-blue-dark: #005177;
+            --wp-gray: #23282d;
+            --wp-light-gray: #f1f2f3;
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -1250,49 +1268,207 @@ class ThemeManager {
             background: #fff;
         }
         
-        .container {
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .header-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .site-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--wp-blue);
+            text-decoration: none;
+        }
+        
+        .version-badge {
+            background: var(--wp-light-gray);
+            color: #666;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: var(--wp-blue);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--wp-blue-dark);
+        }
+        
+        .btn-outline {
+            border: 1px solid #d1d5db;
+            color: #374151;
+        }
+        
+        .btn-outline:hover {
+            background: #f9fafb;
+        }
+        
+        .btn-outline-blue {
+            border: 1px solid var(--wp-blue);
+            color: var(--wp-blue);
+        }
+        
+        .btn-outline-blue:hover {
+            background: var(--wp-blue);
+            color: white;
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--wp-blue) 0%, var(--wp-blue-dark) 100%);
+            color: white;
+            padding: 4rem 1rem;
+            text-align: center;
+        }
+        
+        .hero-container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 2rem 1rem;
         }
         
-        header {
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.1;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: #dbeafe;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .hero-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+        
+        .btn-white {
+            background: white;
+            color: var(--wp-blue);
+            border: 1px solid white;
+        }
+        
+        .btn-white:hover {
+            background: #f9fafb;
+        }
+        
+        .btn-outline-white {
+            border: 1px solid white;
+            color: white;
+            background: transparent;
+        }
+        
+        .btn-outline-white:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Posts Section */
+        .posts-section {
+            padding: 4rem 1rem;
+            background: #f8fafc;
+        }
+        
+        .posts-container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+        
+        .section-header {
             text-align: center;
             margin-bottom: 3rem;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid #eee;
         }
         
-        .site-title {
-            font-size: 2rem;
+        .section-title {
+            font-size: 2.5rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
             color: #1a1a1a;
         }
         
-        .site-description {
+        .section-subtitle {
+            font-size: 1.25rem;
             color: #666;
-            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
         }
         
         .posts-grid {
             display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 2rem;
+            margin-bottom: 3rem;
         }
         
         .post-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 1.5rem;
-            transition: shadow 0.2s;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
         }
         
         .post-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .post-card-content {
+            padding: 1.5rem;
         }
         
         .post-card-title {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
             color: #1a1a1a;
@@ -1304,11 +1480,11 @@ class ThemeManager {
         }
         
         .post-card-title a:hover {
-            color: #3b82f6;
+            color: var(--wp-blue);
         }
         
         .post-card-meta {
-            font-size: 0.9rem;
+            font-size: 0.875rem;
             color: #666;
             margin-bottom: 1rem;
         }
@@ -1316,6 +1492,11 @@ class ThemeManager {
         .post-card-excerpt {
             color: #666;
             line-height: 1.6;
+            font-size: 0.9rem;
+        }
+        
+        .view-all-posts {
+            text-align: center;
         }
         
         .no-posts {
@@ -1323,41 +1504,154 @@ class ThemeManager {
             padding: 3rem 0;
             color: #666;
         }
+        
+        .no-posts h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        /* Footer */
+        .footer {
+            background: var(--wp-gray);
+            color: white;
+            padding: 3rem 1rem;
+        }
+        
+        .footer-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .footer-description {
+            color: #d1d5db;
+            font-size: 0.875rem;
+            margin-bottom: 2rem;
+        }
+        
+        .footer-bottom {
+            border-top: 1px solid #4b5563;
+            padding-top: 2rem;
+            color: #d1d5db;
+            font-size: 0.875rem;
+        }
+        
+        /* Responsive Design */
+        @media (min-width: 640px) {
+            .hero-buttons {
+                flex-direction: row;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+            
+            .header-right {
+                display: none;
+            }
+            
+            .posts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1 class="site-title">${siteTitle}</h1>
-            <p class="site-description">${siteDescription}</p>
-        </header>
-        
-        <main>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <div class="header-left">
+                <a href="/" class="site-logo">${siteTitle}</a>
+                <span class="version-badge">v1.0.0</span>
+            </div>
+            <div class="header-right">
+                <a href="/admin" class="btn btn-outline-blue">
+                    Admin Dashboard
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <h1 class="hero-title">The Future of Content Management</h1>
+            <p class="hero-subtitle">
+                A modern, TypeScript-powered alternative to WordPress. Build faster, deploy easier, scale better.
+            </p>
+            <div class="hero-buttons">
+                <a href="/admin" class="btn btn-white">Get Started</a>
+                <a href="/landing" class="btn btn-outline-white">Learn More</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Posts Section -->
+    <section class="posts-section">
+        <div class="posts-container">
+            <div class="section-header">
+                <h2 class="section-title">Latest Posts</h2>
+                <p class="section-subtitle">
+                    Discover the latest content and insights from our community
+                </p>
+            </div>
+            
             ${posts.length > 0 ? `
                 <div class="posts-grid">
-                    ${posts.map(post => `
+                    ${posts.slice(0, 6).map(post => `
                         <article class="post-card">
-                            <h2 class="post-card-title">
-                                <a href="/posts/${post.id}">${post.title}</a>
-                            </h2>
-                            <div class="post-card-meta">
-                                ${new Date(post.createdAt).toLocaleDateString('en-US', { 
-                                    year: 'numeric', 
-                                    month: 'long', 
-                                    day: 'numeric' 
-                                })}
+                            <div class="post-card-content">
+                                <h3 class="post-card-title">
+                                    <a href="/posts/${post.id}">${post.title}</a>
+                                </h3>
+                                <div class="post-card-meta">
+                                    ${new Date(post.createdAt).toLocaleDateString('en-US', { 
+                                        year: 'numeric', 
+                                        month: 'long', 
+                                        day: 'numeric' 
+                                    })}
+                                </div>
+                                <div class="post-card-excerpt">
+                                    ${this.parseContent(post.excerpt || post.content).substring(0, 150)}${(post.excerpt || post.content).length > 150 ? '...' : ''}
+                                </div>
                             </div>
-                            ${post.excerpt ? `<p class="post-card-excerpt">${post.excerpt}</p>` : ''}
                         </article>
                     `).join('')}
                 </div>
+                <div class="view-all-posts">
+                    <a href="/posts" class="btn btn-primary">View All Posts</a>
+                </div>
             ` : `
                 <div class="no-posts">
-                    <p>No posts published yet.</p>
+                    <h2>Welcome to ${siteTitle}</h2>
+                    <p>Your content management system is ready! Create your first post to get started.</p>
+                    <div style="margin-top: 2rem;">
+                        <a href="/admin" class="btn btn-primary">Create Your First Post</a>
+                    </div>
                 </div>
             `}
-        </main>
-    </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <p class="footer-description">
+                ${siteTitle} - A modern WordPress alternative built with TypeScript, React, and PostgreSQL.
+            </p>
+            <div class="footer-bottom">
+                <p>&copy; ${new Date().getFullYear()} ${siteTitle}. Powered by NextPress CMS.</p>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>`;
   }

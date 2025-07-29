@@ -847,7 +847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/home', async (req, res) => {
     try {
-      const posts = await storage.getPosts(1, 10);
+      const posts = await storage.getPosts({ limit: 10 });
       
       const siteSettings = {
         name: 'NextPress',
@@ -867,6 +867,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const html = themeManager.render404();
       res.status(500).send(html);
     }
+  });
+
+  // Homepage powered by NextPress CMS
+  app.get('/', async (req, res) => {
+    try {
+      const siteSettings = {
+        name: 'NextPress',
+        description: 'A modern WordPress alternative',
+        url: `${req.protocol}://${req.get('host')}`
+      };
+
+      // Get recent posts for homepage
+      const posts = await storage.getPosts({ limit: 6 });
+
+      const html = await themeManager.renderContent('home', {
+        site: siteSettings,
+        posts: posts
+      });
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Error rendering homepage:", error);
+      const html = themeManager.render404();
+      res.status(500).send(html);
+    }
+  });
+
+  // Admin routes - serve React SPA for admin interface
+  app.get('/admin*', (req, res, next) => {
+    // If it's an API request, let it continue to API handlers
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+    
+    // For all other admin routes, serve the React SPA
+    // This is handled by the Vite middleware in development
+    // and will serve the built React app in production
+    next();
   });
 
   app.get('/landing', async (req, res) => {

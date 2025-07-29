@@ -869,7 +869,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Homepage powered by NextPress CMS
+  app.get('/landing', async (req, res) => {
+    try {
+      const siteSettings = {
+        name: 'NextPress',
+        description: 'A modern WordPress alternative',
+        url: `${req.protocol}://${req.get('host')}`
+      };
+
+      const html = await themeManager.renderContent('landing', {
+        site: siteSettings
+      });
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Error rendering landing:", error);
+      const html = themeManager.render404();
+      res.status(500).send(html);
+    }
+  });
+
+  // Serve uploaded files
+  app.use('/uploads', express.static(uploadDir));
+
+  // Homepage powered by NextPress CMS - placed at end to not interfere with other routes
   app.get('/', async (req, res) => {
     try {
       const siteSettings = {
@@ -894,43 +918,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).send(html);
     }
   });
-
-  // Admin routes - serve React SPA for admin interface
-  app.get('/admin*', (req, res, next) => {
-    // If it's an API request, let it continue to API handlers
-    if (req.path.startsWith('/api/')) {
-      return next();
-    }
-    
-    // For all other admin routes, serve the React SPA
-    // This is handled by the Vite middleware in development
-    // and will serve the built React app in production
-    next();
-  });
-
-  app.get('/landing', async (req, res) => {
-    try {
-      const siteSettings = {
-        name: 'NextPress',
-        description: 'A modern WordPress alternative',
-        url: `${req.protocol}://${req.get('host')}`
-      };
-
-      const html = await themeManager.renderContent('landing', {
-        site: siteSettings
-      });
-
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-    } catch (error) {
-      console.error("Error rendering landing:", error);
-      const html = themeManager.render404();
-      res.status(500).send(html);
-    }
-  });
-
-  // Serve uploaded files
-  app.use('/uploads', express.static(uploadDir));
 
   const httpServer = createServer(app);
   

@@ -13,6 +13,8 @@ import Comments from "@/pages/Comments";
 import Themes from "@/pages/Themes";
 import Users from "@/pages/Users";
 import Settings from "@/pages/Settings";
+import Templates from "@/pages/Templates";
+import TemplateEditor from "@/pages/TemplateEditor";
 import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
@@ -37,6 +39,10 @@ function Router() {
           <Route path="/media" component={Media} />
           <Route path="/comments" component={Comments} />
           <Route path="/themes" component={Themes} />
+          <Route path="/templates" component={Templates} />
+          <Route path="/templates/new" component={() => <TemplateEditor />} />
+          <Route path="/templates/:id/edit" component={({ params }) => <TemplateEditor templateId={params.id} />} />
+          <Route path="/templates/:id/preview" component={({ params }) => <TemplateEditor templateId={params.id} />} />
           <Route path="/users" component={Users} />
           <Route path="/settings" component={Settings} />
           <Route path="/home" component={Home} />

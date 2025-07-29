@@ -121,6 +121,40 @@ export const options = pgTable("options", {
   autoload: boolean("autoload").default(true),
 });
 
+// Templates table for page template system
+export const templates = pgTable("templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 50 }).notNull().default("page"), // 'page', 'post', 'landing'
+  isDefault: boolean("is_default").default(false),
+  config: jsonb("config").$type<{
+    header?: {
+      title?: string;
+      subtitle?: string;
+      showButtons?: boolean;
+      backgroundColor?: string;
+    };
+    sections?: Array<{
+      id: string;
+      type: 'stats' | 'content' | 'cards' | 'grid' | 'hero';
+      title?: string;
+      config?: any;
+    }>;
+    footer?: {
+      showLinks?: boolean;
+      text?: string;
+    };
+    styling?: {
+      backgroundColor?: string;
+      textColor?: string;
+      accentColor?: string;
+    };
+  }>().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
@@ -184,6 +218,12 @@ export const insertMediaSchema = createInsertSchema(media).omit({
   updatedAt: true,
 });
 
+export const insertTemplateSchema = createInsertSchema(templates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Create user schema for validation
 export const createUserSchema = createInsertSchema(users, {
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -240,3 +280,6 @@ export type InsertOption = z.infer<typeof insertOptionSchema>;
 
 export type Media = typeof media.$inferSelect;
 export type InsertMedia = z.infer<typeof insertMediaSchema>;
+
+export type Template = typeof templates.$inferSelect;
+export type InsertTemplate = z.infer<typeof insertTemplateSchema>;

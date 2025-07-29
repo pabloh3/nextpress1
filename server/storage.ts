@@ -6,6 +6,7 @@ import {
   plugins,
   options,
   media,
+  templates,
   type User,
   type UpsertUser,
   type Post,
@@ -20,6 +21,8 @@ import {
   type InsertOption,
   type Media,
   type InsertMedia,
+  type Template,
+  type InsertTemplate,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ilike, count } from "drizzle-orm";
@@ -83,6 +86,15 @@ export interface IStorage {
   updateMedia(id: number, mediaItem: Partial<InsertMedia>): Promise<Media>;
   deleteMedia(id: number): Promise<void>;
   getMediaCount(mimeType?: string): Promise<number>;
+  
+  // Template operations
+  getTemplates(type?: string): Promise<Template[]>;
+  getTemplate(id: number): Promise<Template | undefined>;
+  getDefaultTemplate(type?: string): Promise<Template | undefined>;
+  createTemplate(template: InsertTemplate): Promise<Template>;
+  updateTemplate(id: number, template: Partial<InsertTemplate>): Promise<Template>;
+  deleteTemplate(id: number): Promise<void>;
+  setDefaultTemplate(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -504,6 +516,68 @@ export class DatabaseStorage implements IStorage {
     
     const [result] = await query;
     return result.count;
+  }
+
+  // Template operations
+  async getTemplates(type?: string): Promise<Template[]> {
+    let query = db.select().from(templates).orderBy(desc(templates.createdAt));
+    
+    if (type) {
+      query = query.where(eq(templates.type, type));
+    }
+    
+    return await query;
+  }
+
+  async getTemplate(id: number): Promise<Template | undefined> {
+    const [template] = await db.select().from(templates).where(eq(templates.id, id));
+    return template;
+  }
+
+  async getDefaultTemplate(type?: string): Promise<Template | undefined> {
+    let query = db.select().from(templates).where(eq(templates.isDefault, true));
+    
+    if (type) {
+      query = query.where(and(eq(templates.isDefault, true), eq(templates.type, type)));
+    }
+    
+    const [template] = await query;
+    return template;
+  }
+
+  async createTemplate(template: InsertTemplate): Promise<Template> {
+    const [newTemplate] = await db.insert(templates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateTemplate(id: number, template: Partial<InsertTemplate>): Promise<Template> {
+    const [updatedTemplate] = await db
+      .update(templates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(templates.id, id))
+      .returning();
+    return updatedTemplate;
+  }
+
+  async deleteTemplate(id: number): Promise<void> {
+    await db.delete(templates).where(eq(templates.id, id));
+  }
+
+  async setDefaultTemplate(id: number): Promise<void> {
+    // First, remove default from all templates of the same type
+    const template = await this.getTemplate(id);
+    if (template) {
+      await db
+        .update(templates)
+        .set({ isDefault: false })
+        .where(eq(templates.type, template.type));
+      
+      // Then set the new default
+      await db
+        .update(templates)
+        .set({ isDefault: true })
+        .where(eq(templates.id, id));
+    }
   }
 }
 

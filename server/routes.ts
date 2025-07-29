@@ -893,7 +893,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files
   app.use('/uploads', express.static(uploadDir));
 
-  // Homepage powered by NextPress CMS - placed at end to not interfere with other routes
+  // Homepage route - must be after all other routes but before return
+  // This will be handled before Vite middleware gets a chance to process it
   app.get('/', async (req, res) => {
     try {
       const siteSettings = {
@@ -902,7 +903,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         url: `${req.protocol}://${req.get('host')}`
       };
 
-      // Get recent posts for homepage
       const posts = await storage.getPosts({ limit: 6 });
 
       const html = await themeManager.renderContent('home', {

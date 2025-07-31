@@ -193,13 +193,9 @@ export class DatabaseStorage implements IStorage {
     const { status, type, limit = 10, offset = 0 } = options;
     let query = db.select().from(posts);
     
-    console.log('Storage getPosts:', { status, type, limit, offset });
-    
     const conditions = [];
     if (status) conditions.push(eq(posts.status, status));
     if (type) conditions.push(eq(posts.type, type));
-    
-    console.log('Query conditions:', conditions.length);
     
     if (conditions.length > 0) {
       query = query.where(and(...conditions));

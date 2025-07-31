@@ -297,8 +297,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Handle 'any' status to show all posts (for admin interface)
       const actualStatus = status === 'any' ? undefined : status as string;
-      
-      console.log('Posts API query:', { status, actualStatus, type, limit, offset });
 
       const posts = await storage.getPosts({
         status: actualStatus,

@@ -5,15 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Search, Edit, Trash2, Eye, Paintbrush } from "lucide-react";
 import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
+import PostEditor from "@/components/PostEditor";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Post } from "@shared/schema";
 
 export default function Pages() {
   const [search, setSearch] = useState("");
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingPage, setEditingPage] = useState<number | undefined>();
   const [page, setPage] = useState(1);
   
   const { toast } = useToast();
@@ -49,47 +53,32 @@ export default function Pages() {
     }
   };
 
-  const createPageMutation = useMutation({
-    mutationFn: async (pageData: any) => {
-      return await apiRequest('POST', '/api/posts', pageData);
-    },
-    onSuccess: (newPage) => {
-      toast({
-        title: "Success",
-        description: "New page created successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
-      // Redirect to page builder for the new page
-      window.location.href = `/page-builder/page/${newPage.id}`;
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create page",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleEdit = (pageId: number) => {
-    window.location.href = `/page-builder/page/${pageId}`;
+    setEditingPage(pageId);
+    setIsEditorOpen(true);
   };
 
   const handleNewPage = () => {
-    const newPageData = {
-      title: 'New Page',
-      content: '',
-      type: 'page',
-      status: 'draft',
-      usePageBuilder: true,
-      builderData: []
-    };
-    
-    createPageMutation.mutate(newPageData);
+    setEditingPage(undefined);
+    setIsEditorOpen(true);
+  };
+
+  const handleEditorSave = (page: Post) => {
+    setIsEditorOpen(false);
+    setEditingPage(undefined);
+  };
+
+  const handleEditorCancel = () => {
+    setIsEditorOpen(false);
+    setEditingPage(undefined);
   };
 
   const handleView = (pageId: number) => {
     window.open(`/pages/${pageId}`, '_blank');
+  };
+
+  const handlePageBuilder = (pageId: number) => {
+    window.location.href = `/page-builder/page/${pageId}`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -200,9 +189,17 @@ export default function Pages() {
                               variant="ghost" 
                               size="sm"
                               onClick={() => handleEdit(page.id)}
-                              title="Edit with Page Builder"
+                              title="Edit with Classic Editor"
                             >
                               <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handlePageBuilder(page.id)}
+                              title="Edit with Page Builder"
+                            >
+                              <Paintbrush className="w-4 h-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
@@ -251,7 +248,22 @@ export default function Pages() {
         </div>
       </div>
 
-
+      {/* Page Editor Dialog */}
+      <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPage ? 'Edit Page' : 'Add New Page'}
+            </DialogTitle>
+          </DialogHeader>
+          <PostEditor
+            postId={editingPage}
+            type="page"
+            onSave={handleEditorSave}
+            onCancel={handleEditorCancel}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

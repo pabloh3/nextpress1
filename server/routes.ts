@@ -295,15 +295,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(per_page as string);
       const offset = (parseInt(page as string) - 1) * limit;
 
+      // Handle 'any' status to show all posts (for admin interface)
+      const actualStatus = status === 'any' ? undefined : status as string;
+      
+      console.log('Posts API query:', { status, actualStatus, type, limit, offset });
+
       const posts = await storage.getPosts({
-        status: status as string,
+        status: actualStatus,
         type: type as string,
         limit,
         offset
       });
 
       const total = await storage.getPostsCount({
-        status: status as string,
+        status: actualStatus,
         type: type as string
       });
 

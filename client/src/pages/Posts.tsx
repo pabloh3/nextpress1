@@ -24,7 +24,7 @@ export default function Posts() {
   const queryClient = useQueryClient();
 
   const { data: postsData, isLoading } = useQuery({
-    queryKey: ['/api/posts', { type: 'post', page, per_page: 10 }],
+    queryKey: ['/api/posts', { status: 'any', type: 'post', page, per_page: 10 }],
   });
 
   const deleteMutation = useMutation({

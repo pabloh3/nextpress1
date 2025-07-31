@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Save, Eye, Smartphone, Tablet, Monitor, Plus, Settings, Layers } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Post, BlockConfig } from "@shared/schema";
+import type { Post, Template, BlockConfig } from "@shared/schema";
 import BlockLibrary from "./BlockLibrary";
 import BlockRenderer from "./BlockRenderer";
 import BlockSettings from "./BlockSettings";
@@ -17,14 +17,18 @@ import DevicePreview from "./DevicePreview";
 import { generateBlockId } from "./utils";
 
 interface PageBuilderProps {
-  post: Post;
-  onSave?: (updatedPost: Post) => void;
+  post?: Post | Template;
+  template?: Template;
+  onSave?: (updatedData: Post | Template) => void;
   onPreview?: () => void;
 }
 
-export default function PageBuilder({ post, onSave, onPreview }: PageBuilderProps) {
+export default function PageBuilder({ post, template, onSave, onPreview }: PageBuilderProps) {
+  const data = template || post;
+  const isTemplate = !!template;
+  
   const [blocks, setBlocks] = useState<BlockConfig[]>(
-    post.builderData ? (post.builderData as BlockConfig[]) : []
+    data?.builderData ? (data.builderData as BlockConfig[]) : []
   );
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [deviceView, setDeviceView] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -37,23 +41,31 @@ export default function PageBuilder({ post, onSave, onPreview }: PageBuilderProp
 
   const saveMutation = useMutation({
     mutationFn: async (builderData: BlockConfig[]) => {
-      return await apiRequest('PUT', `/api/posts/${post.id}`, {
-        builderData,
-        usePageBuilder: true
-      });
+      if (isTemplate) {
+        return await apiRequest('PUT', `/api/templates/${data!.id}`, {
+          builderData,
+        });
+      } else {
+        return await apiRequest('PUT', `/api/posts/${data!.id}`, {
+          builderData,
+          usePageBuilder: true
+        });
+      }
     },
-    onSuccess: (updatedPost) => {
+    onSuccess: (updatedData) => {
       toast({
         title: "Success",
-        description: "Page saved successfully",
+        description: `${isTemplate ? 'Template' : 'Page'} saved successfully`,
       });
-      onSave?.(updatedPost);
-      queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
+      onSave?.(updatedData);
+      queryClient.invalidateQueries({ 
+        queryKey: isTemplate ? ['/api/templates'] : ['/api/posts'] 
+      });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to save page",
+        description: `Failed to save ${isTemplate ? 'template' : 'page'}`,
         variant: "destructive",
       });
     },

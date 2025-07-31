@@ -10,30 +10,43 @@ import AdminSidebar from "@/components/AdminSidebar";
 import PageBuilder from "@/components/PageBuilder/PageBuilder";
 import PostEditor from "@/components/PostEditor";
 import { useToast } from "@/hooks/use-toast";
-import type { Post } from "@shared/schema";
+import type { Post, Template } from "@shared/schema";
 
 interface PageBuilderEditorProps {
   postId?: string;
-  type?: 'post' | 'page';
+  templateId?: string;
+  type?: 'post' | 'page' | 'template';
 }
 
-export default function PageBuilderEditor({ postId, type = 'page' }: PageBuilderEditorProps) {
+export default function PageBuilderEditor({ postId, templateId, type = 'page' }: PageBuilderEditorProps) {
   const [, setLocation] = useLocation();
   const [editorMode, setEditorMode] = useState<'builder' | 'classic'>('builder');
   const { toast } = useToast();
 
-  // Fetch the post/page data
-  const { data: post, isLoading, error } = useQuery({
+  // Fetch the post/page or template data
+  const { data: post, isLoading: postLoading, error: postError } = useQuery({
     queryKey: [`/api/posts/${postId}`],
-    enabled: !!postId,
+    enabled: !!postId && type !== 'template',
   });
 
+  const { data: template, isLoading: templateLoading, error: templateError } = useQuery({
+    queryKey: [`/api/templates/${templateId}`],
+    enabled: !!templateId && type === 'template',
+  });
+
+  const isLoading = postLoading || templateLoading;
+  const error = postError || templateError;
+  const data = type === 'template' ? template : post;
+
   useEffect(() => {
-    if (post) {
+    if (type === 'template') {
+      // Templates always use the page builder
+      setEditorMode('builder');
+    } else if (post) {
       // Set editor mode based on whether the post uses page builder
       setEditorMode(post.usePageBuilder ? 'builder' : 'classic');
     }
-  }, [post]);
+  }, [post, template, type]);
 
   if (isLoading) {
     return (
@@ -52,7 +65,11 @@ export default function PageBuilderEditor({ postId, type = 'page' }: PageBuilder
     );
   }
 
-  if (error || !post) {
+  if (error || (!data && (postId || templateId))) {
+    const entityName = type === 'template' ? 'Template' : type === 'page' ? 'Page' : 'Post';
+    const backPath = type === 'template' ? '/templates' : type === 'page' ? '/pages' : '/posts';
+    const entityPlural = type === 'template' ? 'Templates' : type === 'page' ? 'Pages' : 'Posts';
+    
     return (
       <div className="flex h-screen">
         <AdminSidebar />
@@ -65,14 +82,14 @@ export default function PageBuilderEditor({ postId, type = 'page' }: PageBuilder
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  {type === 'page' ? 'Page' : 'Post'} not found or failed to load.
+                  {entityName} not found or failed to load.
                 </p>
                 <Button 
-                  onClick={() => setLocation(type === 'page' ? '/pages' : '/posts')}
+                  onClick={() => setLocation(backPath)}
                   className="w-full"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to {type === 'page' ? 'Pages' : 'Posts'}
+                  Back to {entityPlural}
                 </Button>
               </CardContent>
             </Card>
@@ -82,21 +99,30 @@ export default function PageBuilderEditor({ postId, type = 'page' }: PageBuilder
     );
   }
 
-  const handleSave = (updatedPost: Post) => {
+  const handleSave = (updatedData: Post | Template) => {
+    const entityName = type === 'template' ? 'Template' : type === 'page' ? 'Page' : 'Post';
     toast({
       title: "Success",
-      description: `${type === 'page' ? 'Page' : 'Post'} saved successfully`,
+      description: `${entityName} saved successfully`,
     });
     // Optionally redirect or update UI
   };
 
   const handlePreview = () => {
-    const previewUrl = type === 'page' ? `/pages/${post.id}` : `/posts/${post.id}`;
+    if (type === 'template') {
+      toast({
+        title: "Info",
+        description: "Template preview is not available. Templates are applied to content dynamically.",
+      });
+      return;
+    }
+    const previewUrl = type === 'page' ? `/pages/${data?.id}` : `/posts/${data?.id}`;
     window.open(previewUrl, '_blank');
   };
 
   const handleBackToList = () => {
-    setLocation(type === 'page' ? '/pages' : '/posts');
+    const backPath = type === 'template' ? '/templates' : type === 'page' ? '/pages' : '/posts';
+    setLocation(backPath);
   };
 
   const handleModeSwitch = (newMode: 'builder' | 'classic') => {
@@ -129,20 +155,22 @@ export default function PageBuilderEditor({ postId, type = 'page' }: PageBuilder
                 Back
               </Button>
               <div className="text-sm text-gray-500">
-                Editing: {post.title}
+                Editing: {data?.name || data?.title || 'Untitled'}
               </div>
             </div>
             
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleModeSwitch('classic')}
-                className="flex items-center gap-2"
-              >
-                <Edit className="w-4 h-4" />
-                Classic Editor
-              </Button>
+              {type !== 'template' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleModeSwitch('classic')}
+                  className="flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Classic Editor
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -150,14 +178,15 @@ export default function PageBuilderEditor({ postId, type = 'page' }: PageBuilder
                 className="flex items-center gap-2"
               >
                 <Eye className="w-4 h-4" />
-                Preview
+                {type === 'template' ? 'Settings' : 'Preview'}
               </Button>
             </div>
           </div>
           
           {/* Page Builder Component */}
           <PageBuilder
-            post={post}
+            post={data}
+            template={type === 'template' ? data as Template : undefined}
             onSave={handleSave}
             onPreview={handlePreview}
           />
@@ -184,7 +213,7 @@ export default function PageBuilderEditor({ postId, type = 'page' }: PageBuilder
                       Back
                     </Button>
                     <h1 className="text-2xl font-bold text-wp-gray">
-                      Edit {type === 'page' ? 'Page' : 'Post'}
+                      Edit {type === 'template' ? 'Template' : type === 'page' ? 'Page' : 'Post'}
                     </h1>
                   </div>
                   
@@ -218,11 +247,18 @@ export default function PageBuilderEditor({ postId, type = 'page' }: PageBuilder
                   </TabsList>
                   
                   <TabsContent value="editor" className="mt-6">
-                    <PostEditor
-                      postId={parseInt(postId!)}
-                      type={type}
-                      onSave={handleSave}
-                    />
+                    {type !== 'template' && (
+                      <PostEditor
+                        postId={parseInt(postId!)}
+                        type={type}
+                        onSave={handleSave}
+                      />
+                    )}
+                    {type === 'template' && (
+                      <div className="text-center py-8 text-gray-500">
+                        Templates use the Page Builder exclusively. Switch to Page Builder mode to edit this template.
+                      </div>
+                    )}
                   </TabsContent>
                   
                   <TabsContent value="settings" className="mt-6">
@@ -232,20 +268,39 @@ export default function PageBuilderEditor({ postId, type = 'page' }: PageBuilder
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
-                          <div>
-                            <label className="text-sm font-medium">Status: {post.status}</label>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium">Type: {post.type}</label>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium">Slug: {post.slug}</label>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium">
-                              Editor Mode: {post.usePageBuilder ? 'Page Builder' : 'Classic'}
-                            </label>
-                          </div>
+                          {type === 'template' ? (
+                            <>
+                              <div>
+                                <label className="text-sm font-medium">Name: {data?.name}</label>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">Type: {data?.type}</label>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">Status: {data?.isActive ? 'Active' : 'Inactive'}</label>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">Priority: {data?.priority || 0}</label>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div>
+                                <label className="text-sm font-medium">Status: {(data as Post)?.status}</label>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">Type: {(data as Post)?.type}</label>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">Slug: {(data as Post)?.slug}</label>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">
+                                  Editor Mode: {(data as Post)?.usePageBuilder ? 'Page Builder' : 'Classic'}
+                                </label>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </CardContent>
                     </Card>

@@ -917,6 +917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/templates', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const { insertTemplateSchema } = await import("@shared/schema");
       const templateData = insertTemplateSchema.parse({ ...req.body, authorId: userId });
       
       const template = await storage.createTemplate(templateData);
@@ -927,10 +928,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/templates/:id/duplicate', isAuthenticated, async (req, res) => {
+    try {
+      const { name } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: "Template name is required" });
+      }
+      
+      const template = await storage.duplicateTemplate(parseInt(req.params.id), name);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error duplicating template:", error);
+      res.status(500).json({ message: "Failed to duplicate template" });
+    }
+  });
+
   app.put('/api/templates/:id', isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const templateData = insertTemplateSchema.partial().parse(req.body);
+      const { updateTemplateSchema } = await import("@shared/schema");
+      const templateData = updateTemplateSchema.parse(req.body);
       
       const template = await storage.updateTemplate(id, templateData);
       res.json(template);

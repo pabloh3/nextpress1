@@ -18,6 +18,7 @@ import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import PageBuilderEditor from "@/pages/PageBuilderEditor";
+import Templates from "@/pages/Templates";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -38,11 +39,15 @@ function Router() {
           <Route path="/media" component={Media} />
           <Route path="/comments" component={Comments} />
           <Route path="/themes" component={Themes} />
+          <Route path="/templates" component={Templates} />
           <Route path="/users" component={Users} />
           <Route path="/settings" component={Settings} />
           <Route path="/home" component={Home} />
           <Route path="/page-builder/:type/:id" component={({ params }: any) => (
             <PageBuilderEditor postId={params.id} type={params.type as 'post' | 'page'} />
+          )} />
+          <Route path="/page-builder/template/:id" component={({ params }: any) => (
+            <PageBuilderEditor templateId={params.id} type="template" />
           )} />
           <Route path="/page-builder" component={() => (
             <PageBuilderEditor />

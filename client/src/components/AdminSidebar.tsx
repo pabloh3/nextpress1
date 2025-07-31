@@ -7,6 +7,7 @@ import {
   MessageCircle, 
   Paintbrush, 
   Settings, 
+  Layout,
   Plug, 
   Users, 
   Cog 
@@ -26,6 +27,7 @@ const menuItems: MenuItem[] = [
   { label: "Media", path: "/media", icon: Image, section: "Content" },
   { label: "Comments", path: "/comments", icon: MessageCircle, section: "Content" },
   { label: "Themes", path: "/themes", icon: Paintbrush, section: "Appearance" },
+  { label: "Templates", path: "/templates", icon: Layout, section: "Appearance" },
   { label: "Page Builder", path: "/page-builder", icon: Settings, section: "Appearance" },
   { label: "Plugins", path: "/plugins", icon: Plug, section: "System" },
   { label: "Users", path: "/users", icon: Users, section: "System" },

@@ -529,8 +529,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Template operations
-  async getTemplates(options?: { type?: string; isGlobal?: boolean; limit?: number; offset?: number }): Promise<Template[]> {
-    const { type, isGlobal, limit = 50, offset = 0 } = options || {};
+  async getTemplates(options?: { type?: string; isGlobal?: boolean; isActive?: boolean; limit?: number; offset?: number }): Promise<Template[]> {
+    const { type, isGlobal, isActive, limit = 50, offset = 0 } = options || {};
     
     let query = db.select().from(templates).orderBy(desc(templates.createdAt));
     
@@ -541,12 +541,39 @@ export class DatabaseStorage implements IStorage {
     if (isGlobal !== undefined) {
       conditions.push(eq(templates.isGlobal, isGlobal));
     }
+    if (isActive !== undefined) {
+      conditions.push(eq(templates.isActive, isActive));
+    }
     
     if (conditions.length > 0) {
       query = query.where(and(...conditions));
     }
     
     return await query.limit(limit).offset(offset);
+  }
+
+  async getActiveTemplatesByType(type: string): Promise<Template[]> {
+    return await db.select()
+      .from(templates)
+      .where(and(eq(templates.type, type), eq(templates.isActive, true)))
+      .orderBy(desc(templates.priority || 0));
+  }
+
+  async duplicateTemplate(id: number, newName: string): Promise<Template> {
+    const original = await this.getTemplate(id);
+    if (!original) {
+      throw new Error('Template not found');
+    }
+    
+    const { id: _, createdAt, updatedAt, ...templateData } = original;
+    
+    const duplicated = await this.createTemplate({
+      ...templateData,
+      name: newName,
+      isActive: false, // Duplicated templates start as inactive
+    });
+    
+    return duplicated;
   }
 
   async getTemplate(id: number): Promise<Template | undefined> {

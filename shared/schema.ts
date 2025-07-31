@@ -131,11 +131,19 @@ export const options = pgTable("options", {
 export const templates = pgTable("templates", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
-  type: varchar("type").notNull(), // 'header', 'footer', 'page', 'section'
+  type: varchar("type").notNull(), // 'header', 'footer', 'page', 'post', 'popup'
   description: text("description"),
   blocks: jsonb("blocks").notNull().default([]), // Array of block configurations
   settings: jsonb("settings").default({}), // Template-level settings
+  customHtml: text("custom_html"), // Custom HTML content
+  customCss: text("custom_css"), // Custom CSS
+  customJs: text("custom_js"), // Custom JavaScript
   isGlobal: boolean("is_global").default(false), // If true, applies to all pages
+  // Application conditions (Elementor-style)
+  applyTo: varchar("apply_to").default("all"), // 'all', 'specific', 'exclude'
+  conditions: jsonb("conditions").default([]), // Array of condition objects
+  priority: integer("priority").default(0), // Higher priority templates override lower ones
+  isActive: boolean("is_active").default(true),
   authorId: varchar("author_id").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -231,6 +239,20 @@ export const insertTemplateSchema = createInsertSchema(templates).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+});
+
+export const updateTemplateSchema = insertTemplateSchema.partial();
+
+// Template condition schemas for Elementor-style conditional application
+export const templateConditionSchema = z.object({
+  type: z.enum(['page_type', 'post_type', 'specific_page', 'specific_post', 'taxonomy', 'author', 'date_range']),
+  operator: z.enum(['is', 'is_not', 'contains', 'starts_with', 'ends_with']).default('is'),
+  value: z.string(),
+  relation: z.enum(['and', 'or']).default('and'),
+});
+
+export const templateWithConditionsSchema = insertTemplateSchema.extend({
+  conditions: z.array(templateConditionSchema).default([]),
 });
 
 export const insertBlockSchema = createInsertSchema(blocks).omit({

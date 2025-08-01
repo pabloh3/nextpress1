@@ -1,8 +1,20 @@
 import { storage } from "./storage.js";
 import hooks from "./hooks.js";
+import { spawn } from "child_process";
+import { promises as fs } from "fs";
+import path from "path";
+
+interface ThemeRenderer {
+  name: string;
+  type: 'nextjs' | 'react' | 'vue' | 'custom';
+  render: (template: string, data: any) => Promise<string>;
+  isActive?: boolean;
+}
 
 class ThemeManager {
-  private renderers: Map<string, any>;
+  private renderers: Map<string, ThemeRenderer>;
+  private activeTheme: any;
+  private nextJsProcess: any;
 
   constructor() {
     this.renderers = new Map();
@@ -14,6 +26,7 @@ class ThemeManager {
     // React renderer
     this.renderers.set('react', {
       name: 'React Renderer',
+      type: 'react',
       render: async (template: string, data: any) => {
         // React server-side rendering would go here
         return `<!-- React rendered content for ${template} -->`;
@@ -23,14 +36,26 @@ class ThemeManager {
     // Next.js renderer
     this.renderers.set('nextjs', {
       name: 'Next.js Renderer',
+      type: 'nextjs',
       render: async (template: string, data: any) => {
         return this.renderNextJsTemplate(template, data);
+      }
+    });
+
+    // Vue renderer
+    this.renderers.set('vue', {
+      name: 'Vue.js Renderer',
+      type: 'vue',
+      render: async (template: string, data: any) => {
+        // Vue server-side rendering would go here
+        return `<!-- Vue rendered content for ${template} -->`;
       }
     });
 
     // Custom renderer
     this.renderers.set('custom', {
       name: 'Custom Renderer',
+      type: 'custom',
       render: async (template: string, data: any) => {
         // Custom rendering logic
         return `<!-- Custom rendered content for ${template} -->`;
@@ -39,13 +64,18 @@ class ThemeManager {
   }
 
   // Register a new theme renderer
-  registerRenderer(name: string, renderer: any) {
+  registerRenderer(name: string, renderer: ThemeRenderer) {
     this.renderers.set(name, renderer);
   }
 
   // Get available renderers
   getRenderers() {
     return Array.from(this.renderers.keys());
+  }
+
+  // Get renderer by name
+  getRenderer(name: string): ThemeRenderer | undefined {
+    return this.renderers.get(name);
   }
 
   // Install a new theme
@@ -61,17 +91,101 @@ class ThemeManager {
     await storage.activateTheme(themeId);
     const newTheme = await storage.getTheme(themeId);
     
+    // Stop previous Next.js process if switching from Next.js theme
+    if (oldTheme?.renderer === 'nextjs') {
+      await this.stopNextJsProcess();
+    }
+    
+    // Start Next.js process if switching to Next.js theme
+    if (newTheme?.renderer === 'nextjs') {
+      await this.startNextJsProcess();
+    }
+    
+    this.activeTheme = newTheme;
     hooks.doAction('switch_theme', newTheme, oldTheme);
     return newTheme;
   }
 
   // Get active theme
   async getActiveTheme() {
-    return await storage.getActiveTheme();
+    if (!this.activeTheme) {
+      this.activeTheme = await storage.getActiveTheme();
+    }
+    return this.activeTheme;
+  }
+
+  // Start Next.js development server for theme
+  async startNextJsProcess() {
+    try {
+      const themePath = path.join(process.cwd(), 'themes', 'nextjs-theme');
+      
+      // Check if Next.js theme exists
+      try {
+        await fs.access(path.join(themePath, 'package.json'));
+      } catch {
+        console.log('Next.js theme not found, skipping Next.js process start');
+        return;
+      }
+
+      // Kill existing process if running
+      if (this.nextJsProcess) {
+        await this.stopNextJsProcess();
+      }
+
+      console.log('Starting Next.js theme development server...');
+      
+      this.nextJsProcess = spawn('npm', ['run', 'dev'], {
+        cwd: themePath,
+        stdio: 'pipe',
+        env: { ...process.env, PORT: '3001' }
+      });
+
+      this.nextJsProcess.stdout?.on('data', (data: Buffer) => {
+        console.log(`Next.js Theme: ${data.toString()}`);
+      });
+
+      this.nextJsProcess.stderr?.on('data', (data: Buffer) => {
+        console.error(`Next.js Theme Error: ${data.toString()}`);
+      });
+
+      this.nextJsProcess.on('close', (code: number) => {
+        console.log(`Next.js theme process exited with code ${code}`);
+        this.nextJsProcess = null;
+      });
+
+      // Wait a bit for the server to start
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+    } catch (error) {
+      console.error('Error starting Next.js theme process:', error);
+    }
+  }
+
+  // Stop Next.js development server
+  async stopNextJsProcess() {
+    if (this.nextJsProcess) {
+      console.log('Stopping Next.js theme development server...');
+      this.nextJsProcess.kill('SIGTERM');
+      this.nextJsProcess = null;
+    }
   }
 
   // Next.js specific rendering method
-  renderNextJsTemplate(template: string, data: any): string {
+  async renderNextJsTemplate(template: string, data: any): Promise<string> {
+    const { post, page, site } = data;
+    const content = post || page;
+    
+    if (!content) {
+      return this.render404();
+    }
+
+    // For now, use the fallback template until we set up proper Next.js integration
+    // This will be enhanced to actually use Next.js rendering
+    return this.renderFallbackTemplate(template, data);
+  }
+
+  // Fallback template rendering when Next.js is not available
+  renderFallbackTemplate(template: string, data: any): string {
     const { post, page, site } = data;
     const content = post || page;
     
@@ -102,222 +216,50 @@ class ThemeManager {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${post.title} | ${siteTitle}</title>
-    <meta name="description" content="${post.excerpt || post.title}">
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="article">
-    <meta property="og:title" content="${post.title}">
-    <meta property="og:description" content="${post.excerpt || post.title}">
-    <meta property="og:url" content="${site?.url || ''}/posts/${post.id}">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="${post.title}">
-    <meta property="twitter:description" content="${post.excerpt || post.title}">
-    
-    <!-- Next.js-style CSS -->
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #fff;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 3rem;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .site-title {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            color: #1a1a1a;
-        }
-        
-        .site-description {
-            color: #666;
-            font-size: 1.1rem;
-        }
-        
-        .post-header {
-            margin-bottom: 2rem;
-        }
-        
-        .post-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            line-height: 1.2;
-            margin-bottom: 1rem;
-            color: #1a1a1a;
-        }
-        
-        .post-meta {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 1rem;
-        }
-        
-        .post-status {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            text-transform: uppercase;
-        }
-        
-        .status-published { background: #dcfce7; color: #166534; }
-        .status-draft { background: #fef3c7; color: #92400e; }
-        .status-private { background: #fee2e2; color: #991b1b; }
-        
-        .post-content {
-            font-size: 1.1rem;
-            line-height: 1.8;
-            margin-bottom: 2rem;
-        }
-        
-        .post-content h1, .post-content h2, .post-content h3 {
-            margin: 2rem 0 1rem 0;
-            line-height: 1.3;
-        }
-        
-        .post-content h1 { font-size: 2rem; }
-        .post-content h2 { font-size: 1.75rem; }
-        .post-content h3 { font-size: 1.5rem; }
-        
-        .post-content p {
-            margin-bottom: 1.5rem;
-        }
-        
-        .post-content img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin: 1.5rem 0;
-        }
-        
-        .post-content blockquote {
-            border-left: 4px solid #e5e7eb;
-            padding-left: 1.5rem;
-            margin: 1.5rem 0;
-            font-style: italic;
-            color: #666;
-        }
-        
-        .post-content code {
-            background: #f3f4f6;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.9em;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-        }
-        
-        .post-content pre {
-            background: #1f2937;
-            color: #f9fafb;
-            padding: 1.5rem;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 1.5rem 0;
-        }
-        
-        .post-content pre code {
-            background: none;
-            padding: 0;
-            color: inherit;
-        }
-        
-        footer {
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid #eee;
-            text-align: center;
-            color: #666;
-            font-size: 0.9rem;
-        }
-        
-        .back-link {
-            display: inline-block;
-            margin-bottom: 1rem;
-            color: #3b82f6;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        
-        .back-link:hover {
-            text-decoration: underline;
-        }
-        
-        @media (max-width: 640px) {
-            .container {
-                padding: 1rem;
-            }
-            
-            .post-title {
-                font-size: 2rem;
-            }
-            
-            .post-meta {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-            }
-        }
-    </style>
+    <title>${post.title} - ${siteTitle}</title>
+    <meta name="description" content="${siteDescription}">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1 class="site-title">${siteTitle}</h1>
-            <p class="site-description">${siteDescription}</p>
-        </header>
-        
-        <main>
-            <a href="/" class="back-link">← Back to Home</a>
-            
-            <article>
-                <div class="post-header">
-                    <h1 class="post-title">${post.title}</h1>
-                    <div class="post-meta">
-                        <time datetime="${post.createdAt}">
-                            ${new Date(post.createdAt).toLocaleDateString('en-US', { 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
-                            })}
-                        </time>
-                        <span class="post-status status-${post.status}">${post.status}</span>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col">
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-6">
+                    <div class="flex items-center">
+                        <a href="/" class="text-2xl font-bold text-blue-600">
+                            ${siteTitle}
+                        </a>
                     </div>
                 </div>
-                
-                <div class="post-content">
+            </div>
+        </header>
+        
+        <main class="flex-grow">
+            <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <header class="mb-8">
+                    <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                        ${post.title}
+                    </h1>
+                    <div class="flex items-center text-gray-600 mb-6">
+                        <time datetime="${post.created_at}">
+                            ${new Date(post.created_at).toLocaleDateString()}
+                        </time>
+                        ${post.author ? `<span class="mx-2">•</span><span>By ${post.author.username}</span>` : ''}
+                    </div>
+                </header>
+
+                <div class="prose prose-lg max-w-none">
                     ${this.parseContent(post.content)}
                 </div>
             </article>
         </main>
-        
-        <footer>
-            <p>Powered by NextPress - A modern WordPress alternative</p>
+
+        <footer class="bg-gray-50 border-t mt-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="text-center text-gray-600">
+                    <p>&copy; ${new Date().getFullYear()} ${siteTitle}. All rights reserved.</p>
+                </div>
+            </div>
         </footer>
     </div>
 </body>
@@ -325,7 +267,7 @@ class ThemeManager {
   }
 
   renderSinglePage(page: any, site: any): string {
-    // Similar to post but with different structure
+    // Pages use the same template as posts for now
     return this.renderSinglePost(page, site);
   }
 
@@ -333,6 +275,25 @@ class ThemeManager {
     const siteTitle = site?.name || 'NextPress';
     const siteDescription = site?.description || 'A modern WordPress alternative';
     
+    const postsHtml = posts.map(post => `
+        <article class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+            <div class="p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">
+                    <a href="/posts/${post.slug}" class="hover:text-blue-600 transition-colors">
+                        ${post.title}
+                    </a>
+                </h3>
+                <p class="text-gray-600 mb-4">
+                    ${post.excerpt || post.content.substring(0, 150)}...
+                </p>
+                <div class="flex items-center justify-between text-sm text-gray-500">
+                    <span>${new Date(post.created_at).toLocaleDateString()}</span>
+                    ${post.author ? `<span>By ${post.author.username}</span>` : ''}
+                </div>
+            </div>
+        </article>
+    `).join('');
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -340,128 +301,51 @@ class ThemeManager {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${siteTitle}</title>
     <meta name="description" content="${siteDescription}">
-    <style>
-        /* Same base styles as single post */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #fff;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 3rem;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .site-title {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            color: #1a1a1a;
-        }
-        
-        .site-description {
-            color: #666;
-            font-size: 1.1rem;
-        }
-        
-        .posts-grid {
-            display: grid;
-            gap: 2rem;
-        }
-        
-        .post-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 1.5rem;
-            transition: shadow 0.2s;
-        }
-        
-        .post-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        .post-card-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #1a1a1a;
-        }
-        
-        .post-card-title a {
-            color: inherit;
-            text-decoration: none;
-        }
-        
-        .post-card-title a:hover {
-            color: #3b82f6;
-        }
-        
-        .post-card-meta {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 1rem;
-        }
-        
-        .post-card-excerpt {
-            color: #666;
-            line-height: 1.6;
-        }
-        
-        .no-posts {
-            text-align: center;
-            padding: 3rem 0;
-            color: #666;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1 class="site-title">${siteTitle}</h1>
-            <p class="site-description">${siteDescription}</p>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col">
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-6">
+                    <div class="flex items-center">
+                        <a href="/" class="text-2xl font-bold text-blue-600">
+                            ${siteTitle}
+                        </a>
+                    </div>
+                </div>
+            </div>
         </header>
         
-        <main>
-            ${posts.length > 0 ? `
-                <div class="posts-grid">
-                    ${posts.map(post => `
-                        <article class="post-card">
-                            <h2 class="post-card-title">
-                                <a href="/posts/${post.id}">${post.title}</a>
-                            </h2>
-                            <div class="post-card-meta">
-                                ${new Date(post.createdAt).toLocaleDateString('en-US', { 
-                                    year: 'numeric', 
-                                    month: 'long', 
-                                    day: 'numeric' 
-                                })}
-                            </div>
-                            ${post.excerpt ? `<p class="post-card-excerpt">${post.excerpt}</p>` : ''}
-                        </article>
-                    `).join('')}
+        <main class="flex-grow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div class="text-center mb-12">
+                    <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                        Welcome to ${siteTitle}
+                    </h1>
+                    <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                        ${siteDescription}
+                    </p>
                 </div>
-            ` : `
-                <div class="no-posts">
-                    <p>No posts published yet.</p>
+
+                ${posts.length > 0 ? `
+                <div class="mt-16">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-8">Latest Posts</h2>
+                    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                        ${postsHtml}
+                    </div>
                 </div>
-            `}
+                ` : ''}
+            </div>
         </main>
+
+        <footer class="bg-gray-50 border-t mt-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="text-center text-gray-600">
+                    <p>&copy; ${new Date().getFullYear()} ${siteTitle}. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
     </div>
 </body>
 </html>`;
@@ -473,66 +357,28 @@ class ThemeManager {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - Page Not Found</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background: #f9fafb;
-        }
-        
-        .error-container {
-            text-align: center;
-            max-width: 400px;
-            padding: 2rem;
-        }
-        
-        .error-code {
-            font-size: 6rem;
-            font-weight: 700;
-            color: #374151;
-            margin-bottom: 1rem;
-        }
-        
-        .error-message {
-            font-size: 1.5rem;
-            color: #6b7280;
-            margin-bottom: 2rem;
-        }
-        
-        .back-link {
-            color: #3b82f6;
-            text-decoration: none;
-            font-weight: 500;
-        }
-    </style>
+    <title>Page Not Found - NextPress</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="error-container">
-        <div class="error-code">404</div>
-        <div class="error-message">Page Not Found</div>
-        <a href="/" class="back-link">← Back to Home</a>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="text-center">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">404 - Page Not Found</h1>
+            <p class="text-gray-600 mb-8">The page you're looking for doesn't exist.</p>
+            <a href="/" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                Go Home
+            </a>
+        </div>
     </div>
 </body>
 </html>`;
   }
 
   parseContent(content: string): string {
-    // Basic content parsing - convert markdown-like syntax to HTML
-    if (!content) return '';
-    
     return content
-      .replace(/\n\n/g, '</p><p>')
       .replace(/\n/g, '<br>')
-      .replace(/^/, '<p>')
-      .replace(/$/, '</p>')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code>$1</code>');
+      .replace(/\*(.*?)\*/g, '<em>$1</em>');
   }
 
   // Render content using active theme
@@ -540,52 +386,41 @@ class ThemeManager {
     const activeTheme = await this.getActiveTheme();
     
     if (!activeTheme) {
-      throw new Error('No active theme found');
+      console.warn('No active theme found, using fallback renderer');
+      return this.renderFallbackTemplate(template, data);
     }
 
-    const renderer = this.renderers.get(activeTheme.renderer);
-    if (!renderer) {
-      throw new Error(`Renderer '${activeTheme.renderer}' not found`);
-    }
-
-    // Apply theme filters
-    const filteredData = hooks.applyFilters('theme_data', data, activeTheme);
-    const filteredTemplate = hooks.applyFilters('theme_template', template, activeTheme);
-
-    // Render content
-    const content = await renderer.render(filteredTemplate, filteredData);
+    const renderer = this.renderers.get(activeTheme.renderer || 'nextjs');
     
-    // Apply content filters
-    return hooks.applyFilters('theme_content', content, activeTheme);
+    if (!renderer) {
+      console.warn(`Renderer '${activeTheme.renderer}' not found, using fallback`);
+      return this.renderFallbackTemplate(template, data);
+    }
+
+    try {
+      // Render content
+      const html = await renderer.render(template, data);
+      return html;
+    } catch (error) {
+      console.error('Error rendering content:', error);
+      return this.renderFallbackTemplate(template, data);
+    }
   }
 
-  // Get theme templates
   getTemplateHierarchy(type: string, slug: string | null = null): string[] {
     const templates = [];
     
-    switch (type) {
-      case 'single':
-        if (slug) templates.push(`single-${slug}.js`);
-        templates.push('single.js', 'index.js');
-        break;
-      case 'page':
-        if (slug) templates.push(`page-${slug}.js`);
-        templates.push('page.js', 'index.js');
-        break;
-      case 'archive':
-        templates.push('archive.js', 'index.js');
-        break;
-      case 'home':
-        templates.push('home.js', 'index.js');
-        break;
-      default:
-        templates.push('index.js');
+    if (type === 'post') {
+      templates.push('single-post', 'post');
+    } else if (type === 'page') {
+      templates.push('page');
+    } else if (type === 'home') {
+      templates.push('home', 'index');
     }
     
     return templates;
   }
 
-  // WordPress-compatible theme functions
   async getCurrentTheme() {
     return await this.getActiveTheme();
   }
@@ -594,48 +429,47 @@ class ThemeManager {
     const themes = await storage.getThemes();
     const theme = themes.find(t => t.name === themeName);
     
-    if (!theme) {
-      throw new Error(`Theme '${themeName}' not found`);
+    if (theme) {
+      return await this.activateTheme(theme.id);
     }
     
-    return await this.activateTheme(theme.id);
+    throw new Error(`Theme '${themeName}' not found`);
   }
-}
 
-// Initialize default themes
-async function initializeDefaultThemes() {
-  const themes = await storage.getThemes();
-  
-  if (themes.length === 0) {
-    // Create default Next.js theme
-    const nextTheme = await storage.createTheme({
-      name: 'Next Theme',
-      description: 'A modern, responsive theme built with Next.js and Tailwind CSS.',
-      version: '1.0.0',
-      author: 'NextPress Team',
-      renderer: 'nextjs',
-      isActive: true,
-      config: {
-        colors: {
-          primary: '#0073aa',
-          secondary: '#005177',
-          background: '#ffffff',
-          text: '#23282d'
-        },
-        layout: {
-          maxWidth: '1200px',
-          sidebar: 'right'
-        }
-      }
-    });
-
-    console.log('Default theme initialized:', nextTheme.name);
+  // Cleanup method
+  async cleanup() {
+    await this.stopNextJsProcess();
   }
 }
 
 const themeManager = new ThemeManager();
 
+// Initialize default themes
+async function initializeDefaultThemes() {
+  try {
+    const themes = await storage.getThemes();
+    
+    if (themes.length === 0) {
+      // Create default Next.js theme
+      await storage.createTheme({
+        name: 'Next.js Theme',
+        description: 'A modern Next.js-based theme',
+        renderer: 'nextjs',
+        isActive: true,
+        config: {
+          siteName: 'NextPress',
+          siteDescription: 'A modern WordPress alternative'
+        }
+      });
+      
+      console.log('Default Next.js theme created');
+    }
+  } catch (error) {
+    console.error('Error initializing default themes:', error);
+  }
+}
+
 // Initialize themes on startup
-initializeDefaultThemes().catch(console.error);
+initializeDefaultThemes();
 
 export default themeManager;

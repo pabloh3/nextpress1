@@ -536,38 +536,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Themes API
-  app.get('/api/themes', isAuthenticated, async (req, res) => {
-    try {
-      const themes = await storage.getThemes();
-      res.json(themes);
-    } catch (error) {
-      console.error("Error fetching themes:", error);
-      res.status(500).json({ message: "Failed to fetch themes" });
-    }
-  });
-
-  app.get('/api/themes/active', async (req, res) => {
-    try {
-      const theme = await storage.getActiveTheme();
-      res.json(theme);
-    } catch (error) {
-      console.error("Error fetching active theme:", error);
-      res.status(500).json({ message: "Failed to fetch active theme" });
-    }
-  });
-
-  app.post('/api/themes/:id/activate', isAuthenticated, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const theme = await themeManager.activateTheme(id);
-      res.json(theme);
-    } catch (error) {
-      console.error("Error activating theme:", error);
-      res.status(500).json({ message: "Failed to activate theme" });
-    }
-  });
-
   // Plugins API
   app.get('/api/plugins', isAuthenticated, async (req, res) => {
     try {
@@ -786,92 +754,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Theme rendering routes
-  app.get('/posts/:id', async (req, res) => {
-    try {
-      const postId = parseInt(req.params.id);
-      const post = await storage.getPost(postId);
-      
-      if (!post) {
-        const html = themeManager.render404();
-        return res.status(404).send(html);
-      }
-
-      // Get site settings for theme context
-      const siteSettings = {
-        name: 'NextPress',
-        description: 'A modern WordPress alternative',
-        url: `${req.protocol}://${req.get('host')}`
-      };
-
-      const html = await themeManager.renderContent('single-post', {
-        post,
-        site: siteSettings
-      });
-
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-    } catch (error) {
-      console.error("Error rendering post:", error);
-      const html = themeManager.render404();
-      res.status(500).send(html);
-    }
-  });
-
-  app.get('/pages/:id', async (req, res) => {
-    try {
-      const pageId = parseInt(req.params.id);
-      const page = await storage.getPost(pageId); // Pages use same storage as posts
-      
-      if (!page || page.type !== 'page') {
-        const html = themeManager.render404();
-        return res.status(404).send(html);
-      }
-
-      const siteSettings = {
-        name: 'NextPress',
-        description: 'A modern WordPress alternative',
-        url: `${req.protocol}://${req.get('host')}`
-      };
-
-      const html = await themeManager.renderContent('page', {
-        page,
-        site: siteSettings
-      });
-
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-    } catch (error) {
-      console.error("Error rendering page:", error);
-      const html = themeManager.render404();
-      res.status(500).send(html);
-    }
-  });
-
-  app.get('/home', async (req, res) => {
-    try {
-      const posts = await storage.getPosts({ status: 'publish', limit: 10 });
-      
-      const siteSettings = {
-        name: 'NextPress',
-        description: 'A modern WordPress alternative',
-        url: `${req.protocol}://${req.get('host')}`
-      };
-
-      const html = await themeManager.renderContent('home', {
-        posts: posts,
-        site: siteSettings
-      });
-
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-    } catch (error) {
-      console.error("Error rendering home:", error);
-      const html = themeManager.render404();
-      res.status(500).send(html);
-    }
-  });
-
   // Templates API
   app.get('/api/templates', isAuthenticated, async (req, res) => {
     try {
@@ -1049,6 +931,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve uploaded files
   app.use('/uploads', express.static(uploadDir));
+
+  // Theme management routes
+  app.get('/api/themes', isAuthenticated, async (req, res) => {
+    try {
+      const themes = await storage.getThemes();
+      res.json(themes);
+    } catch (error) {
+      console.error("Error fetching themes:", error);
+      res.status(500).json({ message: "Failed to fetch themes" });
+    }
+  });
+
+  app.get('/api/themes/active', async (req, res) => {
+    try {
+      const activeTheme = await themeManager.getActiveTheme();
+      res.json(activeTheme);
+    } catch (error) {
+      console.error("Error fetching active theme:", error);
+      res.status(500).json({ message: "Failed to fetch active theme" });
+    }
+  });
+
+  app.post('/api/themes/:id/activate', isAuthenticated, async (req, res) => {
+    try {
+      const themeId = parseInt(req.params.id);
+      const theme = await themeManager.activateTheme(themeId);
+      res.json(theme);
+    } catch (error) {
+      console.error("Error activating theme:", error);
+      res.status(500).json({ message: "Failed to activate theme" });
+    }
+  });
+
+  app.get('/api/themes/renderers', isAuthenticated, async (req, res) => {
+    try {
+      const renderers = themeManager.getRenderers();
+      res.json(renderers);
+    } catch (error) {
+      console.error("Error fetching renderers:", error);
+      res.status(500).json({ message: "Failed to fetch renderers" });
+    }
+  });
+
+  // Public routes that use theme rendering
+  app.get('/posts/:id', async (req, res) => {
+    try {
+      const postId = parseInt(req.params.id);
+      const post = await storage.getPost(postId);
+      
+      if (!post || post.type !== 'post') {
+        const html = themeManager.render404();
+        return res.status(404).send(html);
+      }
+
+      // Get site settings for theme context
+      const siteSettings = {
+        name: 'NextPress',
+        description: 'A modern WordPress alternative',
+        url: `${req.protocol}://${req.get('host')}`
+      };
+
+      const html = await themeManager.renderContent('single-post', {
+        post,
+        site: siteSettings
+      });
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Error rendering post:", error);
+      const html = themeManager.render404();
+      res.status(500).send(html);
+    }
+  });
+
+  app.get('/pages/:id', async (req, res) => {
+    try {
+      const pageId = parseInt(req.params.id);
+      const page = await storage.getPost(pageId); // Pages use same storage as posts
+      
+      if (!page || page.type !== 'page') {
+        const html = themeManager.render404();
+        return res.status(404).send(html);
+      }
+
+      const siteSettings = {
+        name: 'NextPress',
+        description: 'A modern WordPress alternative',
+        url: `${req.protocol}://${req.get('host')}`
+      };
+
+      const html = await themeManager.renderContent('page', {
+        page,
+        site: siteSettings
+      });
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Error rendering page:", error);
+      const html = themeManager.render404();
+      res.status(500).send(html);
+    }
+  });
+
+  app.get('/home', async (req, res) => {
+    try {
+      const posts = await storage.getPosts({ status: 'publish', limit: 10 });
+      
+      const siteSettings = {
+        name: 'NextPress',
+        description: 'A modern WordPress alternative',
+        url: `${req.protocol}://${req.get('host')}`
+      };
+
+      const html = await themeManager.renderContent('home', {
+        posts: posts,
+        site: siteSettings
+      });
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Error rendering home:", error);
+      const html = themeManager.render404();
+      res.status(500).send(html);
+    }
+  });
+
+  // Root route - redirect to home or show home page
+  app.get('/', async (req, res) => {
+    try {
+      const posts = await storage.getPosts({ status: 'publish', limit: 10 });
+      
+      const siteSettings = {
+        name: 'NextPress',
+        description: 'A modern WordPress alternative',
+        url: `${req.protocol}://${req.get('host')}`
+      };
+
+      const html = await themeManager.renderContent('home', {
+        posts: posts,
+        site: siteSettings
+      });
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Error rendering home:", error);
+      const html = themeManager.render404();
+      res.status(500).send(html);
+    }
+  });
 
   const httpServer = createServer(app);
   

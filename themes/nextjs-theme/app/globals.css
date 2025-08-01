@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .prose {
+    @apply max-w-none;
+  }
+  
+  .prose h1 {
+    @apply text-3xl font-bold mb-6;
+  }
+  
+  .prose h2 {
+    @apply text-2xl font-semibold mb-4 mt-8;
+  }
+  
+  .prose h3 {
+    @apply text-xl font-semibold mb-3 mt-6;
+  }
+  
+  .prose p {
+    @apply mb-4 leading-relaxed;
+  }
+  
+  .prose ul {
+    @apply mb-4 list-disc list-inside;
+  }
+  
+  .prose ol {
+    @apply mb-4 list-decimal list-inside;
+  }
+  
+  .prose blockquote {
+    @apply border-l-4 border-wp-blue pl-4 italic my-4;
+  }
+  
+  .prose code {
+    @apply bg-gray-100 px-1 py-0.5 rounded text-sm;
+  }
+  
+  .prose pre {
+    @apply bg-gray-100 p-4 rounded overflow-x-auto;
+  }
+} 

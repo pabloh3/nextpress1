@@ -8,7 +8,9 @@
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "import:users": "tsx scripts/import-users.ts",
+    "verify:users": "tsx scripts/verify-users.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -51,7 +53,9 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "connect-pg-simple": "^10.0.0",
+    "csv-parse": "^6.1.0",
     "date-fns": "^3.6.0",
+    "dotenv": "^17.2.1",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
@@ -67,6 +71,7 @@
     "openid-client": "^6.6.2",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
+    "postgres": "^3.4.7",
     "react": "^18.3.1",
     "react-beautiful-dnd": "^13.1.1",
     "react-day-picker": "^8.10.1",

@@ -338,28 +338,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/posts', isAuthenticated, async (req: any, res) => {
     try {
+      console.log('=== Post creation route START ===');
+      console.log('Request body:', req.body);
+      console.log('Req.user type:', typeof req.user);
+      console.log('Req.user:', req.user);
+      console.log('Req.user.claims type:', typeof req.user?.claims);
+      console.log('Req.user.claims:', req.user?.claims);
+      console.log('Req.user.claims.sub type:', typeof req.user?.claims?.sub);
+      console.log('Req.user.claims.sub:', req.user?.claims?.sub);
+      
+      if (!req.user) {
+        console.error('ERROR: req.user is undefined');
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      if (!req.user.claims) {
+        console.error('ERROR: req.user.claims is undefined');
+        return res.status(401).json({ message: "User claims not found" });
+      }
+      
+      if (!req.user.claims.sub) {
+        console.error('ERROR: req.user.claims.sub is undefined');
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
       const userId = req.user.claims.sub;
+      console.log('User ID extracted:', userId);
       
       // Add authorId to request body before parsing
       const requestData = { ...req.body, authorId: userId };
+      console.log('Request data with authorId:', requestData);
+      
       const postData = insertPostSchema.parse(requestData);
+      console.log('Post data after parsing:', postData);
       
       // Generate slug if not provided
       if (!postData.slug) {
         postData.slug = postData.title.toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-|-$/g, '');
+        console.log('Generated slug:', postData.slug);
       }
 
       const post = await storage.createPost(postData);
+      console.log('Post created:', post);
+      
       hooks.doAction('save_post', post);
       
       if (post.status === 'publish') {
         hooks.doAction('publish_post', post);
       }
 
+      console.log('=== Post creation route END (success) ===');
       res.status(201).json(post);
     } catch (error) {
+      console.error("=== Post creation route END (error) ===");
       console.error("Error creating post:", error);
       res.status(500).json({ message: "Failed to create post" });
     }
@@ -850,7 +883,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/home', async (req, res) => {
     try {
-      const posts = await storage.getPosts(1, 10, 'published');
+      const posts = await storage.getPosts({ status: 'publish', limit: 10 });
       
       const siteSettings = {
         name: 'NextPress',
@@ -859,7 +892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const html = await themeManager.renderContent('home', {
-        posts: posts.posts,
+        posts: posts,
         site: siteSettings
       });
 

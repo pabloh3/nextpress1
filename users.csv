@@ -1,0 +1,4 @@
+"id","email","first_name","last_name","profile_image_url","username","password","role","status","created_at","updated_at"
+"03678013-c785-4ca8-aa32-a54234ae87f1","test@test.com","Hussein","Kizz",,"Hussein","$2b$10$J4e5jpsSXr2iw54/lJs4C.R7zLdwWdlDWIFAESXxZA/oM/PAYr.WC","administrator","active","""2025-07-31T05:44:27.308Z""","""2025-07-31T05:44:27.308Z"""
+"45660082","pablo.hdz.sanz@gmail.com","Pablo","Hernandez Sanz",,"pablo_hdz_sanz","$2b$10$DqJOghaZIqqopOy.8FVBJuk7rPQxsFNxrxudmhjQRiAUdBEXx/xiC","administrator","active","""2025-07-29T00:45:35.194Z""","""2025-07-31T05:43:20.396Z"""
+"b8200fcc-b821-4933-9e00-71b0fb75b8a0","pablo@builditforme.ai","Pablo","Hernandez",,"Pablo BIFM","$2b$10$VsNxu1qFreATq38QS0Db/uWLB9l6SsEkWTpEzu9jeSQrWRNPYgVS.","administrator","active","""2025-07-29T04:39:42.939Z""","""2025-07-29T04:39:42.939Z"""

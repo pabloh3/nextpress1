@@ -5,3 +5,27 @@ server/public
 vite.config.ts.*
 *.tar.gz
 .env
+
+# Security: Import scripts and sensitive data
+scripts/import-*.ts
+scripts/verify-*.ts
+
+
+# Environment files
+.env.local
+.env.production
+.env.development
+.env.test
+
+# Database dumps and exports
+*.sql
+*.dump
+database-exports/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp

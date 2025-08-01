@@ -160,52 +160,30 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  console.log('=== isAuthenticated middleware START ===');
-  console.log('Request URL:', req.url);
-  console.log('Request method:', req.method);
-  console.log('Session exists:', !!req.session);
-  console.log('Session data:', req.session);
-  console.log('LocalUser exists:', !!(req as any).session?.localUser);
-  console.log('LocalUser data:', (req as any).session?.localUser);
-  console.log('Req.user exists:', !!req.user);
-  console.log('Req.user data:', req.user);
-  console.log('Is authenticated function exists:', !!req.isAuthenticated);
-  console.log('Is authenticated result:', req.isAuthenticated ? req.isAuthenticated() : 'function not available');
-  
   // Check for local session first
   if ((req as any).session?.localUser) {
-    console.log('Using local authentication');
     // Set req.user for local authentication to match the expected structure
     (req as any).user = {
       claims: {
         sub: (req as any).session.localUser.id
       }
     };
-    console.log('Req.user after setting:', req.user);
-    console.log('=== isAuthenticated middleware END (local auth) ===');
     return next();
   }
 
   // Check for Replit auth
   const user = req.user as any;
-  console.log('Checking Replit auth, user:', user);
   if (!req.isAuthenticated() || !user?.expires_at) {
-    console.log('Replit auth failed - not authenticated or no expires_at');
-    console.log('=== isAuthenticated middleware END (Replit auth failed) ===');
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   const now = Math.floor(Date.now() / 1000);
   if (now <= user.expires_at) {
-    console.log('Replit auth successful');
-    console.log('=== isAuthenticated middleware END (Replit auth success) ===');
     return next();
   }
 
   const refreshToken = user.refresh_token;
   if (!refreshToken) {
-    console.log('No refresh token available');
-    console.log('=== isAuthenticated middleware END (no refresh token) ===');
     res.status(401).json({ message: "Unauthorized" });
     return;
   }
@@ -214,11 +192,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     const config = await getOidcConfig();
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
-    console.log('=== isAuthenticated middleware END (token refreshed) ===');
     return next();
   } catch (error) {
-    console.log('Token refresh failed:', error);
-    console.log('=== isAuthenticated middleware END (token refresh failed) ===');
     res.status(401).json({ message: "Unauthorized" });
     return;
   }

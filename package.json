@@ -1,5 +1,5 @@
 {
-  "name": "nextpress",
+  "name": "rest-express",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
@@ -10,10 +10,7 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "import:users": "tsx scripts/import-users.ts",
-    "verify:users": "tsx scripts/verify-users.ts",
-    "theme:dev": "next dev --dir themes/nextjs-theme",
-    "theme:build": "next build --dir themes/nextjs-theme",
-    "theme:start": "next start --dir themes/nextjs-theme"
+    "verify:users": "tsx scripts/verify-users.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -50,7 +47,6 @@
     "@types/bcrypt": "^6.0.0",
     "@types/memoizee": "^0.4.12",
     "@types/multer": "^2.0.0",
-    "@types/node-fetch": "^2.6.13",
     "@types/react-beautiful-dnd": "^13.1.8",
     "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
@@ -71,9 +67,7 @@
     "memoizee": "^0.4.17",
     "memorystore": "^1.6.7",
     "multer": "^2.0.2",
-    "next": "^14.2.5",
     "next-themes": "^0.4.6",
-    "node-fetch": "^3.3.2",
     "openid-client": "^6.6.2",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",

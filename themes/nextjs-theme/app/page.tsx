@@ -1,77 +1,54 @@
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
-import { formatDate, truncateText } from '@/lib/utils'
+import { notFound } from 'next/navigation'
 
-interface Post {
-  id: number
-  title: string
-  content: string
-  excerpt?: string
-  slug: string
-  created_at: string
-  author?: {
-    username: string
+async function getHomeContent() {
+  try {
+    const response = await fetch('http://localhost:3000/api/posts?status=publish&limit=10', {
+      cache: 'no-store'
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch content')
+    }
+    
+    return await response.json()
+  } catch (error) {
+    console.error('Error fetching home content:', error)
+    return null
   }
 }
 
-interface HomePageProps {
-  posts?: Post[]
-  site?: {
-    name: string
-    description: string
+export default async function HomePage() {
+  const content = await getHomeContent()
+  
+  if (!content) {
+    notFound()
   }
-}
 
-export default function HomePage({ posts = [], site }: HomePageProps) {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header 
-        siteName={site?.name} 
-        siteDescription={site?.description} 
-      />
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-4xl font-bold mb-8">Welcome to NextPress</h1>
       
-      <main className="flex-grow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Welcome to {site?.name || 'NextPress'}
-            </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              {site?.description || 'A modern WordPress alternative built with Next.js'}
-            </p>
-          </div>
-
-          {posts.length > 0 && (
-            <div className="mt-16">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8">Latest Posts</h2>
-              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                {posts.map((post) => (
-                  <article key={post.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                    <div className="p-6">
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        <a href={`/posts/${post.slug}`} className="hover:text-wp-blue transition-colors">
-                          {post.title}
-                        </a>
-                      </h3>
-                      <p className="text-gray-600 mb-4">
-                        {truncateText(post.excerpt || post.content)}
-                      </p>
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>{formatDate(post.created_at)}</span>
-                        {post.author && (
-                          <span>By {post.author.username}</span>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
+      <div className="grid gap-6">
+        {content.posts?.map((post: any) => (
+          <article key={post.id} className="border rounded-lg p-6 shadow-sm">
+            <h2 className="text-2xl font-semibold mb-2">{post.title}</h2>
+            <div className="text-gray-600 mb-4">
+              {new Date(post.createdAt).toLocaleDateString()}
             </div>
-          )}
-        </div>
-      </main>
-
-      <Footer />
+            <div className="prose max-w-none">
+              {post.excerpt && (
+                <p className="text-gray-700">{post.excerpt}</p>
+              )}
+            </div>
+            <a 
+              href={`/posts/${post.id}`}
+              className="inline-block mt-4 text-blue-600 hover:text-blue-800"
+            >
+              Read more →
+            </a>
+          </article>
+        ))}
+      </div>
     </div>
   )
 } 

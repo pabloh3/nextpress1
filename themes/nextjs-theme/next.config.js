@@ -1,10 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
-  // This theme will be served by the main NextPress server
-  // so we don't need to run it on a separate port
+  // This theme runs on port 3001 for development
+  // The main NextPress server will proxy requests to it
   async rewrites() {
     return [
       {

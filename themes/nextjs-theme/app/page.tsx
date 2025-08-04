@@ -25,24 +25,26 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-8">Welcome to NextPress</h1>
+    <div className="container mx-auto px-4 py-8 content-fade-in">
+      <h1 className="text-4xl font-bold mb-8 text-wp-blue">Welcome to NextPress</h1>
       
       <div className="grid gap-6">
         {content.posts?.map((post: any) => (
-          <article key={post.id} className="border rounded-lg p-6 shadow-sm">
-            <h2 className="text-2xl font-semibold mb-2">{post.title}</h2>
-            <div className="text-gray-600 mb-4">
+          <article key={post.id} className="border border-border rounded-lg p-6 shadow-sm bg-card hover:shadow-md transition-shadow duration-200">
+            <h2 className="text-2xl font-semibold mb-2 text-foreground hover:text-wp-blue transition-colors">
+              {post.title}
+            </h2>
+            <div className="text-muted-foreground mb-4 text-sm">
               {new Date(post.createdAt).toLocaleDateString()}
             </div>
             <div className="prose max-w-none">
               {post.excerpt && (
-                <p className="text-gray-700">{post.excerpt}</p>
+                <p className="text-muted-foreground leading-relaxed">{post.excerpt}</p>
               )}
             </div>
             <a 
               href={`/posts/${post.id}`}
-              className="inline-block mt-4 text-blue-600 hover:text-blue-800"
+              className="inline-block mt-4 text-wp-blue hover:text-wp-blue-dark transition-colors font-medium"
             >
               Read more →
             </a>

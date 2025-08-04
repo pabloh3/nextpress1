@@ -25,19 +25,19 @@ export default async function PostPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 content-fade-in">
       <article className="max-w-4xl mx-auto">
         <header className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
-          <div className="text-gray-600 mb-4">
+          <h1 className="text-4xl font-bold mb-4 text-foreground">{post.title}</h1>
+          <div className="text-muted-foreground mb-4 text-sm">
             Published on {new Date(post.createdAt).toLocaleDateString()}
           </div>
           {post.excerpt && (
-            <p className="text-xl text-gray-700 mb-6">{post.excerpt}</p>
+            <p className="text-xl text-muted-foreground mb-6 leading-relaxed">{post.excerpt}</p>
           )}
         </header>
         
-        <div className="prose max-w-none">
+        <div className="prose max-w-none bg-card border border-border rounded-lg p-8 shadow-sm">
           <div dangerouslySetInnerHTML={{ __html: post.content || '' }} />
         </div>
       </article>

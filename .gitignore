@@ -29,3 +29,7 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+
+# Next.js cache
+themes/nextjs-theme/.next/cache/

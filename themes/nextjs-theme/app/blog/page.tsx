@@ -1,0 +1,63 @@
+import Link from 'next/link'
+
+async function getPosts() {
+  try {
+    const response = await fetch('http://localhost:3000/api/posts?status=publish&type=post&per_page=50', {
+      cache: 'no-store'
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch posts')
+    }
+    
+    return await response.json()
+  } catch (error) {
+    console.error('Error fetching posts:', error)
+    return null
+  }
+}
+
+export default async function BlogPage() {
+  const content = await getPosts()
+  
+  if (!content) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-4xl font-bold mb-8 text-foreground">Blog</h1>
+        <p className="text-muted-foreground">No posts found.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8 content-fade-in">
+      <h1 className="text-4xl font-bold mb-8 text-foreground">Blog</h1>
+      
+      <div className="grid gap-6">
+        {content.posts?.map((post: any) => (
+          <article key={post.id} className="border border-border rounded-lg p-6 shadow-sm bg-card hover:shadow-md transition-shadow duration-200">
+            <h2 className="text-2xl font-semibold mb-2 text-foreground hover:text-wp-blue transition-colors">
+              <Link href={`/posts/${post.id}`}>
+                {post.title}
+              </Link>
+            </h2>
+            <div className="text-muted-foreground mb-4 text-sm">
+              {new Date(post.createdAt).toLocaleDateString()}
+            </div>
+            <div className="prose max-w-none">
+              {post.excerpt && (
+                <p className="text-muted-foreground leading-relaxed">{post.excerpt}</p>
+              )}
+            </div>
+            <Link 
+              href={`/posts/${post.id}`}
+              className="inline-block mt-4 text-wp-blue hover:text-wp-blue-dark transition-colors font-medium"
+            >
+              Read more →
+            </Link>
+          </article>
+        ))}
+      </div>
+    </div>
+  )
+} 

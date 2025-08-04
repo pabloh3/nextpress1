@@ -1069,6 +1069,9 @@ video {
 .mt-4 {
   margin-top: 1rem;
 }
+.mb-12 {
+  margin-bottom: 3rem;
+}
 .inline-block {
   display: inline-block;
 }

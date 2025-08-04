@@ -414,6 +414,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Pages API (WordPress compatible)
+  app.get('/api/pages', async (req, res) => {
+    try {
+      const { status = 'publish', page = 1, per_page = 10 } = req.query;
+      const limit = parseInt(per_page as string);
+      const offset = (parseInt(page as string) - 1) * limit;
+
+      // Handle 'any' status to show all pages (for admin interface)
+      const actualStatus = status === 'any' ? undefined : status as string;
+
+      const pages = await storage.getPosts({
+        status: actualStatus,
+        type: 'page',
+        limit,
+        offset
+      });
+
+      const total = await storage.getPostsCount({
+        status: actualStatus,
+        type: 'page'
+      });
+
+      res.json({
+        pages,
+        total,
+        page: parseInt(page as string),
+        per_page: limit,
+        total_pages: Math.ceil(total / limit)
+      });
+    } catch (error) {
+      console.error("Error fetching pages:", error);
+      res.status(500).json({ message: "Failed to fetch pages" });
+    }
+  });
+
+  app.get('/api/pages/:id', async (req, res) => {
+    try {
+      const page = await storage.getPost(parseInt(req.params.id));
+      if (!page || page.type !== 'page') {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      res.json(page);
+    } catch (error) {
+      console.error("Error fetching page:", error);
+      res.status(500).json({ message: "Failed to fetch page" });
+    }
+  });
+
+  app.post('/api/pages', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Add authorId and type to request body before parsing
+      const requestData = { ...req.body, authorId: userId, type: 'page' };
+      const pageData = insertPostSchema.parse(requestData);
+      
+      // Generate slug if not provided
+      if (!pageData.slug) {
+        pageData.slug = pageData.title.toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
+
+      const page = await storage.createPost(pageData);
+      hooks.doAction('save_post', page);
+      
+      if (page.status === 'publish') {
+        hooks.doAction('publish_post', page);
+      }
+
+      res.status(201).json(page);
+    } catch (error) {
+      console.error("Error creating page:", error);
+      res.status(500).json({ message: "Failed to create page" });
+    }
+  });
+
+  app.put('/api/pages/:id', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const pageData = insertPostSchema.partial().parse(req.body);
+      
+      const existingPage = await storage.getPost(id);
+      if (!existingPage || existingPage.type !== 'page') {
+        return res.status(404).json({ message: "Page not found" });
+      }
+
+      const wasPublished = existingPage.status === 'publish';
+      const page = await storage.updatePost(id, pageData);
+      
+      hooks.doAction('save_post', page);
+      
+      if (!wasPublished && page.status === 'publish') {
+        hooks.doAction('publish_post', page);
+      }
+
+      res.json(page);
+    } catch (error) {
+      console.error("Error updating page:", error);
+      res.status(500).json({ message: "Failed to update page" });
+    }
+  });
+
+  app.delete('/api/pages/:id', isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const page = await storage.getPost(id);
+      
+      if (!page || page.type !== 'page') {
+        return res.status(404).json({ message: "Page not found" });
+      }
+
+      await storage.deletePost(id);
+      hooks.doAction('delete_post', id);
+      
+      res.json({ message: "Page deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting page:", error);
+      res.status(500).json({ message: "Failed to delete page" });
+    }
+  });
+
   // Comments API
   app.get('/api/comments', async (req, res) => {
     try {

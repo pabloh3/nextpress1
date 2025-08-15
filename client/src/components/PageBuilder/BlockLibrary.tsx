@@ -1,107 +1,15 @@
 import { Draggable, Droppable } from "@hello-pangea/dnd";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  Type, 
-  Heading1, 
-  MousePointer, 
-  Image, 
-  Video, 
-  Minus, 
-  Space,
-  FileText,
-  Grid3x3,
-  Quote,
-  List,
-  Link2
-} from "lucide-react";
+import { blockRegistry } from "./blocks";
 
-interface BlockType {
-  id: string;
-  name: string;
-  icon: any;
-  description: string;
-  category: 'basic' | 'media' | 'layout' | 'advanced';
-}
-
-const blockTypes: BlockType[] = [
-  {
-    id: 'heading',
-    name: 'Heading',
-    icon: Heading1,
-    description: 'Add a heading text',
-    category: 'basic'
-  },
-  {
-    id: 'text',
-    name: 'Text',
-    icon: Type,
-    description: 'Add a paragraph of text',
-    category: 'basic'
-  },
-  {
-    id: 'button',
-    name: 'Button',
-    icon: MousePointer,
-    description: 'Add a clickable button',
-    category: 'basic'
-  },
-  {
-    id: 'image',
-    name: 'Image',
-    icon: Image,
-    description: 'Add an image',
-    category: 'media'
-  },
-  {
-    id: 'video',
-    name: 'Video',
-    icon: Video,
-    description: 'Add a video player',
-    category: 'media'
-  },
-  {
-    id: 'spacer',
-    name: 'Spacer',
-    icon: Space,
-    description: 'Add vertical spacing',
-    category: 'layout'
-  },
-  {
-    id: 'divider',
-    name: 'Divider',
-    icon: Minus,
-    description: 'Add a horizontal line',
-    category: 'layout'
-  },
-  {
-    id: 'columns',
-    name: 'Columns',
-    icon: Grid3x3,
-    description: 'Add multi-column layout',
-    category: 'layout'
-  },
-  {
-    id: 'quote',
-    name: 'Quote',
-    icon: Quote,
-    description: 'Add a blockquote',
-    category: 'advanced'
-  },
-  {
-    id: 'list',
-    name: 'List',
-    icon: List,
-    description: 'Add a bulleted or numbered list',
-    category: 'advanced'
-  }
-];
+const allBlocks = Object.values(blockRegistry);
 
 const categories = [
-  { id: 'basic', name: 'Basic', blocks: blockTypes.filter(b => b.category === 'basic') },
-  { id: 'media', name: 'Media', blocks: blockTypes.filter(b => b.category === 'media') },
-  { id: 'layout', name: 'Layout', blocks: blockTypes.filter(b => b.category === 'layout') },
-  { id: 'advanced', name: 'Advanced', blocks: blockTypes.filter(b => b.category === 'advanced') },
-];
+  { id: 'basic', name: 'Basic', blocks: allBlocks.filter(b => b.category === 'basic') },
+  { id: 'media', name: 'Media', blocks: allBlocks.filter(b => b.category === 'media') },
+  { id: 'layout', name: 'Layout', blocks: allBlocks.filter(b => b.category === 'layout') },
+  { id: 'advanced', name: 'Advanced', blocks: allBlocks.filter(b => b.category === 'advanced') },
+].filter(c => c.blocks.length > 0);
 
 export default function BlockLibrary() {
   return (

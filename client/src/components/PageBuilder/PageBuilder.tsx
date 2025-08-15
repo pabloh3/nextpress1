@@ -15,6 +15,7 @@ import BlockRenderer from "./BlockRenderer";
 import BlockSettings from "./BlockSettings";
 import DevicePreview from "./DevicePreview";
 import { generateBlockId } from "./utils";
+import { getDefaultBlock } from "./blocks";
 
 interface PageBuilderProps {
   post?: Post | Template;
@@ -103,6 +104,8 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
 
   const createDefaultBlock = (type: string): BlockConfig => {
     const id = generateBlockId();
+    const fromRegistry = getDefaultBlock(type, id);
+    if (fromRegistry) return fromRegistry;
     const baseBlock = {
       id,
       type,

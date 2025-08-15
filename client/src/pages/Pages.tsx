@@ -78,7 +78,7 @@ export default function Pages() {
   };
 
   const handlePageBuilder = (pageId: number) => {
-    window.location.href = `/page-builder/page/${pageId}`;
+    window.location.href = `/page-builder/page/${pageId}?mode=builder`;
   };
 
   const getStatusBadge = (status: string) => {

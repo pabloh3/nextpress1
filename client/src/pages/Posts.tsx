@@ -60,7 +60,7 @@ export default function Posts() {
   };
 
   const handlePageBuilder = (postId: number) => {
-    window.location.href = `/page-builder/post/${postId}`;
+    window.location.href = `/page-builder/post/${postId}?mode=builder`;
   };
 
   const handleNewPost = () => {

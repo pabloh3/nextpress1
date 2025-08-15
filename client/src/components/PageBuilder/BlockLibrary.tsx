@@ -1,4 +1,4 @@
-import { Draggable, Droppable } from "react-beautiful-dnd";
+import { Draggable, Droppable } from "@hello-pangea/dnd";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Type, 

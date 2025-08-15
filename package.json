@@ -13,6 +13,7 @@
     "verify:users": "tsx scripts/verify-users.ts"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@neondatabase/serverless": "^0.10.4",
@@ -47,7 +48,6 @@
     "@types/bcrypt": "^6.0.0",
     "@types/memoizee": "^0.4.12",
     "@types/multer": "^2.0.0",
-    "@types/react-beautiful-dnd": "^13.1.8",
     "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -73,7 +73,6 @@
     "passport-local": "^1.0.0",
     "postgres": "^3.4.7",
     "react": "^18.3.1",
-    "react-beautiful-dnd": "^13.1.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.55.0",

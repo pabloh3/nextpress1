@@ -61,13 +61,15 @@ export default function AdminSidebar() {
           const isActive = location === item.path;
           
           return (
-            <Link key={item.path} href={item.path}>
-              <a className={`sidebar-hover flex items-center px-4 py-2 text-sm ${
+            <Link 
+              key={item.path} 
+              href={item.path}
+              className={`sidebar-hover flex items-center px-4 py-2 text-sm ${
                 isActive ? 'bg-wp-blue-dark' : 'hover:bg-gray-700'
-              }`}>
-                <Icon className="w-4 h-4 mr-3" />
-                {item.label}
-              </a>
+              }`}
+            >
+              <Icon className="w-4 h-4 mr-3" />
+              {item.label}
             </Link>
           );
         })}
@@ -82,13 +84,15 @@ export default function AdminSidebar() {
                 const isActive = location === item.path;
                 
                 return (
-                  <Link key={item.path} href={item.path}>
-                    <a className={`sidebar-hover flex items-center py-1 text-sm ${
+                  <Link 
+                    key={item.path} 
+                    href={item.path}
+                    className={`sidebar-hover flex items-center py-1 text-sm ${
                       isActive ? 'text-wp-blue-light' : 'hover:text-wp-blue-light'
-                    }`}>
-                      <Icon className="w-4 h-4 mr-3" />
-                      {item.label}
-                    </a>
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 mr-3" />
+                    {item.label}
                   </Link>
                 );
               })}

@@ -192,7 +192,7 @@ export default function Templates() {
   };
 
   const handlePageBuilder = (templateId: number) => {
-    window.open(`/page-builder/template/${templateId}`, '_blank');
+    window.open(`/page-builder/template/${templateId}?mode=builder`, '_blank');
   };
 
   const addCondition = () => {

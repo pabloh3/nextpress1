@@ -118,11 +118,15 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
 
     switch (type) {
       case 'heading':
+      case 'core/heading':
         return {
           ...baseBlock,
           content: {
-            text: 'Add your heading',
+            content: 'Add your heading',
             level: 2,
+            textAlign: 'left',
+            anchor: '',
+            className: '',
           },
           styles: {
             ...baseBlock.styles,

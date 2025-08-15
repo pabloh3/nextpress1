@@ -344,10 +344,15 @@ export interface TextBlockConfig extends BlockConfig {
 }
 
 export interface HeadingBlockConfig extends BlockConfig {
-  type: 'heading';
+  type: 'heading' | 'core/heading';
   content: {
-    text: string;
+    // Gutenberg uses `content`; keep `text` for legacy compatibility
+    content?: string;
+    text?: string;
     level: 1 | 2 | 3 | 4 | 5 | 6;
+    textAlign?: 'left' | 'center' | 'right' | 'justify';
+    anchor?: string;
+    className?: string;
   };
 }
 

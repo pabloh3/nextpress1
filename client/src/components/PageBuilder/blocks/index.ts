@@ -12,6 +12,9 @@ import QuoteBlock from "./quote/QuoteBlock";
 import ListBlock from "./list/ListBlock";
 
 export const blockRegistry: Record<string, BlockDefinition> = {
+  // Gutenberg-compatible ids
+  "core/heading": HeadingBlock,
+  // Backward compatibility with existing saved data
   heading: HeadingBlock,
   text: TextBlock,
   button: ButtonBlock,

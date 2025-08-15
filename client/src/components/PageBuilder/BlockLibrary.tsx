@@ -2,7 +2,10 @@ import { Draggable, Droppable } from "@hello-pangea/dnd";
 import { Card, CardContent } from "@/components/ui/card";
 import { blockRegistry } from "./blocks";
 
-const allBlocks = Object.values(blockRegistry);
+// Dedupe by block definition id to avoid showing aliases (e.g., "heading" vs "core/heading")
+const allBlocks = Object.values(blockRegistry).filter((block, index, arr) =>
+  arr.findIndex((b) => b.id === block.id) === index
+);
 
 const categories = [
   { id: 'basic', name: 'Basic', blocks: allBlocks.filter(b => b.category === 'basic') },

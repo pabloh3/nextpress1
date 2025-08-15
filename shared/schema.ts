@@ -331,6 +331,7 @@ export interface BlockConfig {
   content: any;
   styles: Record<string, any>;
   settings: Record<string, any>;
+  customCss?: string;
 }
 
 // Common block types

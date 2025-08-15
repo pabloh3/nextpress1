@@ -28,11 +28,12 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
   const isTemplate = !!template;
   
   const [blocks, setBlocks] = useState<BlockConfig[]>(
-    data?.builderData ? (data.builderData as BlockConfig[]) : []
+    data ? (isTemplate ? ((data as any).blocks as BlockConfig[]) : ((data as any).builderData as BlockConfig[])) || [] : []
   );
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [deviceView, setDeviceView] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [activeTab, setActiveTab] = useState<'blocks' | 'settings'>('blocks');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -42,14 +43,16 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
   const saveMutation = useMutation({
     mutationFn: async (builderData: BlockConfig[]) => {
       if (isTemplate) {
-        return await apiRequest('PUT', `/api/templates/${data!.id}`, {
-          builderData,
+        const response = await apiRequest('PUT', `/api/templates/${data!.id}`, {
+          blocks: builderData,
         });
+        return await response.json();
       } else {
-        return await apiRequest('PUT', `/api/posts/${data!.id}`, {
+        const response = await apiRequest('PUT', `/api/posts/${data!.id}`, {
           builderData,
           usePageBuilder: true
         });
+        return await response.json();
       }
     },
     onSuccess: (updatedData) => {
@@ -84,6 +87,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
       newBlocks.splice(destination.index, 0, newBlock);
       setBlocks(newBlocks);
       setSelectedBlockId(newBlock.id);
+      setActiveTab('settings');
       return;
     }
 
@@ -199,7 +203,10 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
           },
         };
       default:
-        return baseBlock;
+        return {
+          ...baseBlock,
+          content: {},
+        };
     }
   };
 
@@ -223,6 +230,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
       newBlocks.splice(blockIndex + 1, 0, duplicatedBlock);
       setBlocks(newBlocks);
       setSelectedBlockId(duplicatedBlock.id);
+      setActiveTab('settings');
     }
   }, [blocks]);
 
@@ -273,8 +281,8 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
             </div>
           </div>
 
-          <Tabs defaultValue="blocks" className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 mx-4 mt-4">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'blocks' | 'settings')} className="flex-1 flex flex-col p-4">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="blocks" className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 Blocks
@@ -285,13 +293,13 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="blocks" className="flex-1 px-4 pb-4">
+            <TabsContent value="blocks" className="flex-1 mt-4">
               <ScrollArea className="h-full">
                 <BlockLibrary />
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="settings" className="flex-1 px-4 pb-4">
+            <TabsContent value="settings" className="flex-1 mt-4">
               <ScrollArea className="h-full">
                 {selectedBlock ? (
                   <BlockSettings
@@ -314,7 +322,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
           <div className="bg-white border-b border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <h3 className="font-medium">{post.title}</h3>
+                <h3 className="font-medium">{data ? (isTemplate ? (data as any).name : (data as any).title) : 'Untitled'}</h3>
                 <Separator orientation="vertical" className="h-6" />
                 <div className="flex items-center gap-2">
                   <Button
@@ -381,7 +389,10 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
                                 } ${
                                   selectedBlockId === block.id ? 'ring-2 ring-blue-500' : ''
                                 }`}
-                                onClick={() => setSelectedBlockId(block.id)}
+                                onClick={() => {
+                                  setSelectedBlockId(block.id);
+                                  setActiveTab('settings');
+                                }}
                               >
                                 <BlockRenderer
                                   block={block}

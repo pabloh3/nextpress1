@@ -30,6 +30,5 @@ logs/
 *.tmp
 *.temp
 
-
 # Next.js cache
-themes/nextjs-theme/.next/cache/
+themes/nextjs-theme/.next/

@@ -13,13 +13,13 @@ export default function DevicePreview({ device, children }: DevicePreviewProps) 
         };
       case 'tablet':
         return {
-          maxWidth: '768px',
+          width: '768px',
           minHeight: '1024px',
         };
       case 'desktop':
       default:
         return {
-          maxWidth: '1200px',
+          width: '100%',
           minHeight: '800px',
         };
     }

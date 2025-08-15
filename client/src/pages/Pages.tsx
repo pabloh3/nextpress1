@@ -14,6 +14,14 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Post } from "@shared/schema";
 
+interface PostsApiResponse {
+  posts: Post[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
 export default function Pages() {
   const [search, setSearch] = useState("");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -23,7 +31,7 @@ export default function Pages() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: pagesData, isLoading } = useQuery({
+  const { data: pagesData, isLoading } = useQuery<PostsApiResponse>({
     queryKey: ['/api/posts', { status: 'any', type: 'page', page, per_page: 10 }],
   });
 
@@ -78,7 +86,7 @@ export default function Pages() {
   };
 
   const handlePageBuilder = (pageId: number) => {
-    window.location.href = `/page-builder/page/${pageId}`;
+    window.location.href = `/page-builder/page/${pageId}?mode=builder`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -165,13 +173,13 @@ export default function Pages() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {getStatusBadge(page.status)}
+                          {getStatusBadge(page.status || 'draft')}
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div>{new Date(page.createdAt).toLocaleDateString()}</div>
+                            <div>{page.createdAt ? new Date(page.createdAt).toLocaleDateString() : 'N/A'}</div>
                             <div className="text-gray-500">
-                              {new Date(page.createdAt).toLocaleTimeString()}
+                              {page.createdAt ? new Date(page.createdAt).toLocaleTimeString() : 'N/A'}
                             </div>
                           </div>
                         </TableCell>

@@ -15,6 +15,15 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Post } from "@shared/schema";
 
+// API response type for posts endpoint
+interface PostsResponse {
+  posts: Post[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
 export default function Posts() {
   const [search, setSearch] = useState("");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -24,7 +33,7 @@ export default function Posts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: postsData, isLoading } = useQuery({
+  const { data: postsData, isLoading } = useQuery<PostsResponse>({
     queryKey: ['/api/posts', { status: 'any', type: 'post', page, per_page: 10 }],
   });
 
@@ -60,7 +69,7 @@ export default function Posts() {
   };
 
   const handlePageBuilder = (postId: number) => {
-    window.location.href = `/page-builder/post/${postId}`;
+    window.location.href = `/page-builder/post/${postId}?mode=builder`;
   };
 
   const handleNewPost = () => {
@@ -162,13 +171,13 @@ export default function Posts() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {getStatusBadge(post.status)}
+                          {getStatusBadge(post.status || 'draft')}
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div>{new Date(post.createdAt).toLocaleDateString()}</div>
+                            <div>{post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'N/A'}</div>
                             <div className="text-gray-500">
-                              {new Date(post.createdAt).toLocaleTimeString()}
+                              {post.createdAt ? new Date(post.createdAt).toLocaleTimeString() : 'N/A'}
                             </div>
                           </div>
                         </TableCell>

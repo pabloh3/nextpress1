@@ -24,12 +24,12 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
   const { toast } = useToast();
 
   // Fetch the post/page or template data
-  const { data: post, isLoading: postLoading, error: postError } = useQuery({
+  const { data: post, isLoading: postLoading, error: postError } = useQuery<Post>({
     queryKey: [`/api/posts/${postId}`],
     enabled: !!postId && type !== 'template',
   });
 
-  const { data: template, isLoading: templateLoading, error: templateError } = useQuery({
+  const { data: template, isLoading: templateLoading, error: templateError } = useQuery<Template>({
     queryKey: [`/api/templates/${templateId}`],
     enabled: !!templateId && type === 'template',
   });
@@ -39,7 +39,14 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
   const data = type === 'template' ? template : post;
 
   useEffect(() => {
-    if (type === 'template') {
+    // Check URL parameters for explicit mode override
+    const urlParams = new URLSearchParams(window.location.search);
+    const modeParam = urlParams.get('mode');
+    
+    if (modeParam === 'builder' || modeParam === 'classic') {
+      // Override mode if explicitly specified in URL
+      setEditorMode(modeParam);
+    } else if (type === 'template') {
       // Templates always use the page builder
       setEditorMode('builder');
     } else if (post) {
@@ -155,7 +162,7 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
                 Back
               </Button>
               <div className="text-sm text-gray-500">
-                Editing: {data?.name || data?.title || 'Untitled'}
+                Editing: {type === 'template' ? (data as Template)?.name : (data as Post)?.title || 'Untitled'}
               </div>
             </div>
             
@@ -198,10 +205,10 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
           <div className="flex-1 ml-40">
             <AdminTopBar />
             
-            <div className="p-6">
+            <div className="px-6 pt-8 pb-6">
               <div className="max-w-4xl mx-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-6 py-4">
                   <div className="flex items-center gap-4">
                     <Button
                       variant="ghost"
@@ -252,6 +259,7 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
                         postId={parseInt(postId!)}
                         type={type}
                         onSave={handleSave}
+                        noContainer={true}
                       />
                     )}
                     {type === 'template' && (
@@ -271,16 +279,16 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
                           {type === 'template' ? (
                             <>
                               <div>
-                                <label className="text-sm font-medium">Name: {data?.name}</label>
+                                <label className="text-sm font-medium">Name: {(data as Template)?.name}</label>
                               </div>
                               <div>
-                                <label className="text-sm font-medium">Type: {data?.type}</label>
+                                <label className="text-sm font-medium">Type: {(data as Template)?.type}</label>
                               </div>
                               <div>
-                                <label className="text-sm font-medium">Status: {data?.isActive ? 'Active' : 'Inactive'}</label>
+                                <label className="text-sm font-medium">Status: {(data as Template)?.isActive ? 'Active' : 'Inactive'}</label>
                               </div>
                               <div>
-                                <label className="text-sm font-medium">Priority: {data?.priority || 0}</label>
+                                <label className="text-sm font-medium">Priority: {(data as Template)?.priority || 0}</label>
                               </div>
                             </>
                           ) : (

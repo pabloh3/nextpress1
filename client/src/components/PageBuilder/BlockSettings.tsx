@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
+ 
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Palette, Type, Layout, Code } from "lucide-react";
 import type { BlockConfig } from "@shared/schema";
+import { blockRegistry } from "./blocks";
 
 interface BlockSettingsProps {
   block: BlockConfig;
@@ -53,274 +52,23 @@ export default function BlockSettings({ block, onUpdate }: BlockSettingsProps) {
   };
 
   const renderContentSettings = () => {
-    switch (block.type) {
-      case 'heading':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="heading-text">Text</Label>
-              <Input
-                id="heading-text"
-                value={block.content.text || ''}
-                onChange={(e) => updateContent({ text: e.target.value })}
-                placeholder="Enter heading text"
-              />
-            </div>
-            <div>
-              <Label htmlFor="heading-level">Heading Level</Label>
-              <Select
-                value={block.content.level?.toString() || '2'}
-                onValueChange={(value) => updateContent({ level: parseInt(value) })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">H1</SelectItem>
-                  <SelectItem value="2">H2</SelectItem>
-                  <SelectItem value="3">H3</SelectItem>
-                  <SelectItem value="4">H4</SelectItem>
-                  <SelectItem value="5">H5</SelectItem>
-                  <SelectItem value="6">H6</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        );
-
-      case 'text':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="text-content">Text Content</Label>
-              <Textarea
-                id="text-content"
-                value={block.content.text || ''}
-                onChange={(e) => updateContent({ text: e.target.value })}
-                placeholder="Enter your text content"
-                rows={4}
-              />
-            </div>
-            <div>
-              <Label htmlFor="text-tag">HTML Tag</Label>
-              <Select
-                value={block.content.tag || 'p'}
-                onValueChange={(value) => updateContent({ tag: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="p">Paragraph (p)</SelectItem>
-                  <SelectItem value="span">Span</SelectItem>
-                  <SelectItem value="div">Div</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        );
-
-      case 'button':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="button-text">Button Text</Label>
-              <Input
-                id="button-text"
-                value={block.content.text || ''}
-                onChange={(e) => updateContent({ text: e.target.value })}
-                placeholder="Button text"
-              />
-            </div>
-            <div>
-              <Label htmlFor="button-url">Link URL</Label>
-              <Input
-                id="button-url"
-                value={block.content.url || ''}
-                onChange={(e) => updateContent({ url: e.target.value })}
-                placeholder="https://example.com"
-              />
-            </div>
-            <div>
-              <Label htmlFor="button-target">Link Target</Label>
-              <Select
-                value={block.content.target || '_self'}
-                onValueChange={(value) => updateContent({ target: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_self">Same Window</SelectItem>
-                  <SelectItem value="_blank">New Window</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        );
-
-      case 'image':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="image-src">Image URL</Label>
-              <Input
-                id="image-src"
-                value={block.content.src || ''}
-                onChange={(e) => updateContent({ src: e.target.value })}
-                placeholder="https://example.com/image.jpg"
-              />
-            </div>
-            <div>
-              <Label htmlFor="image-alt">Alt Text</Label>
-              <Input
-                id="image-alt"
-                value={block.content.alt || ''}
-                onChange={(e) => updateContent({ alt: e.target.value })}
-                placeholder="Image description"
-              />
-            </div>
-            <div>
-              <Label htmlFor="image-caption">Caption</Label>
-              <Input
-                id="image-caption"
-                value={block.content.caption || ''}
-                onChange={(e) => updateContent({ caption: e.target.value })}
-                placeholder="Image caption (optional)"
-              />
-            </div>
-          </div>
-        );
-
-      case 'video':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="video-src">Video URL</Label>
-              <Input
-                id="video-src"
-                value={block.content.src || ''}
-                onChange={(e) => updateContent({ src: e.target.value })}
-                placeholder="https://example.com/video.mp4"
-              />
-            </div>
-            <div>
-              <Label htmlFor="video-poster">Poster Image URL</Label>
-              <Input
-                id="video-poster"
-                value={block.content.poster || ''}
-                onChange={(e) => updateContent({ poster: e.target.value })}
-                placeholder="https://example.com/poster.jpg"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="video-controls"
-                checked={block.content.controls !== false}
-                onCheckedChange={(checked) => updateContent({ controls: checked })}
-              />
-              <Label htmlFor="video-controls">Show Controls</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="video-autoplay"
-                checked={block.content.autoplay || false}
-                onCheckedChange={(checked) => updateContent({ autoplay: checked })}
-              />
-              <Label htmlFor="video-autoplay">Autoplay</Label>
-            </div>
-          </div>
-        );
-
-      case 'spacer':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="spacer-height">Height (px)</Label>
-              <div className="flex items-center space-x-4">
-                <Slider
-                  value={[block.content.height || 50]}
-                  onValueChange={([value]) => updateContent({ height: value })}
-                  max={200}
-                  min={10}
-                  step={5}
-                  className="flex-1"
-                />
-                <Input
-                  type="number"
-                  value={block.content.height || 50}
-                  onChange={(e) => updateContent({ height: parseInt(e.target.value) || 50 })}
-                  className="w-20"
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'divider':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="divider-style">Line Style</Label>
-              <Select
-                value={block.content.style || 'solid'}
-                onValueChange={(value) => updateContent({ style: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="solid">Solid</SelectItem>
-                  <SelectItem value="dashed">Dashed</SelectItem>
-                  <SelectItem value="dotted">Dotted</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="divider-width">Width (%)</Label>
-              <div className="flex items-center space-x-4">
-                <Slider
-                  value={[block.content.width || 100]}
-                  onValueChange={([value]) => updateContent({ width: value })}
-                  max={100}
-                  min={10}
-                  step={5}
-                  className="flex-1"
-                />
-                <Input
-                  type="number"
-                  value={block.content.width || 100}
-                  onChange={(e) => updateContent({ width: parseInt(e.target.value) || 100 })}
-                  className="w-20"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="divider-color">Color</Label>
-              <Input
-                id="divider-color"
-                type="color"
-                value={block.content.color || '#cccccc'}
-                onChange={(e) => updateContent({ color: e.target.value })}
-              />
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="text-center text-gray-500 py-8">
-            No content settings available for this block type.
-          </div>
-        );
+    const def = blockRegistry[block.type];
+    if (def?.settings) {
+      const SettingsComp = def.settings;
+      return <SettingsComp block={block} onUpdate={onUpdate} />;
     }
+    return (
+      <div className="text-center text-gray-500 py-8">
+        No content settings available for this block type.
+      </div>
+    );
   };
 
   const renderStyleSettings = () => {
     return (
       <div className="space-y-6">
         {/* Typography */}
-        {['heading', 'text', 'button'].includes(block.type) && (
+        {["heading", "core/heading", "text", "button"].includes(block.type) && (
           <Card>
             <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2">

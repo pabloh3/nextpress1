@@ -28,6 +28,14 @@ class ThemeManager {
       }
     });
 
+    // Custom SSR renderer - uses the built-in template methods
+    this.renderers.set('custom-ssr', {
+      name: 'Custom SSR Renderer',
+      render: async (template: string, data: any) => {
+        return this.renderNextJsTemplate(template, data);
+      }
+    });
+
     // Custom renderer
     this.renderers.set('custom', {
       name: 'Custom Renderer',
@@ -543,6 +551,10 @@ class ThemeManager {
       throw new Error('No active theme found');
     }
 
+    if (!activeTheme.renderer) {
+      throw new Error('Active theme has no renderer specified');
+    }
+
     const renderer = this.renderers.get(activeTheme.renderer);
     if (!renderer) {
       throw new Error(`Renderer '${activeTheme.renderer}' not found`);
@@ -607,29 +619,37 @@ async function initializeDefaultThemes() {
   const themes = await storage.getThemes();
   
   if (themes.length === 0) {
-    // Create default Next.js theme
-    const nextTheme = await storage.createTheme({
-      name: 'Next Theme',
-      description: 'A modern, responsive theme built with Next.js and Tailwind CSS.',
+    // Create default Custom SSR theme
+    const customSSRTheme = await storage.createTheme({
+      name: 'Custom SSR',
+      description: 'A custom server-side rendered theme with modern styling and responsive design. Built specifically for NextPress with optimized HTML output.',
       version: '1.0.0',
       author: 'NextPress Team',
-      renderer: 'nextjs',
+      renderer: 'custom-ssr',
       isActive: true,
       config: {
         colors: {
           primary: '#0073aa',
           secondary: '#005177',
           background: '#ffffff',
-          text: '#23282d'
+          text: '#23282d',
+          accent: '#00a0d2'
         },
         layout: {
-          maxWidth: '1200px',
-          sidebar: 'right'
+          maxWidth: '800px',
+          sidebar: 'none',
+          navigation: 'top'
+        },
+        features: {
+          serverSideRendering: true,
+          responsiveDesign: true,
+          darkMode: false,
+          customHTML: true
         }
       }
     });
 
-    console.log('Default theme initialized:', nextTheme.name);
+    console.log('Default theme initialized:', customSSRTheme.name);
   }
 }
 

@@ -15,9 +15,10 @@ interface PostEditorProps {
   type?: 'post' | 'page';
   onSave?: (post: Post) => void;
   onCancel?: () => void;
+  noContainer?: boolean;
 }
 
-export default function PostEditor({ postId, type = 'post', onSave, onCancel }: PostEditorProps) {
+export default function PostEditor({ postId, type = 'post', onSave, onCancel, noContainer = false }: PostEditorProps) {
   const [formData, setFormData] = useState<Partial<InsertPost>>({
     title: "",
     content: "",
@@ -31,7 +32,7 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel }: 
   const queryClient = useQueryClient();
 
   // Fetch existing post if editing
-  const { data: post, isLoading } = useQuery({
+  const { data: post, isLoading } = useQuery<Post>({
     queryKey: [`/api/posts/${postId}`],
     enabled: !!postId,
   });
@@ -39,15 +40,15 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel }: 
   useEffect(() => {
     if (post) {
       setFormData({
-        title: post.title,
-        content: post.content || "",
-        excerpt: post.excerpt || "",
-        slug: post.slug,
-        status: post.status,
-        type: post.type
+        title: post.title ?? "",
+        content: post.content ?? "",
+        excerpt: post.excerpt ?? "",
+        slug: post.slug ?? "",
+        status: post.status ?? "draft",
+        type: post.type ?? type
       });
     }
-  }, [post]);
+  }, [post, type]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<InsertPost>) => {
@@ -103,8 +104,8 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel }: 
     );
   }
 
-  return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+  const content = (
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-wp-gray">
           {postId ? `Edit ${type}` : `Add New ${type}`}
@@ -149,7 +150,7 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel }: 
               <div>
                 <Textarea
                   placeholder={`Write your ${type} content here...`}
-                  value={formData.content}
+                  value={formData.content || ""}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   className="min-h-[400px] border-none shadow-none p-0 focus-visible:ring-0 resize-none"
                 />
@@ -165,7 +166,7 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel }: 
             <CardContent className="space-y-4">
               <Textarea
                 placeholder="Optional. Add a brief description..."
-                value={formData.excerpt}
+                value={formData.excerpt || ""}
                 onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
                 rows={3}
               />
@@ -184,7 +185,7 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel }: 
               <div>
                 <Label htmlFor="status">Status</Label>
                 <Select 
-                  value={formData.status} 
+                  value={formData.status || "draft"} 
                   onValueChange={(value) => setFormData({ ...formData, status: value })}
                 >
                   <SelectTrigger>
@@ -210,7 +211,7 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel }: 
                 <Label htmlFor="slug">Slug</Label>
                 <Input
                   id="slug"
-                  value={formData.slug}
+                  value={formData.slug || ""}
                   onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                   placeholder="url-slug"
                 />
@@ -219,6 +220,16 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel }: 
           </Card>
         </div>
       </div>
+    </div>
+  );
+
+  if (noContainer) {
+    return content;
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
+      {content}
     </div>
   );
 }

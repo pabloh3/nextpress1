@@ -205,10 +205,10 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
           <div className="flex-1 ml-40">
             <AdminTopBar />
             
-            <div className="p-6">
+            <div className="px-6 pt-8 pb-6">
               <div className="max-w-4xl mx-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-6 py-4">
                   <div className="flex items-center gap-4">
                     <Button
                       variant="ghost"
@@ -259,6 +259,7 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
                         postId={parseInt(postId!)}
                         type={type}
                         onSave={handleSave}
+                        noContainer={true}
                       />
                     )}
                     {type === 'template' && (

@@ -10,6 +10,7 @@ import DividerBlock from "./divider/DividerBlock";
 import ColumnsBlock from "./columns/ColumnsBlock";
 import QuoteBlock from "./quote/QuoteBlock";
 import ListBlock from "./list/ListBlock";
+import MediaTextBlock from "./media-text/MediaTextBlock";
 
 export const blockRegistry: Record<string, BlockDefinition> = {
   // Gutenberg-compatible ids
@@ -30,11 +31,16 @@ export const blockRegistry: Record<string, BlockDefinition> = {
   spacer: SpacerBlock,
   divider: DividerBlock,
   columns: ColumnsBlock,
+  // Gutenberg-compatible id for quote
+  "core/quote": QuoteBlock,
+  // Backward compatibility
   quote: QuoteBlock,
   // Gutenberg-compatible id for list
   "core/list": ListBlock,
   // Backward compatibility
   list: ListBlock,
+  // Gutenberg-compatible id for media & text
+  "core/media-text": MediaTextBlock,
 };
 
 export function getDefaultBlock(type: string, id: string): BlockConfig | null {

@@ -443,3 +443,47 @@ export interface ListBlockConfig extends BlockConfig {
     items?: string[];
   };
 }
+
+export interface QuoteBlockConfig extends BlockConfig {
+  type: 'quote' | 'core/quote';
+  content: {
+    // Gutenberg core/quote
+    value?: string; // HTML string, often <p>..</p>
+    citation?: string; // text inside <cite>
+    textAlign?: 'left' | 'center' | 'right';
+    align?: 'wide' | 'full';
+    anchor?: string;
+    className?: string;
+    // legacy
+    text?: string;
+    author?: string;
+  };
+}
+
+// Media & Text block (Gutenberg core/media-text)
+export interface MediaTextBlockConfig extends BlockConfig {
+	type: 'media-text' | 'core/media-text';
+	content: {
+		// Gutenberg-compatible media attributes
+		mediaId?: number;
+		mediaUrl?: string;
+		mediaType?: 'image' | 'video';
+		mediaAlt?: string;
+		// Layout/behavior
+		mediaPosition?: 'left' | 'right';
+		mediaWidth?: number; // percentage 0-100
+		isStackedOnMobile?: boolean;
+		imageFill?: boolean; // crop image to fill
+		verticalAlignment?: 'top' | 'center' | 'bottom';
+		// Optional link on media
+		href?: string;
+		linkTarget?: '_self' | '_blank';
+		rel?: string;
+		title?: string;
+		// Text area (older WP versions stored as RichText content)
+		content?: string; // HTML string for the text area
+		// Common attrs
+		anchor?: string;
+		className?: string;
+	};
+}

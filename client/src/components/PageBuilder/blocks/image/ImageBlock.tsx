@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import type { BlockConfig } from "@shared/schema";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
@@ -78,100 +78,17 @@ function ImageSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
     });
   };
 
-  // Simple resizer state
-  const previewRef = useRef<HTMLDivElement | null>(null);
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const [isResizing, setIsResizing] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [startY, setStartY] = useState(0);
-  const [startWidth, setStartWidth] = useState<number | null>(null);
-  const [startHeight, setStartHeight] = useState<number | null>(null);
-  const [aspectRatio, setAspectRatio] = useState<number | null>(null);
-
-  useEffect(() => {
-    const img = imgRef.current;
-    if (!img) return;
-    const onLoad = () => {
-      if (img.naturalWidth && img.naturalHeight) {
-        setAspectRatio(img.naturalWidth / img.naturalHeight);
-      }
-    };
-    if (img.complete) {
-      onLoad();
-    } else {
-      img.addEventListener('load', onLoad);
-      return () => img.removeEventListener('load', onLoad);
-    }
-  }, [block.content?.url]);
-
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      if (startWidth == null || startHeight == null) return;
-      const dx = e.clientX - startX;
-      const newWidth = Math.max(1, startWidth + dx);
-      const newHeight = aspectRatio ? Math.max(1, Math.round(newWidth / aspectRatio)) : startHeight;
-      (imgRef.current as any)?.style && ((imgRef.current as any).style.width = `${newWidth}px`);
-      (imgRef.current as any)?.style && ((imgRef.current as any).style.height = `${newHeight}px`);
-    };
-    const onMouseUp = () => {
-      if (!isResizing) return;
-      setIsResizing(false);
-      const img = imgRef.current;
-      if (img) {
-        const appliedWidth = img.style.width || '';
-        const appliedHeight = img.style.height || '';
-        updateStyles({ width: appliedWidth, height: appliedHeight });
-      }
-    };
-    if (isResizing) {
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
-    }
-    return () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [isResizing, startX, startY, startWidth, startHeight, aspectRatio]);
 
   return (
     <div className="space-y-4">
-      {/* Preview with drag-to-resize */}
+      {/* Simple preview at a reasonable size (no live resizing here) */}
       <div>
-        <Label>Preview & Resize</Label>
-        <div
-          ref={previewRef}
-          className="relative mt-2 inline-block border border-dashed border-gray-300 p-2"
-          style={{ maxWidth: '100%' }}
-        >
+        <Label>Preview</Label>
+        <div className="mt-2 inline-block border border-dashed border-gray-300 p-2" style={{ maxWidth: '100%' }}>
           <img
-            ref={imgRef}
             src={block.content?.url || block.content?.src || ''}
             alt={block.content?.alt || ''}
-            style={{
-              width: block.styles?.width || 'auto',
-              height: block.styles?.height || 'auto',
-              objectFit: block.styles?.objectFit || 'contain',
-              display: 'block',
-              maxWidth: block.styles?.maxWidth || '100%',
-              maxHeight: block.styles?.maxHeight || 'none',
-            }}
-          />
-          <div
-            onMouseDown={(e) => {
-              e.preventDefault();
-              const img = imgRef.current;
-              if (!img) return;
-              setIsResizing(true);
-              setStartX(e.clientX);
-              setStartY(e.clientY);
-              const currentWidth = img.getBoundingClientRect().width;
-              const currentHeight = img.getBoundingClientRect().height;
-              setStartWidth(Math.round(currentWidth));
-              setStartHeight(Math.round(currentHeight));
-            }}
-            className="absolute bottom-2 right-2 w-3 h-3 bg-blue-500 cursor-se-resize rounded-sm"
-            title="Drag to resize"
+            style={{ width: '240px', height: 'auto', display: 'block' }}
           />
         </div>
       </div>

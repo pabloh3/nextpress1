@@ -4,14 +4,28 @@ import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Type } from "lucide-react";
 
 function TextRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  const Tag = (block.content?.tag || 'p') as keyof JSX.IntrinsicElements;
+  const align = (block.content?.align as string) || (block.styles?.textAlign as string | undefined);
+  const anchor = block.content?.anchor as string | undefined;
+  const extraClass = (block.content?.className as string | undefined) || "";
+  const dropCap = Boolean(block.content?.dropCap);
+
+  const className = [
+    "wp-block-paragraph",
+    align ? `has-text-align-${align}` : "",
+    dropCap ? "has-drop-cap" : "",
+    extraClass,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <Tag style={block.styles}>
-      {block.content?.text}
-    </Tag>
+    <p id={anchor} className={className} style={block.styles}>
+      {block.content?.content ?? block.content?.text}
+    </p>
   );
 }
 
@@ -31,41 +45,73 @@ function TextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
         <Label htmlFor="text-content">Text Content</Label>
         <Textarea
           id="text-content"
-          value={block.content?.text || ''}
-          onChange={(e) => updateContent({ text: e.target.value })}
+          value={(block.content?.content ?? block.content?.text) || ''}
+          onChange={(e) => updateContent({ content: e.target.value, text: undefined })}
           placeholder="Enter your text content"
           rows={4}
         />
       </div>
       <div>
-        <Label htmlFor="text-tag">HTML Tag</Label>
+        <Label htmlFor="paragraph-align">Text Align</Label>
         <Select
-          value={block.content?.tag || 'p'}
-          onValueChange={(value) => updateContent({ tag: value })}
+          value={block.content?.align || 'left'}
+          onValueChange={(value) => updateContent({ align: value })}
         >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="p">Paragraph (p)</SelectItem>
-            <SelectItem value="span">Span</SelectItem>
-            <SelectItem value="div">Div</SelectItem>
+            <SelectItem value="left">Left</SelectItem>
+            <SelectItem value="center">Center</SelectItem>
+            <SelectItem value="right">Right</SelectItem>
+            <SelectItem value="justify">Justify</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+      <div className="flex items-center justify-between">
+        <Label htmlFor="paragraph-dropcap">Drop cap</Label>
+        <Switch
+          id="paragraph-dropcap"
+          checked={Boolean(block.content?.dropCap)}
+          onCheckedChange={(checked) => updateContent({ dropCap: checked })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="paragraph-anchor">Anchor</Label>
+        <Textarea
+          id="paragraph-anchor"
+          value={block.content?.anchor || ''}
+          onChange={(e) => updateContent({ anchor: e.target.value })}
+          placeholder="Add an anchor (without #)"
+          rows={1}
+        />
+      </div>
+      <div>
+        <Label htmlFor="paragraph-class">Additional CSS Class(es)</Label>
+        <Textarea
+          id="paragraph-class"
+          value={block.content?.className || ''}
+          onChange={(e) => updateContent({ className: e.target.value })}
+          placeholder="e.g. custom-class is-style-outline"
+          rows={1}
+        />
       </div>
     </div>
   );
 }
 
 const TextBlock: BlockDefinition = {
-  id: 'text',
-  name: 'Text',
+  id: 'core/paragraph',
+  name: 'Paragraph',
   icon: Type,
   description: 'Add a paragraph of text',
   category: 'basic',
   defaultContent: {
-    text: 'Add your text content here. You can edit this text and customize its appearance.',
-    tag: 'p',
+    content: 'Add your text content here. You can edit this text and customize its appearance.',
+    align: 'left',
+    dropCap: false,
+    anchor: '',
+    className: '',
   },
   defaultStyles: {
     fontSize: '16px',

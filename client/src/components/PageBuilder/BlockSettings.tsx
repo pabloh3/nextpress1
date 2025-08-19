@@ -68,7 +68,7 @@ export default function BlockSettings({ block, onUpdate }: BlockSettingsProps) {
     return (
       <div className="space-y-6">
         {/* Typography */}
-        {["heading", "core/heading", "text", "button"].includes(block.type) && (
+        {["heading", "core/heading", "text", "core/paragraph", "button", "core/button"].includes(block.type) && (
           <Card>
             <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2">

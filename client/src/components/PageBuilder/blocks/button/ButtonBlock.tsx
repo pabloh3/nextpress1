@@ -7,16 +7,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MousePointer } from "lucide-react";
 
 function ButtonRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
+  const url = block.content?.url as string | undefined;
+  const linkTarget = (block.content?.linkTarget as string | undefined) || (block.content?.target as string | undefined);
+  const rel = block.content?.rel as string | undefined;
+  const title = block.content?.title as string | undefined;
+  const extraClass = (block.content?.className as string | undefined) || "";
+
+  const wrapperClass = ["wp-block-button", extraClass].filter(Boolean).join(" ");
+  const anchorClass = "wp-block-button__link wp-element-button";
+
   return (
-    <a
-      href={block.content?.url}
-      target={block.content?.target}
-      style={block.styles}
-      className="inline-block text-decoration-none"
-      onClick={(e) => isPreview ? undefined : e.preventDefault()}
-    >
-      {block.content?.text}
-    </a>
+    <div className={wrapperClass} onClick={(e) => (isPreview ? undefined : e.preventDefault())}>
+      <a
+        href={url}
+        target={linkTarget}
+        rel={rel}
+        title={title}
+        style={block.styles}
+        className={anchorClass}
+      >
+        {block.content?.text}
+      </a>
+    </div>
   );
 }
 
@@ -53,8 +65,8 @@ function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
       <div>
         <Label htmlFor="button-target">Link Target</Label>
         <Select
-          value={block.content?.target || '_self'}
-          onValueChange={(value) => updateContent({ target: value })}
+          value={(block.content?.linkTarget || block.content?.target || '_self')}
+          onValueChange={(value) => updateContent({ linkTarget: value, target: undefined })}
         >
           <SelectTrigger>
             <SelectValue />
@@ -65,12 +77,39 @@ function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
           </SelectContent>
         </Select>
       </div>
+      <div>
+        <Label htmlFor="button-rel">Rel</Label>
+        <Input
+          id="button-rel"
+          value={block.content?.rel || ''}
+          onChange={(e) => updateContent({ rel: e.target.value })}
+          placeholder="noopener noreferrer"
+        />
+      </div>
+      <div>
+        <Label htmlFor="button-title">Title</Label>
+        <Input
+          id="button-title"
+          value={block.content?.title || ''}
+          onChange={(e) => updateContent({ title: e.target.value })}
+          placeholder="Link title"
+        />
+      </div>
+      <div>
+        <Label htmlFor="button-class">Additional CSS Class(es)</Label>
+        <Input
+          id="button-class"
+          value={block.content?.className || ''}
+          onChange={(e) => updateContent({ className: e.target.value })}
+          placeholder="e.g. is-style-outline"
+        />
+      </div>
     </div>
   );
 }
 
 const ButtonBlock: BlockDefinition = {
-  id: 'button',
+  id: 'core/button',
   name: 'Button',
   icon: MousePointer,
   description: 'Add a clickable button',
@@ -78,7 +117,10 @@ const ButtonBlock: BlockDefinition = {
   defaultContent: {
     text: 'Click Me',
     url: '#',
-    target: '_self',
+    linkTarget: '_self',
+    rel: '',
+    title: '',
+    className: '',
   },
   defaultStyles: {
     backgroundColor: '#007cba',

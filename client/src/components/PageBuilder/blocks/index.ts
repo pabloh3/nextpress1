@@ -14,10 +14,17 @@ import ListBlock from "./list/ListBlock";
 export const blockRegistry: Record<string, BlockDefinition> = {
   // Gutenberg-compatible ids
   "core/heading": HeadingBlock,
+  "core/paragraph": TextBlock,
   // Backward compatibility with existing saved data
   heading: HeadingBlock,
   text: TextBlock,
+  // Gutenberg-compatible id for button
+  "core/button": ButtonBlock,
+  // Backward compatibility
   button: ButtonBlock,
+  // Gutenberg-compatible id for image
+  "core/image": ImageBlock,
+  // Backward compatibility
   image: ImageBlock,
   video: VideoBlock,
   spacer: SpacerBlock,

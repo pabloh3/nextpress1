@@ -336,10 +336,16 @@ export interface BlockConfig {
 
 // Common block types
 export interface TextBlockConfig extends BlockConfig {
-  type: 'text';
+  type: 'text' | 'core/paragraph';
   content: {
-    text: string;
-    tag?: 'p' | 'span' | 'div';
+    // Gutenberg uses `content` to store raw text/HTML
+    content?: string;
+    // legacy support
+    text?: string;
+    align?: 'left' | 'center' | 'right' | 'justify';
+    dropCap?: boolean;
+    anchor?: string;
+    className?: string;
   };
 }
 
@@ -357,20 +363,39 @@ export interface HeadingBlockConfig extends BlockConfig {
 }
 
 export interface ImageBlockConfig extends BlockConfig {
-  type: 'image';
+  type: 'image' | 'core/image';
   content: {
-    src: string;
-    alt: string;
+    // Gutenberg
+    id?: number;
+    url?: string; // image url
+    alt?: string;
     caption?: string;
+    sizeSlug?: 'thumbnail' | 'medium' | 'large' | 'full';
+    align?: '' | 'left' | 'center' | 'right' | 'wide' | 'full';
+    linkDestination?: 'none' | 'media' | 'attachment' | 'custom';
+    href?: string; // when linkDestination === 'custom'
+    linkTarget?: '_self' | '_blank';
+    // legacy
+    src?: string;
+    target?: '_self' | '_blank';
+    // common link attrs
+    rel?: string;
+    title?: string;
+    className?: string;
   };
 }
 
 export interface ButtonBlockConfig extends BlockConfig {
-  type: 'button';
+  type: 'button' | 'core/button';
   content: {
     text: string;
     url: string;
+    linkTarget?: '_blank' | '_self';
+    // legacy support
     target?: '_blank' | '_self';
+    rel?: string;
+    title?: string;
+    className?: string;
   };
 }
 

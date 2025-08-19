@@ -137,11 +137,15 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
           },
         };
       case 'text':
+      case 'core/paragraph':
         return {
           ...baseBlock,
           content: {
-            text: 'Add your text content here. You can edit this text and customize its appearance.',
-            tag: 'p',
+            content: 'Add your text content here. You can edit this text and customize its appearance.',
+            align: 'left',
+            dropCap: false,
+            anchor: '',
+            className: '',
           },
           styles: {
             ...baseBlock.styles,
@@ -151,12 +155,16 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
           },
         };
       case 'button':
+      case 'core/button':
         return {
           ...baseBlock,
           content: {
             text: 'Click Me',
             url: '#',
-            target: '_self',
+            linkTarget: '_self',
+            rel: '',
+            title: '',
+            className: '',
           },
           styles: {
             ...baseBlock.styles,
@@ -172,12 +180,22 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
           },
         };
       case 'image':
+      case 'core/image':
         return {
           ...baseBlock,
           content: {
-            src: 'https://via.placeholder.com/600x300?text=Add+Your+Image',
+            url: 'https://via.placeholder.com/600x300?text=Add+Your+Image',
             alt: 'Placeholder image',
             caption: '',
+            id: undefined,
+            sizeSlug: 'full',
+            align: '',
+            linkDestination: 'none',
+            href: '',
+            linkTarget: '_self',
+            rel: '',
+            title: '',
+            className: '',
           },
           styles: {
             ...baseBlock.styles,

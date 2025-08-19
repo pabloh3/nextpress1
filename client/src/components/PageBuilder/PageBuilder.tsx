@@ -276,10 +276,10 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-full bg-gray-50">
       <DragDropContext onDragEnd={handleDragEnd}>
         {/* Sidebar - Block Library and Settings */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+        <div className="w-80 bg-white border-r border-gray-200 flex flex-col min-h-0">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Page Builder</h2>
@@ -306,7 +306,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
             </div>
           </div>
 
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'blocks' | 'settings')} className="flex-1 flex flex-col p-4">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'blocks' | 'settings')} className="flex-1 flex flex-col p-4 min-h-0">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="blocks" className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />
@@ -318,13 +318,13 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="blocks" className="flex-1 mt-4">
+            <TabsContent value="blocks" className="flex-1 mt-4 overflow-hidden">
               <ScrollArea className="h-full">
                 <BlockLibrary />
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="settings" className="flex-1 mt-4">
+            <TabsContent value="settings" className="flex-1 mt-4 overflow-hidden">
               <ScrollArea className="h-full">
                 {selectedBlock ? (
                   <BlockSettings
@@ -380,9 +380,9 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
           </div>
 
           {/* Canvas */}
-          <div className="flex-1 overflow-auto bg-gray-100 p-8">
+          <div className="flex-1 overflow-auto bg-gray-100 p-8 min-h-0">
             <DevicePreview device={deviceView}>
-              <div className="bg-white min-h-screen shadow-lg">
+              <div className="bg-white min-h-full shadow-lg">
                 <Droppable droppableId="canvas">
                   {(provided, snapshot) => (
                     <div

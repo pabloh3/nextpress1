@@ -31,6 +31,9 @@ export const blockRegistry: Record<string, BlockDefinition> = {
   divider: DividerBlock,
   columns: ColumnsBlock,
   quote: QuoteBlock,
+  // Gutenberg-compatible id for list
+  "core/list": ListBlock,
+  // Backward compatibility
   list: ListBlock,
 };
 

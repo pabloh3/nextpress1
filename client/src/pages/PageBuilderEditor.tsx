@@ -148,9 +148,9 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
     <div className="flex h-screen bg-gray-50">
       {editorMode === 'builder' ? (
         // Full-screen page builder
-        <div className="w-full">
+        <div className="w-full h-full flex flex-col">
           {/* Top navigation for page builder */}
-          <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+          <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-none">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
@@ -191,12 +191,14 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
           </div>
           
           {/* Page Builder Component */}
-          <PageBuilder
-            post={data}
-            template={type === 'template' ? data as Template : undefined}
-            onSave={handleSave}
-            onPreview={handlePreview}
-          />
+          <div className="flex-1 min-h-0">
+            <PageBuilder
+              post={data}
+              template={type === 'template' ? data as Template : undefined}
+              onSave={handleSave}
+              onPreview={handlePreview}
+            />
+          </div>
         </div>
       ) : (
         // Classic editor with sidebar

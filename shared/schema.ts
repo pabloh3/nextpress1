@@ -424,3 +424,22 @@ export interface DividerBlockConfig extends BlockConfig {
     color: string;
   };
 }
+
+export interface ListBlockConfig extends BlockConfig {
+  type: 'list' | 'core/list';
+  content: {
+    // Gutenberg core/list
+    ordered?: boolean;
+    values?: string; // HTML string with <li> items
+    start?: number; // only for ordered lists
+    reversed?: boolean; // only for ordered lists
+    // For ordered lists: '1' | 'a' | 'A' | 'i' | 'I'
+    // For unordered lists: CSS list-style-type values like 'disc' | 'circle' | 'square'
+    type?: string;
+    // common attrs
+    anchor?: string;
+    className?: string;
+    // legacy
+    items?: string[];
+  };
+}

@@ -3,19 +3,56 @@ import type { BlockConfig } from "@shared/schema";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { List as ListIcon } from "lucide-react";
 
 function ListRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  const ListTag = (block.content?.ordered ? 'ol' : 'ul') as keyof JSX.IntrinsicElements;
-  const items: string[] = block.content?.items || ['List item 1', 'List item 2', 'List item 3'];
-  return (
-    <ListTag style={block.styles}>
-      {items.map((item, index) => (
-        <li key={index}>{item}</li>
-      ))}
-    </ListTag>
-  );
+  const isOrdered = !!block.content?.ordered;
+  const ListTag = (isOrdered ? 'ol' : 'ul') as keyof JSX.IntrinsicElements;
+  // Back-compat: if legacy `items` array exists and no `values`, build HTML from it
+  const legacyItems: string[] | undefined = block.content?.items;
+  const valuesHtml: string =
+    (block.content?.values as string | undefined)?.trim() ||
+    (Array.isArray(legacyItems)
+      ? legacyItems
+          .filter((it) => typeof it === 'string' && it.trim().length > 0)
+          .map((it) => `<li>${it}</li>`)
+          .join('')
+      : '<li>List item 1</li><li>List item 2</li><li>List item 3</li>');
+
+  // Map Gutenberg-like attributes
+  const anchor: string | undefined = block.content?.anchor;
+  const className: string | undefined = block.content?.className;
+  const reversed: boolean | undefined = isOrdered ? block.content?.reversed : undefined;
+  const start: number | undefined = isOrdered ? block.content?.start : undefined;
+  const listType: string | undefined = block.content?.type;
+
+  const style: React.CSSProperties = {
+    ...block.styles,
+    // For unordered lists, map `type` to CSS list-style-type if present
+    ...(listType && !isOrdered ? { listStyleType: listType as React.CSSProperties['listStyleType'] } : {}),
+  };
+
+  const commonProps: any = {
+    style,
+    ...(anchor ? { id: anchor } : {}),
+    ...(className ? { className } : {}),
+    dangerouslySetInnerHTML: { __html: valuesHtml },
+  };
+
+  // For ordered lists, support HTML attributes reversed/start and type
+  if (isOrdered) {
+    if (typeof start === 'number') commonProps.start = start;
+    if (reversed) commonProps.reversed = true;
+    // For ordered lists, `type` can be one of '1', 'a', 'A', 'i', 'I'
+    if (listType && ['1', 'a', 'A', 'i', 'I'].includes(listType)) {
+      commonProps.type = listType;
+    }
+  }
+
+  return <ListTag {...commonProps} />;
 }
 
 function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
@@ -28,14 +65,23 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
     });
   };
 
-  const items: string[] = block.content?.items || [];
+  const isOrdered = !!block.content?.ordered;
+  const values: string = (block.content?.values as string | undefined) || '';
+  // Provide a simple textarea UX: one line per list item
+  const itemsText: string = values
+    ? values
+        .split(/<\/li>/i)
+        .map((chunk) => chunk.replace(/<li>/i, '').trim())
+        .filter((line) => line.length > 0)
+        .join('\n')
+    : (block.content?.items as string[] | undefined)?.join('\n') || '';
 
   return (
     <div className="space-y-4">
       <div>
         <Label htmlFor="list-type">List Type</Label>
         <Select
-          value={block.content?.ordered ? 'ordered' : 'unordered'}
+          value={isOrdered ? 'ordered' : 'unordered'}
           onValueChange={(value) => updateContent({ ordered: value === 'ordered' })}
         >
           <SelectTrigger>
@@ -48,33 +94,118 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
         </Select>
       </div>
       <div className="space-y-2">
-        <Label>Items</Label>
-        {[0,1,2,3,4].map((idx) => (
+        <Label>Items (one per line)</Label>
+        <Textarea
+          value={itemsText}
+          onChange={(e) => {
+            const lines = e.target.value.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+            const html = lines.map((l) => `<li>${l}</li>`).join('');
+            updateContent({ values: html });
+          }}
+          placeholder={`List item 1\nList item 2\nList item 3`}
+          rows={6}
+        />
+      </div>
+      {isOrdered ? (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="list-start">Start</Label>
+            <Input
+              type="number"
+              value={block.content?.start ?? ''}
+              onChange={(e) => updateContent({ start: e.target.value === '' ? undefined : Number(e.target.value) })}
+              placeholder="1"
+              id="list-start"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="list-reversed">Reversed</Label>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="list-reversed"
+                checked={!!block.content?.reversed}
+                onCheckedChange={(val) => updateContent({ reversed: val })}
+              />
+            </div>
+          </div>
+          <div className="space-y-2 col-span-2">
+            <Label htmlFor="list-type-ordered">Numbering Type</Label>
+            <Select
+              value={block.content?.type ?? 'default'}
+              onValueChange={(value) => updateContent({ type: value === 'default' ? undefined : value })}
+            >
+              <SelectTrigger id="list-type-ordered">
+                <SelectValue placeholder="Default (1,2,3)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default (1,2,3)</SelectItem>
+                <SelectItem value="1">1,2,3</SelectItem>
+                <SelectItem value="a">a,b,c</SelectItem>
+                <SelectItem value="A">A,B,C</SelectItem>
+                <SelectItem value="i">i,ii,iii</SelectItem>
+                <SelectItem value="I">I,II,III</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="list-type-unordered">Bullet Style</Label>
+          <Select
+            value={block.content?.type ?? 'default'}
+            onValueChange={(value) => updateContent({ type: value === 'default' ? undefined : value })}
+          >
+            <SelectTrigger id="list-type-unordered">
+              <SelectValue placeholder="Default (disc)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Default (disc)</SelectItem>
+              <SelectItem value="disc">disc</SelectItem>
+              <SelectItem value="circle">circle</SelectItem>
+              <SelectItem value="square">square</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="list-anchor">Anchor</Label>
           <Input
-            key={idx}
-            value={items[idx] || ''}
-            onChange={(e) => {
-              const next = [...items];
-              next[idx] = e.target.value;
-              updateContent({ items: next });
-            }}
-            placeholder={`List item ${idx + 1}`}
+            id="list-anchor"
+            value={block.content?.anchor ?? ''}
+            onChange={(e) => updateContent({ anchor: e.target.value })}
+            placeholder="section-id"
           />
-        ))}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="list-class">CSS Class</Label>
+          <Input
+            id="list-class"
+            value={block.content?.className ?? ''}
+            onChange={(e) => updateContent({ className: e.target.value })}
+            placeholder="custom-class"
+          />
+        </div>
       </div>
     </div>
   );
 }
 
 const ListBlock: BlockDefinition = {
-  id: 'list',
+  id: 'core/list',
   name: 'List',
   icon: ListIcon,
   description: 'Add a bulleted or numbered list',
   category: 'advanced',
   defaultContent: {
     ordered: false,
-    items: ['List item 1', 'List item 2', 'List item 3'],
+    values: '<li>List item 1</li><li>List item 2</li><li>List item 3</li>',
+    // Gutenberg-compatible extras
+    start: undefined,
+    reversed: undefined,
+    type: undefined,
+    anchor: '',
+    className: '',
   },
   defaultStyles: {},
   renderer: ListRenderer,

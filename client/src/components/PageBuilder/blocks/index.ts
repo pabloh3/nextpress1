@@ -5,6 +5,7 @@ import TextBlock from "./text/TextBlock";
 import ButtonBlock from "./button/ButtonBlock";
 import ImageBlock from "./image/ImageBlock";
 import VideoBlock from "./video/VideoBlock";
+import AudioBlock from "./audio/AudioBlock";
 import SpacerBlock from "./spacer/SpacerBlock";
 import DividerBlock from "./divider/DividerBlock";
 import ColumnsBlock from "./columns/ColumnsBlock";
@@ -31,6 +32,10 @@ export const blockRegistry: Record<string, BlockDefinition> = {
   "core/video": VideoBlock,
   // Backward compatibility
   video: VideoBlock,
+  // Gutenberg-compatible id for audio
+  "core/audio": AudioBlock,
+  // Backward compatibility
+  audio: AudioBlock,
   spacer: SpacerBlock,
   divider: DividerBlock,
   columns: ColumnsBlock,

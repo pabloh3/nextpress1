@@ -424,6 +424,24 @@ export interface VideoBlockConfig extends BlockConfig {
   };
 }
 
+export interface AudioBlockConfig extends BlockConfig {
+  type: 'audio' | 'core/audio';
+  content: {
+    // Gutenberg core/audio
+    src?: string; // audio URL
+    id?: number; // attachment id
+    autoplay?: boolean;
+    controls?: boolean;
+    loop?: boolean;
+    preload?: 'auto' | 'metadata' | 'none';
+    // Presentation
+    align?: 'wide' | 'full';
+    caption?: string;
+    anchor?: string;
+    className?: string;
+  };
+}
+
 export interface SpacerBlockConfig extends BlockConfig {
   type: 'spacer';
   content: {

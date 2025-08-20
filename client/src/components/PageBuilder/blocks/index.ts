@@ -61,6 +61,8 @@ export function getDefaultBlock(type: string, id: string): BlockConfig | null {
     styles: {
       padding: '20px',
       margin: '0px',
+      contentAlignHorizontal: 'left',
+      contentAlignVertical: 'top',
       ...def.defaultStyles,
     },
     settings: {},

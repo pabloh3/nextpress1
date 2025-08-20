@@ -35,6 +35,11 @@ export default function BlockRenderer({
   const parsePadding = parseMargin;
   const [pTop, pRight, pBottom, pLeft] = parsePadding(paddingString);
 
+  const horizontal = (block.styles as any)?.contentAlignHorizontal as 'left' | 'center' | 'right' | undefined;
+  const vertical = (block.styles as any)?.contentAlignVertical as 'top' | 'middle' | 'bottom' | undefined;
+  const justifyContent = horizontal === 'center' ? 'center' : horizontal === 'right' ? 'flex-end' : 'flex-start';
+  const alignItems = vertical === 'middle' ? 'center' : vertical === 'bottom' ? 'flex-end' : 'flex-start';
+
   const renderContent = () => {
     const def = blockRegistry[block.type];
     if (def?.renderer) {
@@ -92,7 +97,10 @@ export default function BlockRenderer({
 
       {/* Block Content with spacing highlight overlays */}
       <div className={`${!isPreview ? 'cursor-pointer' : ''} transition-all duration-200`}>
-        <div className={`${!isPreview && isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''} ${!isPreview && isHovered && !isSelected ? 'ring-1 ring-gray-300' : ''} relative`}>
+        <div
+          className={`${!isPreview && isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''} ${!isPreview && isHovered && !isSelected ? 'ring-1 ring-gray-300' : ''} relative`}
+          style={{ display: 'flex', justifyContent, alignItems, width: '100%' }}
+        >
           {/* Padding highlight (approximate) */}
           {(!isPreview && hoverHighlight === 'padding') && (
             <>

@@ -172,6 +172,50 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
           </CardContent>
         </Card>
 
+        {/* Content Alignment */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Layout className="w-4 h-4" />
+              Content Alignment
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="align-horizontal">Horizontal</Label>
+              <Select
+                value={(block.styles as any)?.contentAlignHorizontal || 'left'}
+                onValueChange={(value) => updateStyles({ contentAlignHorizontal: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Left</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="right">Right</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="align-vertical">Vertical</Label>
+              <Select
+                value={(block.styles as any)?.contentAlignVertical || 'top'}
+                onValueChange={(value) => updateStyles({ contentAlignVertical: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="top">Top</SelectItem>
+                  <SelectItem value="middle">Middle</SelectItem>
+                  <SelectItem value="bottom">Bottom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Spacing */}
         <Card>
           <CardHeader>

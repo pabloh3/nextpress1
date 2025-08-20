@@ -113,6 +113,8 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
       styles: {
         padding: '20px',
         margin: '0px',
+        contentAlignHorizontal: 'left',
+        contentAlignVertical: 'top',
       },
       settings: {},
     };

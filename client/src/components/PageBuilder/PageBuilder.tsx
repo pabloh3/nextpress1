@@ -35,6 +35,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
   const [deviceView, setDeviceView] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'blocks' | 'settings'>('blocks');
+  const [hoverHighlight, setHoverHighlight] = useState<'padding' | 'margin' | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -330,6 +331,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
                   <BlockSettings
                     block={selectedBlock}
                     onUpdate={(updates) => updateBlock(selectedBlock.id, updates)}
+                    onHoverArea={(area) => setHoverHighlight(area)}
                   />
                 ) : (
                   <div className="text-center text-gray-500 mt-8">
@@ -425,6 +427,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
                                   isPreview={isPreviewMode}
                                   onDuplicate={() => duplicateBlock(block.id)}
                                   onDelete={() => deleteBlock(block.id)}
+                                  hoverHighlight={selectedBlockId === block.id ? hoverHighlight : null}
                                 />
                               </div>
                             )}

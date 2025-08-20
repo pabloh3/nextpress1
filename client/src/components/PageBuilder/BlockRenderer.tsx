@@ -10,6 +10,7 @@ interface BlockRendererProps {
   isPreview: boolean;
   onDuplicate: () => void;
   onDelete: () => void;
+  hoverHighlight?: 'padding' | 'margin' | null;
 }
 
 export default function BlockRenderer({ 
@@ -17,9 +18,22 @@ export default function BlockRenderer({
   isSelected, 
   isPreview, 
   onDuplicate, 
-  onDelete 
+  onDelete,
+  hoverHighlight = null,
 }: BlockRendererProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const marginString: string = (block.styles?.margin as string) || '0px';
+  const parseMargin = (value: string): [string, string, string, string] => {
+    const parts = value.trim().split(/\s+/);
+    if (parts.length === 1) return [parts[0], parts[0], parts[0], parts[0]];
+    if (parts.length === 2) return [parts[0], parts[1], parts[0], parts[1]];
+    if (parts.length === 3) return [parts[0], parts[1], parts[2], parts[1]];
+    return [parts[0], parts[1], parts[2], parts[3]];
+  };
+  const [mTop, mRight, mBottom, mLeft] = parseMargin(marginString);
+  const paddingString: string = (block.styles?.padding as string) || '0px';
+  const parsePadding = parseMargin;
+  const [pTop, pRight, pBottom, pLeft] = parsePadding(paddingString);
 
   const renderContent = () => {
     const def = blockRegistry[block.type];
@@ -76,16 +90,36 @@ export default function BlockRenderer({
         </div>
       )}
 
-      {/* Block Content */}
-      <div
-        className={`
-          ${!isPreview && isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
-          ${!isPreview && isHovered && !isSelected ? 'ring-1 ring-gray-300' : ''}
-          ${!isPreview ? 'cursor-pointer' : ''}
-          transition-all duration-200
-        `}
-      >
-        {renderContent()}
+      {/* Block Content with spacing highlight overlays */}
+      <div className={`${!isPreview ? 'cursor-pointer' : ''} transition-all duration-200`}>
+        <div className={`${!isPreview && isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''} ${!isPreview && isHovered && !isSelected ? 'ring-1 ring-gray-300' : ''} relative`}>
+          {/* Padding highlight (approximate) */}
+          {(!isPreview && hoverHighlight === 'padding') && (
+            <>
+              <div className="absolute left-0 right-0 pointer-events-none" style={{ top: 0, height: pTop, background: 'rgba(34,197,94,0.15)' }} />
+              <div className="absolute left-0 right-0 pointer-events-none" style={{ bottom: 0, height: pBottom, background: 'rgba(34,197,94,0.15)' }} />
+              <div className="absolute top-0 bottom-0 pointer-events-none" style={{ left: 0, width: pLeft, background: 'rgba(34,197,94,0.15)' }} />
+              <div className="absolute top-0 bottom-0 pointer-events-none" style={{ right: 0, width: pRight, background: 'rgba(34,197,94,0.15)' }} />
+            </>
+          )}
+          {/* Margin highlight */}
+          {(!isPreview && hoverHighlight === 'margin') && (
+            <div
+              className="pointer-events-none"
+              style={{
+                position: 'absolute',
+                top: `calc(-1 * ${mTop})`,
+                left: `calc(-1 * ${mLeft})`,
+                right: `calc(-1 * ${mRight})`,
+                bottom: `calc(-1 * ${mBottom})`,
+                outline: '2px dashed rgba(59,130,246,0.6)',
+                outlineOffset: 0,
+                borderRadius: '6px',
+              }}
+            />
+          )}
+          {renderContent()}
+        </div>
       </div>
     </div>
   );

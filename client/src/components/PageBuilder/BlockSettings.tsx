@@ -14,9 +14,10 @@ import { blockRegistry } from "./blocks";
 interface BlockSettingsProps {
   block: BlockConfig;
   onUpdate: (updates: Partial<BlockConfig>) => void;
+  onHoverArea?: (area: 'padding' | 'margin' | null) => void;
 }
 
-export default function BlockSettings({ block, onUpdate }: BlockSettingsProps) {
+export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSettingsProps) {
   const [customCss, setCustomCss] = useState(block.customCss || '');
 
   const updateContent = (contentUpdates: any) => {
@@ -187,6 +188,8 @@ export default function BlockSettings({ block, onUpdate }: BlockSettingsProps) {
                 value={block.styles?.padding || '20px'}
                 onChange={(e) => updateStyles({ padding: e.target.value })}
                 placeholder="20px"
+                onMouseEnter={() => onHoverArea?.('padding')}
+                onMouseLeave={() => onHoverArea?.(null)}
               />
             </div>
             <div>
@@ -196,6 +199,8 @@ export default function BlockSettings({ block, onUpdate }: BlockSettingsProps) {
                 value={block.styles?.margin || '0px'}
                 onChange={(e) => updateStyles({ margin: e.target.value })}
                 placeholder="0px"
+                onMouseEnter={() => onHoverArea?.('margin')}
+                onMouseLeave={() => onHoverArea?.(null)}
               />
             </div>
           </CardContent>

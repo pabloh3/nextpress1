@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import type { BlockConfig } from "@shared/schema";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { AudioLines as AudioIcon } from "lucide-react";
 
 function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
@@ -54,6 +56,7 @@ function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
 }
 
 function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  const [isPickerOpen, setPickerOpen] = useState(false);
   const updateContent = (contentUpdates: any) => {
     onUpdate({
       content: {
@@ -67,11 +70,20 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
     <div className="space-y-4">
       <div>
         <Label htmlFor="audio-src">Audio URL</Label>
-        <Input
-          id="audio-src"
-          value={(block.content as any)?.src || ''}
-          onChange={(e) => updateContent({ src: e.target.value })}
-          placeholder="https://example.com/audio.mp3"
+        <div className="flex items-center gap-2">
+          <Input
+            id="audio-src"
+            value={(block.content as any)?.src || ''}
+            onChange={(e) => updateContent({ src: e.target.value })}
+            placeholder="https://example.com/audio.mp3"
+          />
+          <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>Choose from library</Button>
+        </div>
+        <MediaPickerDialog
+          open={isPickerOpen}
+          onOpenChange={setPickerOpen}
+          kind="audio"
+          onSelect={(m) => updateContent({ id: m.id, src: m.url })}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">

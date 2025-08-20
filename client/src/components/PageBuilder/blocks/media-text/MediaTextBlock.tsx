@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { BlockConfig } from "@shared/schema";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { Image as ImageIcon } from "lucide-react";
 
 function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
@@ -73,6 +75,7 @@ function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }
 }
 
 function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  const [isPickerOpen, setPickerOpen] = useState(false);
   const updateContent = (contentUpdates: any) => {
     onUpdate({
       content: {
@@ -86,11 +89,28 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
     <div className="space-y-4">
       <div>
         <Label htmlFor="media-url">Media URL</Label>
-        <Input
-          id="media-url"
-          value={(block.content as any)?.mediaUrl || ''}
-          onChange={(e) => updateContent({ mediaUrl: e.target.value })}
-          placeholder="https://example.com/image-or-video.jpg"
+        <div className="flex items-center gap-2">
+          <Input
+            id="media-url"
+            value={(block.content as any)?.mediaUrl || ''}
+            onChange={(e) => updateContent({ mediaUrl: e.target.value })}
+            placeholder="https://example.com/image-or-video.jpg"
+          />
+          <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>Choose from library</Button>
+        </div>
+        <MediaPickerDialog
+          open={isPickerOpen}
+          onOpenChange={setPickerOpen}
+          kind="any"
+          onSelect={(m) => {
+            const type = m.mimeType?.startsWith("video/") ? "video" : "image";
+            updateContent({
+              mediaId: m.id,
+              mediaUrl: m.url,
+              mediaType: type,
+              mediaAlt: (block.content as any)?.mediaAlt || m.alt || m.originalName || m.filename,
+            });
+          }}
         />
       </div>
       <div>

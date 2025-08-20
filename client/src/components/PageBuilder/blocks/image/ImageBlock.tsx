@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import type { BlockConfig } from "@shared/schema";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { Image as ImageIcon } from "lucide-react";
 
 function ImageRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
@@ -60,6 +62,7 @@ function ImageRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
 }
 
 function ImageSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  const [isPickerOpen, setPickerOpen] = useState(false);
   const updateContent = (contentUpdates: any) => {
     onUpdate({
       content: {
@@ -95,11 +98,28 @@ function ImageSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
 
       <div>
         <Label htmlFor="image-src">Image URL</Label>
-        <Input
-          id="image-src"
-          value={block.content?.url || block.content?.src || ''}
-          onChange={(e) => updateContent({ url: e.target.value, src: undefined })}
-          placeholder="https://example.com/image.jpg"
+        <div className="flex items-center gap-2">
+          <Input
+            id="image-src"
+            value={block.content?.url || block.content?.src || ''}
+            onChange={(e) => updateContent({ url: e.target.value, src: undefined })}
+            placeholder="https://example.com/image.jpg"
+          />
+          <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>Choose from library</Button>
+        </div>
+        <MediaPickerDialog
+          open={isPickerOpen}
+          onOpenChange={setPickerOpen}
+          kind="image"
+          onSelect={(m) => {
+            updateContent({
+              id: m.id,
+              url: m.url,
+              src: undefined,
+              alt: (block.content as any)?.alt || m.alt || m.originalName || m.filename,
+              caption: (block.content as any)?.caption,
+            });
+          }}
         />
       </div>
       <div>

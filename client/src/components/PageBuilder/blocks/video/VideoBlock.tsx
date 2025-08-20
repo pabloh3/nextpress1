@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import type { BlockConfig } from "@shared/schema";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { Video as VideoIcon } from "lucide-react";
 
 function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
@@ -174,6 +176,8 @@ function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
 }
 
 function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  const [isPickerOpen, setPickerOpen] = useState(false);
+  const [isPosterPickerOpen, setPosterPickerOpen] = useState(false);
   const updateContent = (contentUpdates: any) => {
     onUpdate({
       content: {
@@ -195,20 +199,40 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
     <div className="space-y-4">
       <div>
         <Label htmlFor="video-src">Video URL</Label>
-        <Input
-          id="video-src"
-          value={(block.content as any)?.src || ''}
-          onChange={(e) => updateContent({ src: e.target.value })}
-          placeholder="https://example.com/video.mp4"
+        <div className="flex items-center gap-2">
+          <Input
+            id="video-src"
+            value={(block.content as any)?.src || ''}
+            onChange={(e) => updateContent({ src: e.target.value })}
+            placeholder="https://example.com/video.mp4"
+          />
+          <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>Choose from library</Button>
+        </div>
+        <MediaPickerDialog
+          open={isPickerOpen}
+          onOpenChange={setPickerOpen}
+          kind="video"
+          onSelect={(m) => {
+            updateContent({ id: m.id, src: m.url });
+          }}
         />
       </div>
       <div>
         <Label htmlFor="video-poster">Poster Image URL</Label>
-        <Input
-          id="video-poster"
-          value={(block.content as any)?.poster || ''}
-          onChange={(e) => updateContent({ poster: e.target.value })}
-          placeholder="https://example.com/poster.jpg"
+        <div className="flex items-center gap-2">
+          <Input
+            id="video-poster"
+            value={(block.content as any)?.poster || ''}
+            onChange={(e) => updateContent({ poster: e.target.value })}
+            placeholder="https://example.com/poster.jpg"
+          />
+          <Button type="button" variant="outline" onClick={() => setPosterPickerOpen(true)}>Choose image</Button>
+        </div>
+        <MediaPickerDialog
+          open={isPosterPickerOpen}
+          onOpenChange={setPosterPickerOpen}
+          kind="image"
+          onSelect={(m) => updateContent({ poster: m.url })}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">

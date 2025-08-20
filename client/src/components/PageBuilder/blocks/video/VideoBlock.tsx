@@ -4,25 +4,172 @@ import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Video as VideoIcon } from "lucide-react";
 
 function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+  const {
+    src,
+    poster,
+    controls = true,
+    autoplay = false,
+    loop = false,
+    muted = false,
+    playsInline = true,
+    preload = 'metadata',
+    align,
+    caption,
+    anchor,
+    className,
+    sources,
+  } = (block.content || {}) as any;
+
+  const classes = [
+    'wp-block-video',
+    align ? `align${align}` : '',
+    className || '',
+  ].filter(Boolean).join(' ');
+
+  // Detect YouTube URLs and render an iframe embed instead of <video>
+  const isYouTubeUrl = (url?: string): boolean => {
+    if (!url) return false;
+    try {
+      const u = new URL(url);
+      const host = u.hostname.toLowerCase();
+      return (
+        host === 'www.youtube.com' ||
+        host === 'youtube.com' ||
+        host === 'm.youtube.com' ||
+        host === 'youtu.be'
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  const extractYouTubeId = (url: string): string | null => {
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('youtu.be')) {
+        return u.pathname.split('/').filter(Boolean)[0] || null;
+      }
+      if (u.searchParams.has('v')) {
+        return u.searchParams.get('v');
+      }
+      // Handle /embed/VIDEOID or /v/VIDEOID
+      const m = u.pathname.match(/\/(embed|v)\/([a-zA-Z0-9_-]{6,})/);
+      if (m && m[2]) return m[2];
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const parseStartSeconds = (url: string): number | undefined => {
+    try {
+      const u = new URL(url);
+      if (u.searchParams.has('start')) {
+        const s = Number(u.searchParams.get('start'));
+        return Number.isFinite(s) ? s : undefined;
+      }
+      if (u.searchParams.has('t')) {
+        const t = u.searchParams.get('t') || '';
+        // Parse formats like 90, 1m30s, 2h3m4s
+        const re = /(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?|(\d+)/i;
+        const m = t.match(re);
+        if (m) {
+          if (m[4]) return Number(m[4]);
+          const h = Number(m[1] || 0);
+          const min = Number(m[2] || 0);
+          const s = Number(m[3] || 0);
+          return h * 3600 + min * 60 + s;
+        }
+      }
+      return undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const youTubeId = isYouTubeUrl(src) ? extractYouTubeId(src!) : null;
+  if (youTubeId) {
+    const params = new URLSearchParams();
+    if (autoplay) params.set('autoplay', '1');
+    if (controls === false) params.set('controls', '0');
+    if (loop) {
+      params.set('loop', '1');
+      params.set('playlist', youTubeId);
+    }
+    if (muted) params.set('mute', '1');
+    const start = parseStartSeconds(src!);
+    if (start && start > 0) params.set('start', String(start));
+    params.set('rel', '0');
+    params.set('modestbranding', '1');
+
+    const embedUrl = `https://www.youtube.com/embed/${youTubeId}?${params.toString()}`;
+    const embedClasses = [
+      'wp-block-embed',
+      'is-type-video',
+      'is-provider-youtube',
+      'wp-block-embed-youtube',
+      align ? `align${align}` : '',
+      className || '',
+    ].filter(Boolean).join(' ');
+
+    // Determine aspect ratio; default 16:9
+    const aspectWidth = 16;
+    const aspectHeight = 9;
+    const paddingBottom = `${(aspectHeight / aspectWidth) * 100}%`;
+
+    const hasExplicitHeight = typeof (block.styles as any)?.height === 'string' && (block.styles as any).height !== '';
+    return (
+      <figure id={anchor} className={embedClasses} style={{ ...block.styles }}>
+        <div
+          className="wp-block-embed__wrapper"
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: hasExplicitHeight ? '100%' : 0,
+            paddingBottom: hasExplicitHeight ? undefined : paddingBottom,
+          }}
+        >
+          <iframe
+            src={embedUrl}
+            title={caption || 'YouTube video player'}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+          />
+        </div>
+        {caption ? (
+          <figcaption className="wp-element-caption">{caption}</figcaption>
+        ) : null}
+      </figure>
+    );
+  }
+
   return (
-    <div style={{ padding: block.styles?.padding, margin: block.styles?.margin }}>
+    <figure id={anchor} className={classes} style={{ ...block.styles }}>
       <video
-        src={block.content?.src}
-        poster={block.content?.poster}
-        controls={block.content?.controls !== false}
-        autoPlay={block.content?.autoplay}
-        style={{
-          ...block.styles,
-          padding: 0,
-          margin: 0,
-        }}
+        src={src}
+        poster={poster}
+        controls={controls}
+        autoPlay={autoplay}
+        loop={loop}
+        muted={muted}
+        playsInline={playsInline}
+        preload={preload}
+        style={{ display: 'block', width: '100%', height: (block.styles as any)?.height ? '100%' : 'auto' }}
       >
+        {Array.isArray(sources) && sources.map((s: any, i: number) => (
+          <source key={i} src={s.src} type={s.type} />
+        ))}
         Your browser does not support the video tag.
       </video>
-    </div>
+      {caption ? (
+        <figcaption className="wp-element-caption">{caption}</figcaption>
+      ) : null}
+    </figure>
   );
 }
 
@@ -35,6 +182,14 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
       },
     });
   };
+  const updateStyles = (styleUpdates: any) => {
+    onUpdate({
+      styles: {
+        ...block.styles,
+        ...styleUpdates,
+      },
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -42,7 +197,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
         <Label htmlFor="video-src">Video URL</Label>
         <Input
           id="video-src"
-          value={block.content?.src || ''}
+          value={(block.content as any)?.src || ''}
           onChange={(e) => updateContent({ src: e.target.value })}
           placeholder="https://example.com/video.mp4"
         />
@@ -51,42 +206,164 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
         <Label htmlFor="video-poster">Poster Image URL</Label>
         <Input
           id="video-poster"
-          value={block.content?.poster || ''}
+          value={(block.content as any)?.poster || ''}
           onChange={(e) => updateContent({ poster: e.target.value })}
           placeholder="https://example.com/poster.jpg"
         />
       </div>
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="video-controls"
-          checked={block.content?.controls !== false}
-          onCheckedChange={(checked) => updateContent({ controls: checked })}
-        />
-        <Label htmlFor="video-controls">Show Controls</Label>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="video-controls">Show Controls</Label>
+          <Switch
+            id="video-controls"
+            checked={((block.content as any)?.controls ?? true) !== false}
+            onCheckedChange={(checked) => updateContent({ controls: checked })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="video-autoplay">Autoplay</Label>
+          <Switch
+            id="video-autoplay"
+            checked={Boolean((block.content as any)?.autoplay)}
+            onCheckedChange={(checked) => updateContent({ autoplay: checked })}
+          />
+        </div>
       </div>
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="video-autoplay"
-          checked={block.content?.autoplay || false}
-          onCheckedChange={(checked) => updateContent({ autoplay: checked })}
-        />
-        <Label htmlFor="video-autoplay">Autoplay</Label>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="video-loop">Loop</Label>
+          <Switch
+            id="video-loop"
+            checked={Boolean((block.content as any)?.loop)}
+            onCheckedChange={(checked) => updateContent({ loop: checked })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="video-muted">Muted</Label>
+          <Switch
+            id="video-muted"
+            checked={Boolean((block.content as any)?.muted)}
+            onCheckedChange={(checked) => updateContent({ muted: checked })}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="video-playsinline">Plays Inline</Label>
+          <Switch
+            id="video-playsinline"
+            checked={((block.content as any)?.playsInline ?? true) !== false}
+            onCheckedChange={(checked) => updateContent({ playsInline: checked })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="video-preload">Preload</Label>
+          <Select
+            value={(block.content as any)?.preload || 'metadata'}
+            onValueChange={(value) => updateContent({ preload: value })}
+          >
+            <SelectTrigger id="video-preload">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">Auto</SelectItem>
+              <SelectItem value="metadata">Metadata</SelectItem>
+              <SelectItem value="none">None</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="video-width">Width</Label>
+          <Input
+            id="video-width"
+            value={(block.styles as any)?.width || ''}
+            onChange={(e) => updateStyles({ width: e.target.value })}
+            placeholder="e.g. 100% or 640px or auto"
+          />
+        </div>
+        <div>
+          <Label htmlFor="video-height">Height</Label>
+          <Input
+            id="video-height"
+            value={(block.styles as any)?.height || ''}
+            onChange={(e) => updateStyles({ height: e.target.value })}
+            placeholder="e.g. auto or 360px"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="video-align">Alignment</Label>
+          <Select
+            value={(block.content as any)?.align || 'default'}
+            onValueChange={(value) => updateContent({ align: value === 'default' ? undefined : value })}
+          >
+            <SelectTrigger id="video-align">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Default</SelectItem>
+              <SelectItem value="wide">Wide</SelectItem>
+              <SelectItem value="full">Full</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="video-caption">Caption</Label>
+          <Input
+            id="video-caption"
+            value={(block.content as any)?.caption || ''}
+            onChange={(e) => updateContent({ caption: e.target.value })}
+            placeholder="Add a caption (optional)"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="video-anchor">Anchor</Label>
+          <Input
+            id="video-anchor"
+            value={(block.content as any)?.anchor || ''}
+            onChange={(e) => updateContent({ anchor: e.target.value })}
+            placeholder="section-id"
+          />
+        </div>
+        <div>
+          <Label htmlFor="video-class">Additional CSS Class(es)</Label>
+          <Input
+            id="video-class"
+            value={(block.content as any)?.className || ''}
+            onChange={(e) => updateContent({ className: e.target.value })}
+            placeholder="custom-class"
+          />
+        </div>
       </div>
     </div>
   );
 }
 
 const VideoBlock: BlockDefinition = {
-  id: 'video',
+  id: 'core/video',
   name: 'Video',
   icon: VideoIcon,
   description: 'Add a video player',
   category: 'media',
   defaultContent: {
     src: '',
+    id: undefined,
     poster: '',
     autoplay: false,
     controls: true,
+    loop: false,
+    muted: false,
+    playsInline: true,
+    preload: 'metadata',
+    align: undefined,
+    caption: '',
+    anchor: '',
+    className: '',
   },
   defaultStyles: {},
   renderer: VideoRenderer,

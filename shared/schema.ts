@@ -400,12 +400,27 @@ export interface ButtonBlockConfig extends BlockConfig {
 }
 
 export interface VideoBlockConfig extends BlockConfig {
-  type: 'video';
+  type: 'video' | 'core/video';
   content: {
-    src: string;
+    // Gutenberg core/video
+    src?: string; // video URL
+    id?: number; // attachment id
     poster?: string;
     autoplay?: boolean;
     controls?: boolean;
+    loop?: boolean;
+    muted?: boolean;
+    playsInline?: boolean;
+    preload?: 'auto' | 'metadata' | 'none';
+    // Additional sources (optional, not always used by Gutenberg UI)
+    sources?: Array<{ src: string; type?: string }>;
+    // Presentation
+    width?: number;
+    height?: number;
+    align?: 'wide' | 'full';
+    caption?: string;
+    anchor?: string;
+    className?: string;
   };
 }
 

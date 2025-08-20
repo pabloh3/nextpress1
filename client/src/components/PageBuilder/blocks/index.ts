@@ -27,6 +27,9 @@ export const blockRegistry: Record<string, BlockDefinition> = {
   "core/image": ImageBlock,
   // Backward compatibility
   image: ImageBlock,
+  // Gutenberg-compatible id for video
+  "core/video": VideoBlock,
+  // Backward compatibility
   video: VideoBlock,
   spacer: SpacerBlock,
   divider: DividerBlock,

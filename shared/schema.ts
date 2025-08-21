@@ -70,10 +70,12 @@ export const comments = pgTable("comments", {
   authorEmail: varchar("author_email"),
   content: text("content").notNull(),
   status: varchar("status").default("pending"), // approved, pending, spam, trash
-  parentId: integer("parent_id").references(() => comments.id),
+  parentId: integer("parent_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  parentReference: index("idx_comments_parent").on(table.parentId),
+}));
 
 // Themes table
 export const themes = pgTable("themes", {
@@ -178,8 +180,8 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
 export const commentsRelations = relations(comments, ({ one, many }) => ({
   post: one(posts, { fields: [comments.postId], references: [posts.id] }),
   author: one(users, { fields: [comments.authorId], references: [users.id] }),
-  parent: one(comments, { fields: [comments.parentId], references: [comments.id] }),
-  children: many(comments),
+  parent: one(comments, { fields: [comments.parentId], references: [comments.id], relationName: "parentComment" }),
+  children: many(comments, { relationName: "parentComment" }),
 }));
 
 export const mediaRelations = relations(media, ({ one }) => ({
@@ -495,28 +497,28 @@ export interface QuoteBlockConfig extends BlockConfig {
 
 // Media & Text block (Gutenberg core/media-text)
 export interface MediaTextBlockConfig extends BlockConfig {
-	type: 'media-text' | 'core/media-text';
-	content: {
-		// Gutenberg-compatible media attributes
-		mediaId?: number;
-		mediaUrl?: string;
-		mediaType?: 'image' | 'video';
-		mediaAlt?: string;
-		// Layout/behavior
-		mediaPosition?: 'left' | 'right';
-		mediaWidth?: number; // percentage 0-100
-		isStackedOnMobile?: boolean;
-		imageFill?: boolean; // crop image to fill
-		verticalAlignment?: 'top' | 'center' | 'bottom';
-		// Optional link on media
-		href?: string;
-		linkTarget?: '_self' | '_blank';
-		rel?: string;
-		title?: string;
-		// Text area (older WP versions stored as RichText content)
-		content?: string; // HTML string for the text area
-		// Common attrs
-		anchor?: string;
-		className?: string;
-	};
+        type: 'media-text' | 'core/media-text';
+        content: {
+                // Gutenberg-compatible media attributes
+                mediaId?: number;
+                mediaUrl?: string;
+                mediaType?: 'image' | 'video';
+                mediaAlt?: string;
+                // Layout/behavior
+                mediaPosition?: 'left' | 'right';
+                mediaWidth?: number; // percentage 0-100
+                isStackedOnMobile?: boolean;
+                imageFill?: boolean; // crop image to fill
+                verticalAlignment?: 'top' | 'center' | 'bottom';
+                // Optional link on media
+                href?: string;
+                linkTarget?: '_self' | '_blank';
+                rel?: string;
+                title?: string;
+                // Text area (older WP versions stored as RichText content)
+                content?: string; // HTML string for the text area
+                // Common attrs
+                anchor?: string;
+                className?: string;
+        };
 }

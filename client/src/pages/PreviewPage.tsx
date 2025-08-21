@@ -20,8 +20,8 @@ export default function PreviewPage({ postId, templateId, type }: PreviewPagePro
   // Fetch post or template data using preview endpoints
   const { data, isLoading, error } = useQuery({
     queryKey: contentType === 'template' 
-      ? ['/api/preview/template', contentId] 
-      : ['/api/preview', contentType, contentId],
+      ? [`/api/preview/template/${contentId}`] 
+      : [`/api/preview/${contentType}/${contentId}`],
     enabled: !!contentId,
   });
 

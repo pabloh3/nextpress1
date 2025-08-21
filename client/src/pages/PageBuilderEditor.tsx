@@ -1,16 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Eye, Settings } from "lucide-react";
+import { ArrowLeft, Edit, Eye, Settings, Save } from "lucide-react";
 import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
 import PageBuilder from "@/components/PageBuilder/PageBuilder";
 import PostEditor from "@/components/PostEditor";
+import PublishDialog from "@/components/PageBuilder/PublishDialog";
 import { useToast } from "@/hooks/use-toast";
-import type { Post, Template } from "@shared/schema";
+import type { Post, Template, BlockConfig } from "@shared/schema";
 
 interface PageBuilderEditorProps {
   postId?: string;
@@ -21,6 +22,9 @@ interface PageBuilderEditorProps {
 export default function PageBuilderEditor({ postId, templateId, type = 'page' }: PageBuilderEditorProps) {
   const [, setLocation] = useLocation();
   const [editorMode, setEditorMode] = useState<'builder' | 'classic'>('builder');
+  const [blocks, setBlocks] = useState<BlockConfig[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const pageBuilderRef = useRef<any>(null);
   const { toast } = useToast();
 
   // Fetch the post/page or template data
@@ -54,6 +58,17 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
       setEditorMode(post.usePageBuilder ? 'builder' : 'classic');
     }
   }, [post, template, type]);
+
+  // Initialize blocks when data is loaded
+  useEffect(() => {
+    if (data) {
+      if (type === 'template') {
+        setBlocks((data as Template).blocks as BlockConfig[] || []);
+      } else {
+        setBlocks((data as Post).builderData as BlockConfig[] || []);
+      }
+    }
+  }, [data, type]);
 
   if (isLoading) {
     return (
@@ -115,6 +130,38 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
     // Optionally redirect or update UI
   };
 
+  const handlePageBuilderSave = async () => {
+    if (!data) return;
+    
+    setIsSaving(true);
+    try {
+      const { apiRequest } = await import("@/lib/queryClient");
+      
+      if (type === 'template') {
+        const response = await apiRequest('PUT', `/api/templates/${data.id}`, {
+          blocks: blocks,
+        });
+        const updatedTemplate = await response.json();
+        handleSave(updatedTemplate);
+      } else {
+        const response = await apiRequest('PUT', `/api/posts/${data.id}`, {
+          builderData: blocks,
+          usePageBuilder: true
+        });
+        const updatedPost = await response.json();
+        handleSave(updatedPost);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to save ${type === 'template' ? 'template' : 'page'}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handlePreview = () => {
     if (type === 'template') {
       toast({
@@ -123,8 +170,12 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
       });
       return;
     }
-    const previewUrl = type === 'page' ? `/pages/${data?.id}` : `/posts/${data?.id}`;
-    window.open(previewUrl, '_blank');
+    
+    if (data) {
+      const postType = type === 'page' ? 'page' : 'post';
+      const previewUrl = `/preview/${postType}/${data.id}`;
+      window.open(previewUrl, '_blank');
+    }
   };
 
   const handleBackToList = () => {
@@ -183,10 +234,29 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
                 size="sm"
                 onClick={handlePreview}
                 className="flex items-center gap-2"
+                data-testid="button-preview"
               >
                 <Eye className="w-4 h-4" />
                 {type === 'template' ? 'Settings' : 'Preview'}
               </Button>
+              <Button
+                size="sm"
+                onClick={handlePageBuilderSave}
+                disabled={isSaving}
+                className="flex items-center gap-2"
+                data-testid="button-save"
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? 'Saving...' : 'Save'}
+              </Button>
+              {type !== 'template' && data && (
+                <PublishDialog
+                  post={data as Post}
+                  blocks={blocks}
+                  onPublished={handleSave}
+                  disabled={isSaving}
+                />
+              )}
             </div>
           </div>
           
@@ -195,6 +265,8 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
             <PageBuilder
               post={data}
               template={type === 'template' ? data as Template : undefined}
+              blocks={blocks}
+              onBlocksChange={setBlocks}
               onSave={handleSave}
               onPreview={handlePreview}
             />

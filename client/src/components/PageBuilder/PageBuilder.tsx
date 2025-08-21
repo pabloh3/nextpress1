@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Save, Eye, Smartphone, Tablet, Monitor, Plus, Settings, Layers } from "lucide-react";
+import { Smartphone, Tablet, Monitor, Plus, Settings, Layers } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Post, Template, BlockConfig } from "@shared/schema";
@@ -14,23 +14,24 @@ import BlockLibrary from "./BlockLibrary";
 import BlockRenderer from "./BlockRenderer";
 import BlockSettings from "./BlockSettings";
 import DevicePreview from "./DevicePreview";
-import PublishDialog from "./PublishDialog";
 import { generateBlockId } from "./utils";
 import { getDefaultBlock } from "./blocks";
 
 interface PageBuilderProps {
   post?: Post | Template;
   template?: Template;
+  blocks?: BlockConfig[];
+  onBlocksChange?: (blocks: BlockConfig[]) => void;
   onSave?: (updatedData: Post | Template) => void;
   onPreview?: () => void;
 }
 
-export default function PageBuilder({ post, template, onSave, onPreview }: PageBuilderProps) {
+export default function PageBuilder({ post, template, blocks: propBlocks, onBlocksChange, onSave, onPreview }: PageBuilderProps) {
   const data = template || post;
   const isTemplate = !!template;
   
   const [blocks, setBlocks] = useState<BlockConfig[]>(
-    data ? (isTemplate ? ((data as any).blocks as BlockConfig[]) : ((data as any).builderData as BlockConfig[])) || [] : []
+    propBlocks || (data ? (isTemplate ? ((data as any).blocks as BlockConfig[]) : ((data as any).builderData as BlockConfig[])) || [] : [])
   );
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [deviceView, setDeviceView] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -40,6 +41,19 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Sync blocks with parent when propBlocks change
+  useEffect(() => {
+    if (propBlocks) {
+      setBlocks(propBlocks);
+    }
+  }, [propBlocks]);
+
+  // Communicate block changes to parent
+  const updateBlocks = (newBlocks: BlockConfig[]) => {
+    setBlocks(newBlocks);
+    onBlocksChange?.(newBlocks);
+  };
 
   const selectedBlock = blocks.find(block => block.id === selectedBlockId);
 
@@ -97,7 +111,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
       const newBlock = createDefaultBlock(blockType);
       const newBlocks = [...blocks];
       newBlocks.splice(destination.index, 0, newBlock);
-      setBlocks(newBlocks);
+      updateBlocks(newBlocks);
       setSelectedBlockId(newBlock.id);
       setActiveTab('settings');
       return;
@@ -123,7 +137,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
         ...columnsBlock,
         content: { ...(columnsBlock.content || {}), columns: columnsArr },
       } as any;
-      setBlocks(blocksCopy);
+      updateBlocks(blocksCopy);
       setSelectedBlockId(newChild.id);
       setActiveTab('settings');
       return;
@@ -134,7 +148,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
       const newBlocks = Array.from(blocks);
       const [removed] = newBlocks.splice(source.index, 1);
       newBlocks.splice(destination.index, 0, removed);
-      setBlocks(newBlocks);
+      updateBlocks(newBlocks);
       return;
     }
 
@@ -157,7 +171,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
         ...columnsBlock,
         content: { ...(columnsBlock.content || {}), columns: columnsArr },
       } as any;
-      setBlocks(blocksCopy);
+      updateBlocks(blocksCopy);
       return;
     }
 
@@ -180,7 +194,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
         content: { ...(columnsBlock.content || {}), columns: columnsArr },
       } as any;
       blocksCopy.splice(destination.index, 0, moved);
-      setBlocks(blocksCopy);
+      updateBlocks(blocksCopy);
       return;
     }
 
@@ -212,7 +226,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
         ...columnsBlock,
         content: { ...(columnsBlock.content || {}), columns: columnsArr },
       } as any;
-      setBlocks(blocksCopy);
+      updateBlocks(blocksCopy);
       return;
     }
   }, [blocks]);
@@ -353,12 +367,13 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
   };
 
   const updateBlock = useCallback((blockId: string, updates: Partial<BlockConfig>) => {
-    setBlocks(prev => prev.map(block => 
+    const updatedBlocks = blocks.map(block => 
       block.id === blockId 
         ? { ...block, ...updates }
         : block
-    ));
-  }, []);
+    );
+    updateBlocks(updatedBlocks);
+  }, [blocks]);
 
   const duplicateBlock = useCallback((blockId: string) => {
     const blockIndex = blocks.findIndex(block => block.id === blockId);
@@ -370,18 +385,19 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
       };
       const newBlocks = [...blocks];
       newBlocks.splice(blockIndex + 1, 0, duplicatedBlock);
-      setBlocks(newBlocks);
+      updateBlocks(newBlocks);
       setSelectedBlockId(duplicatedBlock.id);
       setActiveTab('settings');
     }
   }, [blocks]);
 
   const deleteBlock = useCallback((blockId: string) => {
-    setBlocks(prev => prev.filter(block => block.id !== blockId));
+    const filteredBlocks = blocks.filter(block => block.id !== blockId);
+    updateBlocks(filteredBlocks);
     if (selectedBlockId === blockId) {
       setSelectedBlockId(null);
     }
-  }, [selectedBlockId]);
+  }, [blocks, selectedBlockId]);
 
   const handleSave = () => {
     saveMutation.mutate(blocks);
@@ -489,37 +505,6 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
               <div className="flex items-center gap-4">
                 <div className="text-sm text-gray-500">
                   {blocks.length} blocks
-                </div>
-                <Separator orientation="vertical" className="h-6" />
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePreview}
-                    className="flex items-center gap-2"
-                    data-testid="button-preview"
-                  >
-                    <Eye className="w-4 h-4" />
-                    Preview
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={saveMutation.isPending}
-                    className="flex items-center gap-2"
-                    data-testid="button-save"
-                  >
-                    <Save className="w-4 h-4" />
-                    {saveMutation.isPending ? 'Saving...' : 'Save'}
-                  </Button>
-                  {!isTemplate && (
-                    <PublishDialog
-                      post={data as Post}
-                      blocks={blocks}
-                      onPublished={onSave}
-                      disabled={saveMutation.isPending}
-                    />
-                  )}
                 </div>
               </div>
             </div>

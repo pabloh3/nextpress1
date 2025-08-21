@@ -150,7 +150,7 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 }
 
 const ColumnsBlock: BlockDefinition = {
-  id: 'columns',
+  id: 'core/columns',
   name: 'Columns',
   icon: GridIcon,
   description: 'Add multi-column layout',

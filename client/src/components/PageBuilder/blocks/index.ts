@@ -12,45 +12,57 @@ import ColumnsBlock from "./columns/ColumnsBlock";
 import QuoteBlock from "./quote/QuoteBlock";
 import ListBlock from "./list/ListBlock";
 import MediaTextBlock from "./media-text/MediaTextBlock";
+import SeparatorBlock from "./separator/SeparatorBlock";
+import GroupBlock from "./group/GroupBlock";
+import ButtonsBlock from "./buttons/ButtonsBlock";
+import GalleryBlock from "./gallery/GalleryBlock";
+import CoverBlock from "./cover/CoverBlock";
+import FileBlock from "./file/FileBlock";
+import CodeBlock from "./code/CodeBlock";
+import HtmlBlock from "./html/HtmlBlock";
+import PullquoteBlock from "./pullquote/PullquoteBlock";
+import PreformattedBlock from "./preformatted/PreformattedBlock";
+import TableBlock from "./table/TableBlock";
 
 export const blockRegistry: Record<string, BlockDefinition> = {
   // Gutenberg-compatible ids
   "core/heading": HeadingBlock,
   "core/paragraph": TextBlock,
+  "core/button": ButtonBlock,
+  "core/buttons": ButtonsBlock,
+  "core/image": ImageBlock,
+  "core/gallery": GalleryBlock,
+  "core/video": VideoBlock,
+  "core/audio": AudioBlock,
+  "core/spacer": SpacerBlock,
+  "core/separator": SeparatorBlock,
+  "core/columns": ColumnsBlock,
+  "core/group": GroupBlock,
+  "core/quote": QuoteBlock,
+  "core/list": ListBlock,
+  "core/media-text": MediaTextBlock,
+  "core/cover": CoverBlock,
+  "core/file": FileBlock,
+  "core/code": CodeBlock,
+  "core/html": HtmlBlock,
+  "core/pullquote": PullquoteBlock,
+  "core/preformatted": PreformattedBlock,
+  "core/table": TableBlock,
+  
   // Backward compatibility with existing saved data
   heading: HeadingBlock,
   text: TextBlock,
-  // Gutenberg-compatible id for button
-  "core/button": ButtonBlock,
-  // Backward compatibility
   button: ButtonBlock,
-  // Gutenberg-compatible id for image
-  "core/image": ImageBlock,
-  // Backward compatibility
   image: ImageBlock,
-  // Gutenberg-compatible id for video
-  "core/video": VideoBlock,
-  // Backward compatibility
   video: VideoBlock,
-  // Gutenberg-compatible id for audio
-  "core/audio": AudioBlock,
-  // Backward compatibility
   audio: AudioBlock,
   spacer: SpacerBlock,
-  divider: DividerBlock,
-  // Gutenberg-compatible id for columns
-  "core/columns": ColumnsBlock,
   columns: ColumnsBlock,
-  // Gutenberg-compatible id for quote
-  "core/quote": QuoteBlock,
-  // Backward compatibility
   quote: QuoteBlock,
-  // Gutenberg-compatible id for list
-  "core/list": ListBlock,
-  // Backward compatibility
   list: ListBlock,
-  // Gutenberg-compatible id for media & text
-  "core/media-text": MediaTextBlock,
+  
+  // Custom blocks (keep for backward compatibility)
+  divider: DividerBlock,
 };
 
 export function getDefaultBlock(type: string, id: string): BlockConfig | null {

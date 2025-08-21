@@ -7,12 +7,16 @@ import { Slider } from "@/components/ui/slider";
 import { Space as SpaceIcon } from "lucide-react";
 
 function SpacerRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+  const height = block.content?.height ?? 100;
+  
   return (
     <div
+      className="wp-block-spacer"
       style={{
-        height: `${block.content?.height ?? 50}px`,
+        height: `${height}px`,
         ...block.styles,
       }}
+      aria-hidden="true"
     />
   );
 }
@@ -54,16 +58,17 @@ function SpacerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
 }
 
 const SpacerBlock: BlockDefinition = {
-  id: 'spacer',
+  id: 'core/spacer',
   name: 'Spacer',
   icon: SpaceIcon,
   description: 'Add vertical spacing',
   category: 'layout',
   defaultContent: {
-    height: 50,
+    height: 100,
   },
   defaultStyles: {
     padding: '0px',
+    margin: '0px',
   },
   renderer: SpacerRenderer,
   settings: SpacerSettings,

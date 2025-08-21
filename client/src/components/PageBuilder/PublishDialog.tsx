@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Share2, Globe, ExternalLink, AlertCircle } from "lucide-react";
+import { Share2, Globe, ExternalLink, AlertCircle, FileX } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Post, BlockConfig } from "@shared/schema";
@@ -85,6 +85,39 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
     },
   });
 
+  const unpublishMutation = useMutation({
+    mutationFn: async () => {
+      if (!post) throw new Error("No post data");
+      
+      const unpublishData = {
+        builderData: blocks,
+        usePageBuilder: true,
+        status: 'draft',
+        publishedAt: null,
+        slug: post.slug // Keep the same slug
+      };
+
+      const response = await apiRequest('PUT', `/api/posts/${post.id}`, unpublishData);
+      return await response.json();
+    },
+    onSuccess: (updatedData) => {
+      toast({
+        title: "Moved to Draft",
+        description: "Page is no longer publicly accessible",
+      });
+      setOpen(false);
+      onPublished?.(updatedData);
+      queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to unpublish",
+        description: error.message || "Failed to move page to draft",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handlePublish = () => {
     // Validate slug
     if (slug && !/^[a-z0-9-]+$/.test(slug)) {
@@ -97,6 +130,10 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
     }
     
     publishMutation.mutate();
+  };
+
+  const handleUnpublish = () => {
+    unpublishMutation.mutate();
   };
 
   const isPublished = post?.status === 'publish';
@@ -213,19 +250,33 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
           </div>
         </div>
 
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" data-testid="button-cancel-publish">
-              Cancel
+        <DialogFooter className={isPublished ? "flex-col-reverse sm:flex-row sm:justify-between" : ""}>
+          {isPublished && (
+            <Button 
+              variant="outline"
+              onClick={handleUnpublish}
+              disabled={unpublishMutation.isPending}
+              className="flex items-center gap-2"
+              data-testid="button-unpublish"
+            >
+              <FileX className="w-4 h-4" />
+              {unpublishMutation.isPending ? 'Moving to Draft...' : 'Move to Draft'}
             </Button>
-          </DialogClose>
-          <Button 
-            onClick={handlePublish}
-            disabled={publishMutation.isPending}
-            data-testid="button-confirm-publish"
-          >
-            {publishMutation.isPending ? 'Publishing...' : isPublished ? 'Update' : 'Publish'}
-          </Button>
+          )}
+          <div className="flex gap-2">
+            <DialogClose asChild>
+              <Button variant="outline" data-testid="button-cancel-publish">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button 
+              onClick={handlePublish}
+              disabled={publishMutation.isPending}
+              data-testid="button-confirm-publish"
+            >
+              {publishMutation.isPending ? 'Publishing...' : isPublished ? 'Update' : 'Publish'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -60,7 +60,7 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
         builderData: blocks,
         usePageBuilder: true,
         status: 'publish',
-        publishedAt: new Date().toISOString(),
+        publishedAt: new Date(),
         slug: slug || generateSlug(post.title)
       };
 

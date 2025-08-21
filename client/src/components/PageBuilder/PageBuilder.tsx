@@ -415,39 +415,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
         {/* Sidebar - Block Library and Settings */}
         <div className="w-80 bg-white border-r border-gray-200 flex flex-col min-h-0">
           <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Page Builder</h2>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreview}
-                  className="flex items-center gap-2"
-                  data-testid="button-preview"
-                >
-                  <Eye className="w-4 h-4" />
-                  Preview
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={saveMutation.isPending}
-                  className="flex items-center gap-2"
-                  data-testid="button-save"
-                >
-                  <Save className="w-4 h-4" />
-                  {saveMutation.isPending ? 'Saving...' : 'Save'}
-                </Button>
-                {!isTemplate && (
-                  <PublishDialog
-                    post={data as Post}
-                    blocks={blocks}
-                    onPublished={onSave}
-                    disabled={saveMutation.isPending}
-                  />
-                )}
-              </div>
-            </div>
+            <h2 className="text-lg font-semibold">Page Builder</h2>
           </div>
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'blocks' | 'settings')} className="flex-1 flex flex-col p-4 min-h-0">
@@ -518,8 +486,41 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
                   </Button>
                 </div>
               </div>
-              <div className="text-sm text-gray-500">
-                {blocks.length} blocks
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-500">
+                  {blocks.length} blocks
+                </div>
+                <Separator orientation="vertical" className="h-6" />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreview}
+                    className="flex items-center gap-2"
+                    data-testid="button-preview"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Preview
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={saveMutation.isPending}
+                    className="flex items-center gap-2"
+                    data-testid="button-save"
+                  >
+                    <Save className="w-4 h-4" />
+                    {saveMutation.isPending ? 'Saving...' : 'Save'}
+                  </Button>
+                  {!isTemplate && (
+                    <PublishDialog
+                      post={data as Post}
+                      blocks={blocks}
+                      onPublished={onSave}
+                      disabled={saveMutation.isPending}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>

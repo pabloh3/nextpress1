@@ -207,6 +207,8 @@ export const insertPostSchema = createInsertSchema(posts).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  publishedAt: z.union([z.date(), z.string().datetime().transform(str => new Date(str))]).optional().nullable(),
 });
 
 export const insertCommentSchema = createInsertSchema(comments).omit({

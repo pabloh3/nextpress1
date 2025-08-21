@@ -14,6 +14,7 @@ import BlockLibrary from "./BlockLibrary";
 import BlockRenderer from "./BlockRenderer";
 import BlockSettings from "./BlockSettings";
 import DevicePreview from "./DevicePreview";
+import PublishDialog from "./PublishDialog";
 import { generateBlockId } from "./utils";
 import { getDefaultBlock } from "./blocks";
 
@@ -422,6 +423,7 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
                   size="sm"
                   onClick={handlePreview}
                   className="flex items-center gap-2"
+                  data-testid="button-preview"
                 >
                   <Eye className="w-4 h-4" />
                   Preview
@@ -431,10 +433,19 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
                   onClick={handleSave}
                   disabled={saveMutation.isPending}
                   className="flex items-center gap-2"
+                  data-testid="button-save"
                 >
                   <Save className="w-4 h-4" />
                   {saveMutation.isPending ? 'Saving...' : 'Save'}
                 </Button>
+                {!isTemplate && (
+                  <PublishDialog
+                    post={data as Post}
+                    blocks={blocks}
+                    onPublished={onSave}
+                    disabled={saveMutation.isPending}
+                  />
+                )}
               </div>
             </div>
           </div>

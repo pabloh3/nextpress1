@@ -20,6 +20,7 @@ import Register from "@/pages/Register";
 import PageBuilderEditor from "@/pages/PageBuilderEditor";
 import Templates from "@/pages/Templates";
 import PreviewPage from "@/pages/PreviewPage";
+import PublicPageView from "@/pages/PublicPageView";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -49,12 +50,25 @@ function Router() {
         <PreviewPage templateId={params.id} type="template" />
       )} />
       
+      {/* Public routes - published content available to everyone */}
+      <Route path="/page/:slug" component={({ params }: any) => (
+        <PublicPageView slug={params.slug} type="page" />
+      )} />
+      <Route path="/post/:slug" component={({ params }: any) => (
+        <PublicPageView slug={params.slug} type="post" />
+      )} />
+      
       {/* Auth routes - always available */}
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       
       {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
+        <>
+          {/* Try to show homepage content from page builder, fallback to Landing */}
+          <Route path="/" component={() => (
+            <PublicPageView type="homepage" />
+          )} />
+        </>
       ) : (
         <>
           <Route path="/" component={Dashboard} />

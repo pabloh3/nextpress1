@@ -1231,6 +1231,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public endpoints for published content - accessible without authentication
+  app.get('/api/public/page/:slug', async (req, res) => {
+    try {
+      const page = await storage.getPostBySlug(req.params.slug);
+      if (!page || page.type !== 'page') {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      
+      // Only allow access to published pages
+      if (page.status !== 'publish') {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      
+      res.json(page);
+    } catch (error) {
+      console.error("Error fetching published page:", error);
+      res.status(500).json({ message: "Failed to fetch page" });
+    }
+  });
+
+  app.get('/api/public/post/:slug', async (req, res) => {
+    try {
+      const post = await storage.getPostBySlug(req.params.slug);
+      if (!post || post.type !== 'post') {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      
+      // Only allow access to published posts
+      if (post.status !== 'publish') {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      
+      res.json(post);
+    } catch (error) {
+      console.error("Error fetching published post:", error);
+      res.status(500).json({ message: "Failed to fetch post" });
+    }
+  });
+
+  // Homepage endpoint - returns a published page marked as homepage or the first published page
+  app.get('/api/public/homepage', async (req, res) => {
+    try {
+      // First try to get a page specifically marked as homepage (we'll add this option later)
+      let homepage = await storage.getOption('homepage_page_slug');
+      let page;
+      
+      if (homepage && homepage.value) {
+        page = await storage.getPostBySlug(homepage.value);
+      }
+      
+      // If no specific homepage set, try to get the first published page
+      if (!page) {
+        const pages = await storage.getPosts({ 
+          status: 'publish', 
+          type: 'page', 
+          limit: 1 
+        });
+        page = pages[0];
+      }
+      
+      if (!page) {
+        return res.status(404).json({ message: "No homepage content found" });
+      }
+      
+      res.json(page);
+    } catch (error) {
+      console.error("Error fetching homepage:", error);
+      res.status(500).json({ message: "Failed to fetch homepage" });
+    }
+  });
+
   // Serve admin static assets
   app.use('/admin/assets', express.static(path.join(__dirname, '../dist/public/assets')));
 

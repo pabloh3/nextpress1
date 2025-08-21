@@ -38,6 +38,8 @@ export const blockRegistry: Record<string, BlockDefinition> = {
   audio: AudioBlock,
   spacer: SpacerBlock,
   divider: DividerBlock,
+  // Gutenberg-compatible id for columns
+  "core/columns": ColumnsBlock,
   columns: ColumnsBlock,
   // Gutenberg-compatible id for quote
   "core/quote": QuoteBlock,

@@ -81,6 +81,15 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
 
     const { source, destination, draggableId } = result;
 
+    const parseColumnDroppable = (id: string): null | { blockId: string; columnIndex: number } => {
+      const match = id.match(/^(.*?):column:(\d+)$/);
+      if (!match) return null;
+      return { blockId: match[1], columnIndex: parseInt(match[2], 10) };
+    };
+
+    const sourceCol = parseColumnDroppable(source.droppableId);
+    const destCol = parseColumnDroppable(destination.droppableId);
+
     // Handle drag from block library to canvas
     if (source.droppableId === 'block-library' && destination.droppableId === 'canvas') {
       const blockType = draggableId;
@@ -93,12 +102,116 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
       return;
     }
 
+    // Handle drag from block library to a column
+    if (source.droppableId === 'block-library' && destCol) {
+      const blockType = draggableId;
+      const newChild = createDefaultBlock(blockType);
+      const blocksCopy = [...blocks];
+      const columnsBlockIndex = blocksCopy.findIndex((b) => b.id === destCol.blockId);
+      if (columnsBlockIndex === -1) return;
+      const columnsBlock = blocksCopy[columnsBlockIndex];
+      const columnsArr: any[] = Array.isArray((columnsBlock.content as any)?.columns)
+        ? [ ...(columnsBlock.content as any).columns ]
+        : [];
+      const targetColumn = { ...(columnsArr[destCol.columnIndex] || { width: 1, blocks: [] }) } as any;
+      const targetBlocks: BlockConfig[] = Array.isArray(targetColumn.blocks) ? [ ...targetColumn.blocks ] : [];
+      targetBlocks.splice(destination.index, 0, newChild);
+      targetColumn.blocks = targetBlocks;
+      columnsArr[destCol.columnIndex] = targetColumn;
+      blocksCopy[columnsBlockIndex] = {
+        ...columnsBlock,
+        content: { ...(columnsBlock.content || {}), columns: columnsArr },
+      } as any;
+      setBlocks(blocksCopy);
+      setSelectedBlockId(newChild.id);
+      setActiveTab('settings');
+      return;
+    }
+
     // Handle reordering blocks in canvas
     if (source.droppableId === 'canvas' && destination.droppableId === 'canvas') {
       const newBlocks = Array.from(blocks);
       const [removed] = newBlocks.splice(source.index, 1);
       newBlocks.splice(destination.index, 0, removed);
       setBlocks(newBlocks);
+      return;
+    }
+
+    // Move from canvas to a column
+    if (source.droppableId === 'canvas' && destCol) {
+      const blocksCopy = [...blocks];
+      const [moved] = blocksCopy.splice(source.index, 1);
+      const columnsBlockIndex = blocksCopy.findIndex((b) => b.id === destCol.blockId);
+      if (columnsBlockIndex === -1) return;
+      const columnsBlock = blocksCopy[columnsBlockIndex];
+      const columnsArr: any[] = Array.isArray((columnsBlock.content as any)?.columns)
+        ? [ ...(columnsBlock.content as any).columns ]
+        : [];
+      const targetColumn = { ...(columnsArr[destCol.columnIndex] || { width: 1, blocks: [] }) } as any;
+      const targetBlocks: BlockConfig[] = Array.isArray(targetColumn.blocks) ? [ ...targetColumn.blocks ] : [];
+      targetBlocks.splice(destination.index, 0, moved);
+      targetColumn.blocks = targetBlocks;
+      columnsArr[destCol.columnIndex] = targetColumn;
+      blocksCopy[columnsBlockIndex] = {
+        ...columnsBlock,
+        content: { ...(columnsBlock.content || {}), columns: columnsArr },
+      } as any;
+      setBlocks(blocksCopy);
+      return;
+    }
+
+    // Move from a column to canvas
+    if (sourceCol && destination.droppableId === 'canvas') {
+      const blocksCopy = [...blocks];
+      const columnsBlockIndex = blocksCopy.findIndex((b) => b.id === sourceCol.blockId);
+      if (columnsBlockIndex === -1) return;
+      const columnsBlock = blocksCopy[columnsBlockIndex];
+      const columnsArr: any[] = Array.isArray((columnsBlock.content as any)?.columns)
+        ? [ ...(columnsBlock.content as any).columns ]
+        : [];
+      const fromColumn = { ...(columnsArr[sourceCol.columnIndex] || { width: 1, blocks: [] }) } as any;
+      const fromBlocks: BlockConfig[] = Array.isArray(fromColumn.blocks) ? [ ...fromColumn.blocks ] : [];
+      const [moved] = fromBlocks.splice(source.index, 1);
+      fromColumn.blocks = fromBlocks;
+      columnsArr[sourceCol.columnIndex] = fromColumn;
+      blocksCopy[columnsBlockIndex] = {
+        ...columnsBlock,
+        content: { ...(columnsBlock.content || {}), columns: columnsArr },
+      } as any;
+      blocksCopy.splice(destination.index, 0, moved);
+      setBlocks(blocksCopy);
+      return;
+    }
+
+    // Reorder within a column or move between columns
+    if (sourceCol && destCol) {
+      const blocksCopy = [...blocks];
+      const columnsBlockIndex = blocksCopy.findIndex((b) => b.id === sourceCol.blockId);
+      if (columnsBlockIndex === -1) return;
+      const columnsBlock = blocksCopy[columnsBlockIndex];
+      const columnsArr: any[] = Array.isArray((columnsBlock.content as any)?.columns)
+        ? [ ...(columnsBlock.content as any).columns ]
+        : [];
+      const fromColumn = { ...(columnsArr[sourceCol.columnIndex] || { width: 1, blocks: [] }) } as any;
+      const toColumn = sourceCol.columnIndex === destCol.columnIndex
+        ? fromColumn
+        : { ...(columnsArr[destCol.columnIndex] || { width: 1, blocks: [] }) } as any;
+
+      const fromBlocks: BlockConfig[] = Array.isArray(fromColumn.blocks) ? [ ...fromColumn.blocks ] : [];
+      const [moved] = fromBlocks.splice(source.index, 1);
+      fromColumn.blocks = fromBlocks;
+
+      const toBlocks: BlockConfig[] = Array.isArray(toColumn.blocks) ? [ ...toColumn.blocks ] : [];
+      toBlocks.splice(destination.index, 0, moved);
+      toColumn.blocks = toBlocks;
+
+      columnsArr[sourceCol.columnIndex] = fromColumn;
+      columnsArr[destCol.columnIndex] = toColumn;
+      blocksCopy[columnsBlockIndex] = {
+        ...columnsBlock,
+        content: { ...(columnsBlock.content || {}), columns: columnsArr },
+      } as any;
+      setBlocks(blocksCopy);
       return;
     }
   }, [blocks]);

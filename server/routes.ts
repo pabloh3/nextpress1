@@ -1173,6 +1173,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Preview endpoints - public access for sharing
+  app.get('/api/preview/post/:id', async (req, res) => {
+    try {
+      const post = await storage.getPost(parseInt(req.params.id));
+      if (!post) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      
+      // Only allow preview of published posts or posts with status 'preview'
+      if (post.status !== 'publish' && post.status !== 'preview') {
+        return res.status(404).json({ message: "Post not available for preview" });
+      }
+      
+      res.json(post);
+    } catch (error) {
+      console.error("Error fetching post preview:", error);
+      res.status(500).json({ message: "Failed to fetch post preview" });
+    }
+  });
+
+  app.get('/api/preview/page/:id', async (req, res) => {
+    try {
+      const page = await storage.getPost(parseInt(req.params.id));
+      if (!page || page.type !== 'page') {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      
+      // Only allow preview of published pages or pages with status 'preview'
+      if (page.status !== 'publish' && page.status !== 'preview') {
+        return res.status(404).json({ message: "Page not available for preview" });
+      }
+      
+      res.json(page);
+    } catch (error) {
+      console.error("Error fetching page preview:", error);
+      res.status(500).json({ message: "Failed to fetch page preview" });
+    }
+  });
+
+  app.get('/api/preview/template/:id', async (req, res) => {
+    try {
+      const template = await storage.getTemplate(parseInt(req.params.id));
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Only allow preview of active templates
+      if (!template.isActive) {
+        return res.status(404).json({ message: "Template not available for preview" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching template preview:", error);
+      res.status(500).json({ message: "Failed to fetch template preview" });
+    }
+  });
+
   // Serve admin static assets
   app.use('/admin/assets', express.static(path.join(__dirname, '../dist/public/assets')));
 

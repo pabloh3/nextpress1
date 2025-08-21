@@ -19,6 +19,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import PageBuilderEditor from "@/pages/PageBuilderEditor";
 import Templates from "@/pages/Templates";
+import PreviewPage from "@/pages/PreviewPage";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -37,6 +38,17 @@ function Router() {
 
   return (
     <Switch>
+      {/* Preview routes - available to everyone */}
+      <Route path="/preview/post/:id" component={({ params }: any) => (
+        <PreviewPage postId={params.id} type="post" />
+      )} />
+      <Route path="/preview/page/:id" component={({ params }: any) => (
+        <PreviewPage postId={params.id} type="page" />
+      )} />
+      <Route path="/preview/template/:id" component={({ params }: any) => (
+        <PreviewPage templateId={params.id} type="template" />
+      )} />
+      
       {/* Auth routes - always available */}
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />

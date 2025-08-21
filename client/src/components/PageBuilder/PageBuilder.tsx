@@ -387,7 +387,24 @@ export default function PageBuilder({ post, template, onSave, onPreview }: PageB
   };
 
   const handlePreview = () => {
-    setIsPreviewMode(!isPreviewMode);
+    // Generate preview URL based on content type and ID
+    let previewUrl = '';
+    
+    if (isTemplate && data) {
+      previewUrl = `/preview/template/${data.id}`;
+    } else if (data) {
+      const postType = (data as any).type === 'page' ? 'page' : 'post';
+      previewUrl = `/preview/${postType}/${data.id}`;
+    }
+    
+    if (previewUrl) {
+      // Open preview in new tab
+      window.open(previewUrl, '_blank');
+    } else {
+      // Fallback to old behavior if no ID available
+      setIsPreviewMode(!isPreviewMode);
+    }
+    
     onPreview?.();
   };
 

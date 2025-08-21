@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,7 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
   const [isSaving, setIsSaving] = useState(false);
   const pageBuilderRef = useRef<any>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch the post/page or template data
   const { data: post, isLoading: postLoading, error: postError } = useQuery<Post>({
@@ -127,7 +128,9 @@ export default function PageBuilderEditor({ postId, templateId, type = 'page' }:
       title: "Success",
       description: `${entityName} saved successfully`,
     });
-    // Optionally redirect or update UI
+    // Force query refresh to get latest data
+    queryClient.invalidateQueries({ queryKey: [`/api/posts/${postId}`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/templates/${templateId}`] });
   };
 
   const handlePageBuilderSave = async () => {

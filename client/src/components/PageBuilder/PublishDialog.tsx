@@ -43,6 +43,17 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
     }
   }, [post?.slug]);
 
+  // Force close dialog when post status changes to ensure fresh data on next open
+  useEffect(() => {
+    if (open && post) {
+      // Close dialog to force refresh on next open
+      const currentStatus = post.status;
+      if (currentStatus !== (post.status === 'publish' ? 'publish' : 'draft')) {
+        setOpen(false);
+      }
+    }
+  }, [post?.status, open]);
+
   // Generate slug from title if empty
   const generateSlug = (title: string) => {
     return title
@@ -60,7 +71,7 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
         builderData: blocks,
         usePageBuilder: true,
         status: 'publish',
-        publishedAt: new Date(),
+        publishedAt: new Date().toISOString(),
         slug: slug || generateSlug(post.title)
       };
 
@@ -75,6 +86,7 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
       setOpen(false);
       onPublished?.(updatedData);
       queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/posts/${post?.id}`] });
     },
     onError: (error: any) => {
       toast({
@@ -108,6 +120,7 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
       setOpen(false);
       onPublished?.(updatedData);
       queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/posts/${post?.id}`] });
     },
     onError: (error: any) => {
       toast({

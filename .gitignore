@@ -32,3 +32,5 @@ logs/
 
 # Next.js cache
 themes/nextjs-theme/.next/
+backup
+trash

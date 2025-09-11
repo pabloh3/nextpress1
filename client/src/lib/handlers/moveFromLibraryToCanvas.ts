@@ -1,5 +1,5 @@
 import type { BlockConfig } from '@shared/schema';
-import { getDefaultBlock } from '../blocks';
+import { getDefaultBlock } from '../../components/PageBuilder/blocks';
 
 export function moveFromLibraryToCanvas(
   blocks: BlockConfig[],

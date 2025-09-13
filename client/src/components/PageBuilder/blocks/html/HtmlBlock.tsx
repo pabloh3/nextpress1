@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Code2 as HtmlIcon } from "lucide-react";
 
-function HtmlRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+function HtmlRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
   const content = (block.content as any)?.content || '';
   
   const className = [

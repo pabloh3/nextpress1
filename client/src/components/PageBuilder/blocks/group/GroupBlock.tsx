@@ -4,21 +4,21 @@ import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Droppable, Draggable } from "@hello-pangea/dnd";
-import BlockRenderer from "../../BlockRenderer";
+import { ContainerChildren } from "../../BlockRenderer";
 import { Package as GroupIcon } from "lucide-react";
 
+export interface GroupBlockConfig extends BlockConfig {
+  content: { tagName: string; className?: string };
+  children?: BlockConfig[];
+}
+
 function GroupRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
-  const blocks: BlockConfig[] = Array.isArray((block.content as any)?.innerBlocks)
-    ? (block.content as any).innerBlocks
-    : [];
-
-  const tagName = (block.content as any)?.tagName || 'div';
+  const children = Array.isArray(block.children) ? block.children : [];
+  const tagName = block.content?.tagName || 'div';
   const className = [
-    "wp-block-group",
-    block.content?.className || "",
-  ].filter(Boolean).join(" ");
-
+    'wp-block-group',
+    block.content?.className || '',
+  ].filter(Boolean).join(' ');
   const TagName = tagName as keyof JSX.IntrinsicElements;
 
   return (
@@ -30,68 +30,7 @@ function GroupRenderer({ block, isPreview }: { block: BlockConfig; isPreview: bo
       }}
     >
       <div className="wp-block-group__inner-container">
-        {!isPreview ? (
-          <Droppable
-            droppableId={`${block.id}:inner`}
-            direction="vertical"
-          >
-            {(provided, snapshot) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                style={{
-                  minHeight: blocks.length === 0 ? '120px' : 'auto',
-                  border: snapshot.isDraggingOver ? '2px solid #3b82f6' : '2px dashed transparent',
-                  borderRadius: '4px',
-                  background: snapshot.isDraggingOver ? 'rgba(59,130,246,0.06)' : undefined,
-                }}
-              >
-                {blocks.length > 0 ? (
-                  blocks.map((child: BlockConfig, childIndex: number) => (
-                    <Draggable key={child.id} draggableId={child.id} index={childIndex}>
-                      {(dragProvided, dragSnapshot) => (
-                        <div
-                          ref={dragProvided.innerRef}
-                          {...dragProvided.draggableProps}
-                          {...dragProvided.dragHandleProps}
-                          className={`relative group ${dragSnapshot.isDragging ? 'opacity-50' : ''}`}
-                        >
-                          <BlockRenderer
-                            block={child}
-                            isSelected={false}
-                            isPreview={isPreview}
-                            onDuplicate={() => {}}
-                            onDelete={() => {}}
-                          />
-                        </div>
-                      )}
-                    </Draggable>
-                  ))
-                ) : (
-                  <div className="text-center text-gray-400 p-8">
-                    Group Block
-                    <br />
-                    <small>Drag blocks here to group them</small>
-                  </div>
-                )}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        ) : (
-          <div>
-            {blocks.map((child: BlockConfig) => (
-              <BlockRenderer
-                key={child.id}
-                block={child}
-                isSelected={false}
-                isPreview={isPreview}
-                onDuplicate={() => {}}
-                onDelete={() => {}}
-              />
-            ))}
-          </div>
-        )}
+        <ContainerChildren block={block} isPreview={isPreview} />
       </div>
     </TagName>
   );
@@ -176,9 +115,9 @@ const GroupBlock: BlockDefinition = {
   icon: GroupIcon,
   description: 'Gather blocks in a layout container',
   category: 'layout',
+  isContainer: true,
   defaultContent: {
     tagName: 'div',
-    innerBlocks: [],
     className: '',
   },
   defaultStyles: {

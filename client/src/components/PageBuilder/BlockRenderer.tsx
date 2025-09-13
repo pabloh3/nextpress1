@@ -3,6 +3,75 @@ import { Button } from "@/components/ui/button";
 import { Copy, Trash2, Move } from "lucide-react";
 import type { BlockConfig } from "@shared/schema";
 import { blockRegistry } from "./blocks";
+import { Droppable, Draggable } from "@hello-pangea/dnd";
+import { useBlockActions } from "./BlockActionsContext";
+
+export function ContainerChildren({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
+  const children = Array.isArray(block.children) ? block.children : [];
+  const isContainer = !!blockRegistry[block.type]?.isContainer;
+  const actions = useBlockActions();
+  if (!isContainer) return null;
+  if (isPreview) {
+    return (
+      <div>
+        {children.map(child => (
+           <BlockRenderer
+             key={child.id}
+             block={child}
+             isSelected={actions?.selectedBlockId === child.id}
+             isPreview={true}
+             onDuplicate={() => actions?.onDuplicate(child.id)}
+             onDelete={() => actions?.onDelete(child.id)}
+           />
+        ))}
+      </div>
+    );
+  }
+  return (
+    <Droppable droppableId={block.id} direction="vertical">
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+            {...provided.droppableProps}
+          style={{
+            minHeight: children.length === 0 ? '120px' : 'auto',
+            border: snapshot.isDraggingOver ? '2px solid #3b82f6' : '2px dashed #e2e8f0',
+            borderRadius: '4px',
+            background: snapshot.isDraggingOver ? 'rgba(59,130,246,0.06)' : undefined,
+          }}
+        >
+          {children.length > 0 ? (
+            children.map((child: BlockConfig, childIndex: number) => (
+              <Draggable key={child.id} draggableId={child.id} index={childIndex}>
+                {(dragProvided, dragSnapshot) => (
+                  <div
+                    ref={dragProvided.innerRef}
+                    {...dragProvided.draggableProps}
+                    className={`relative group ${dragSnapshot.isDragging ? 'opacity-50' : ''}`}
+                  >
+                     <BlockRenderer
+                       block={child}
+                       isSelected={actions?.selectedBlockId === child.id}
+                       isPreview={false}
+                       onDuplicate={() => actions?.onDuplicate(child.id)}
+                       onDelete={() => actions?.onDelete(child.id)}
+                       dragHandleProps={dragProvided.dragHandleProps}
+                     />
+                  </div>
+                )}
+              </Draggable>
+            ))
+          ) : (
+            <div className="text-center text-gray-400 p-8">
+              <small>Drag blocks here</small>
+            </div>
+          )}
+          {provided.placeholder}
+        </div>
+      )}
+    </Droppable>
+  );
+}
 
 interface BlockRendererProps {
   block: BlockConfig;
@@ -11,6 +80,7 @@ interface BlockRendererProps {
   onDuplicate: () => void;
   onDelete: () => void;
   hoverHighlight?: 'padding' | 'margin' | null;
+  dragHandleProps?: any;
 }
 
 export default function BlockRenderer({ 
@@ -20,8 +90,13 @@ export default function BlockRenderer({
   onDuplicate, 
   onDelete,
   hoverHighlight = null,
+  dragHandleProps,
 }: BlockRendererProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const actions = useBlockActions();
+  const effectiveSelected = isSelected || actions?.selectedBlockId === block.id;
+  const effectiveHoverHighlight = effectiveSelected ? (hoverHighlight ?? actions?.hoverHighlight ?? null) : null;
+
   const marginString: string = (block.styles?.margin as string) || '0px';
   const parseMargin = (value: string): [string, string, string, string] => {
     const parts = value.trim().split(/\s+/);
@@ -49,7 +124,7 @@ export default function BlockRenderer({
     return (
       <div style={block.styles} className="p-4 border border-dashed border-gray-300 rounded">
         <div className="text-center text-gray-400">
-          {block.type} block
+          {blockRegistry[block.type]?.name || block.type} block
           <br />
           <small>Not implemented yet</small>
         </div>
@@ -62,11 +137,18 @@ export default function BlockRenderer({
       className="relative group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={(e) => { 
+        if (!isPreview) { 
+          e.stopPropagation(); 
+          actions?.onSelect(block.id); 
+        } 
+      }}
     >
-      {/* Block Controls */}
-      {!isPreview && (isSelected || isHovered) && (
-        <div className="absolute -top-10 left-0 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded shadow-sm p-1">
-          <span className="text-xs text-gray-600 px-2">{block.type}</span>
+       {!isPreview && (effectiveSelected || isHovered) && (
+         <div className="absolute -top-10 left-0 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded shadow-sm p-1">
+           <span className="text-xs text-gray-600 px-2">
+             {blockRegistry[block.type]?.name || block.type}
+           </span>
           <Button
             variant="ghost"
             size="sm"
@@ -89,20 +171,21 @@ export default function BlockRenderer({
           >
             <Trash2 className="w-3 h-3" />
           </Button>
-          <div className="w-6 h-6 flex items-center justify-center cursor-move">
+          <div 
+            className="w-6 h-6 flex items-center justify-center cursor-move"
+            {...dragHandleProps}
+          >
             <Move className="w-3 h-3 text-gray-400" />
           </div>
         </div>
       )}
 
-      {/* Block Content with spacing highlight overlays */}
       <div className={`${!isPreview ? 'cursor-pointer' : ''} transition-all duration-200`}>
         <div
-          className={`${!isPreview && isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''} ${!isPreview && isHovered && !isSelected ? 'ring-1 ring-gray-300' : ''} relative`}
+          className={`${!isPreview && effectiveSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''} ${!isPreview && isHovered && !effectiveSelected ? 'ring-1 ring-gray-300' : ''} relative`}
           style={{ display: 'flex', justifyContent, alignItems, width: '100%' }}
         >
-          {/* Padding highlight (approximate) */}
-          {(!isPreview && hoverHighlight === 'padding') && (
+          {(!isPreview && effectiveHoverHighlight === 'padding') && (
             <>
               <div className="absolute left-0 right-0 pointer-events-none" style={{ top: 0, height: pTop, background: 'rgba(34,197,94,0.15)' }} />
               <div className="absolute left-0 right-0 pointer-events-none" style={{ bottom: 0, height: pBottom, background: 'rgba(34,197,94,0.15)' }} />
@@ -110,8 +193,7 @@ export default function BlockRenderer({
               <div className="absolute top-0 bottom-0 pointer-events-none" style={{ right: 0, width: pRight, background: 'rgba(34,197,94,0.15)' }} />
             </>
           )}
-          {/* Margin highlight */}
-          {(!isPreview && hoverHighlight === 'margin') && (
+          {(!isPreview && effectiveHoverHighlight === 'margin') && (
             <div
               className="pointer-events-none"
               style={{

@@ -8,7 +8,28 @@ import { Button } from "@/components/ui/button";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { Image as ImageIcon } from "lucide-react";
 
-function ImageRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+interface ImageBlockContent {
+  url?: string;
+  src?: string;
+  alt?: string;
+  caption?: string;
+  align?: 'left' | 'center' | 'right' | 'wide' | 'full' | '';
+  sizeSlug?: 'thumbnail' | 'medium' | 'large' | 'full';
+  className?: string;
+  linkDestination?: 'none' | 'media' | 'attachment' | 'custom';
+  href?: string;
+  linkTarget?: '_self' | '_blank';
+  target?: string;
+  rel?: string;
+  title?: string;
+  id?: number;
+}
+
+interface ImageBlockConfig extends Omit<BlockConfig, 'content'> {
+  content?: ImageBlockContent;
+}
+
+function ImageRenderer({ block }: { block: ImageBlockConfig; isPreview: boolean }): JSX.Element | null {
   const url = (block.content?.url as string) || (block.content?.src as string);
   const alt = block.content?.alt as string | undefined;
   const caption = block.content?.caption as string | undefined;
@@ -61,7 +82,7 @@ function ImageRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function ImageSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function ImageSettings({ block, onUpdate }: { block: ImageBlockConfig; onUpdate: (updates: Partial<ImageBlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
   const updateContent = (contentUpdates: any) => {
     onUpdate({
@@ -333,8 +354,8 @@ const ImageBlock: BlockDefinition = {
     width: '100%',
     height: 'auto',
   },
-  renderer: ImageRenderer,
-  settings: ImageSettings,
+  renderer: ImageRenderer as any,
+  settings: ImageSettings as any,
 };
 
 export default ImageBlock;

@@ -7,7 +7,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Type } from "lucide-react";
 
-function TextRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+interface TextBlockContent {
+  content?: string;
+  text?: string;
+  align?: 'left' | 'center' | 'right' | 'justify';
+  anchor?: string;
+  className?: string;
+  dropCap?: boolean;
+}
+
+interface TextBlockConfig extends Omit<BlockConfig, 'content'> {
+  content?: TextBlockContent;
+}
+
+function TextRenderer({ block }: { block: TextBlockConfig; isPreview: boolean }) {
   const align = (block.content?.align as string) || (block.styles?.textAlign as string | undefined);
   const anchor = block.content?.anchor as string | undefined;
   const extraClass = (block.content?.className as string | undefined) || "";
@@ -29,7 +42,7 @@ function TextRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function TextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const updateContent = (contentUpdates: any) => {
     onUpdate({
       content: {

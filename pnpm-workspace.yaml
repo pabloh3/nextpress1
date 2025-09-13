@@ -1,0 +1,6 @@
+onlyBuiltDependencies:
+  - '@tailwindcss/oxide'
+  - bcrypt
+  - bufferutil
+  - es5-ext
+  - esbuild

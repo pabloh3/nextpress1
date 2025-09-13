@@ -7,7 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import React from "react";
 
-function HeadingRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+interface HeadingBlockContent {
+  content?: string;
+  text?: string;
+  level?: number;
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  anchor?: string;
+  className?: string;
+}
+
+interface HeadingBlockConfig extends Omit<BlockConfig, 'content'> {
+  content?: HeadingBlockContent;
+}
+
+function HeadingRenderer({ block }: { block: HeadingBlockConfig; isPreview: boolean }) {
   const level = (block.content?.level as number) || 2;
   const Tag = ("h" + level) as keyof JSX.IntrinsicElements;
 
@@ -30,7 +43,7 @@ function HeadingRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
   );
 }
 
-function HeadingSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function HeadingSettings({ block, onUpdate }: { block: HeadingBlockConfig; onUpdate: (updates: Partial<HeadingBlockConfig>) => void }) {
   const updateContent = (contentUpdates: any) => {
     onUpdate({
       content: {

@@ -89,7 +89,7 @@ export function moveExistingBlock(rootBlocks: BlockConfig[], sourceParentId: str
   // Find source container
   const { container: sourceContainer } = findParent(clone, sourceParentId);
   if (!sourceContainer || sourceIndex < 0 || sourceIndex >= sourceContainer.length) {
-      console.error("Source not found", {sourceParentId, sourceIndex, clone});
+      console.error("Source not found", { sourceParentId, sourceIndex });
       return rootBlocks; // Source not found
   }
 

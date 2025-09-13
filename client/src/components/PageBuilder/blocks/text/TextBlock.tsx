@@ -42,7 +42,7 @@ function TextRenderer({ block }: { block: TextBlockConfig; isPreview: boolean })
   );
 }
 
-function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (updates: Partial<TextBlockConfig>) => void }) {
+function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const updateContent = (contentUpdates: any) => {
     onUpdate({
       content: {

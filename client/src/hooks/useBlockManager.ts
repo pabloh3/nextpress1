@@ -67,8 +67,13 @@ export function useBlockManager(initialBlocks: BlockConfig[] = []) {
   }, [blocks]);
 
   const updateBlock = useCallback((blockId: string, updates: Partial<BlockConfig>) => {
-    setBlocks(prev => updateBlockDeep(prev, blockId, updates));
-    return { status: true, data: null };
+    let wasUpdated = false;
+    setBlocks(prev => {
+      const next = updateBlockDeep(prev, blockId, updates);
+      wasUpdated = next !== prev;
+      return next;
+    });
+    return { status: wasUpdated, data: null };
   }, []);
 
   const duplicateBlock = useCallback((blockId: string, generateBlockId: () => string) => {

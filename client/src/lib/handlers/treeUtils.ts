@@ -1,0 +1,125 @@
+
+import type { BlockConfig } from '@shared/schema';
+import { getDefaultBlock } from '@/components/PageBuilder/blocks';
+
+export function findBlock(rootBlocks: BlockConfig[], targetId: string): BlockConfig | null {
+  function search(list: BlockConfig[]): BlockConfig | null {
+    for (const block of list) {
+      if (block.id === targetId) {
+        return block;
+      }
+      if (Array.isArray(block.children)) {
+        const found = search(block.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  return search(rootBlocks);
+}
+
+export function findBlockPath(rootBlocks: BlockConfig[], targetId: string): number[] | null {
+  const path: number[] = [];
+  function dfs(list: BlockConfig[], currentPath: number[]): boolean {
+    for (let i = 0; i < list.length; i++) {
+      const b = list[i];
+      const next = currentPath.concat(i);
+      if (b.id === targetId) {
+        path.push(...next);
+        return true;
+      }
+      if (Array.isArray(b.children) && dfs(b.children, next.concat(-1))) return true; // -1 marker separating levels
+    }
+    return false;
+  }
+  if (!dfs(rootBlocks, [])) return null;
+  return path;
+}
+
+export function insertNewBlock(rootBlocks: BlockConfig[], parentId: string | null, index: number, type: string): { blocks: BlockConfig[]; newId?: string } {
+  const clone = structuredClone(rootBlocks) as BlockConfig[];
+  const newBlock = getDefaultBlock(type, crypto.randomUUID());
+  if (!newBlock) return { blocks: rootBlocks };
+  if (!parentId) {
+    clone.splice(index, 0, newBlock);
+    return { blocks: clone, newId: newBlock.id };
+  }
+  function insert(list: BlockConfig[]): boolean {
+    for (const b of list) {
+      if (b.id === parentId) {
+        if (!Array.isArray(b.children)) b.children = [];
+        b.children.splice(index, 0, newBlock!);
+        return true;
+      }
+      if (b.children && insert(b.children)) return true;
+    }
+    return false;
+  }
+  if (!insert(clone)) return { blocks: rootBlocks };
+  return { blocks: clone, newId: newBlock.id };
+}
+
+// Helper to find the parent list and index of a block
+function findParent(list: BlockConfig[], parentId: string | null): { container: BlockConfig[], parentBlock: BlockConfig | null } {
+    if (parentId === null) {
+        return { container: list, parentBlock: null };
+    }
+
+    const queue: BlockConfig[] = [...list];
+    while(queue.length > 0) {
+        const block = queue.shift();
+        if (block && block.id === parentId) {
+            if (!Array.isArray(block.children)) {
+                block.children = [];
+            }
+            return { container: block.children, parentBlock: block };
+        }
+        if (block && Array.isArray(block.children)) {
+            queue.push(...block.children);
+        }
+    }
+
+    return { container: list, parentBlock: null }; // Fallback to root
+}
+
+
+export function moveExistingBlock(rootBlocks: BlockConfig[], sourceParentId: string | null, sourceIndex: number, destParentId: string | null, destIndex: number): BlockConfig[] {
+  const clone = structuredClone(rootBlocks) as BlockConfig[];
+
+  // Find source container
+  const { container: sourceContainer } = findParent(clone, sourceParentId);
+  if (!sourceContainer || sourceIndex < 0 || sourceIndex >= sourceContainer.length) {
+      console.error("Source not found", {sourceParentId, sourceIndex, clone});
+      return rootBlocks; // Source not found
+  }
+
+  const sameParent = sourceParentId === destParentId;
+  // No-op scenarios (dropping in the same place or immediately after itself within same container)
+  if (sameParent && (destIndex === sourceIndex || destIndex === sourceIndex + 1)) {
+    return rootBlocks;
+  }
+
+  // Remove block from source
+  const [movedBlock] = sourceContainer.splice(sourceIndex, 1);
+  if (!movedBlock) {
+      return rootBlocks; // Block not found
+  }
+
+  // Find destination container
+  const { container: destContainer } = findParent(clone, destParentId);
+  if (!destContainer) {
+      console.error("Destination not found", {destParentId, destIndex, clone});
+      return rootBlocks; // Destination not found
+  }
+
+  let targetIndex = destIndex;
+  if (sameParent && destIndex > sourceIndex) {
+    targetIndex = destIndex - 1; // account for removal shifting indices
+  }
+  if (targetIndex < 0) targetIndex = 0;
+  if (targetIndex > destContainer.length) targetIndex = destContainer.length;
+
+  destContainer.splice(targetIndex, 0, movedBlock);
+
+  return clone;
+}

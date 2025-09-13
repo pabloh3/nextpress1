@@ -1,0 +1,21 @@
+import React, { createContext, useContext } from 'react';
+
+export type HoverHighlight = 'padding' | 'margin' | null;
+
+export interface BlockActionsContextValue {
+  selectedBlockId: string | null;
+  onSelect: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
+  hoverHighlight: HoverHighlight;
+}
+
+const BlockActionsContext = createContext<BlockActionsContextValue | null>(null);
+
+export function useBlockActions() {
+  return useContext(BlockActionsContext);
+}
+
+export function BlockActionsProvider({ value, children }: { value: BlockActionsContextValue; children: React.ReactNode }) {
+  return <BlockActionsContext.Provider value={value}>{children}</BlockActionsContext.Provider>;
+}

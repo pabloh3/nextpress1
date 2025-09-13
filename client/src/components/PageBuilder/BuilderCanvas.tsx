@@ -3,13 +3,12 @@ import { Droppable, Draggable } from '@hello-pangea/dnd';
 import DevicePreview from './DevicePreview';
 import BlockRenderer from './BlockRenderer';
 import { Layers } from 'lucide-react';
+import { useBlockActions } from './BlockActionsContext';
 
 export function BuilderCanvas({
   blocks,
   deviceView,
   selectedBlockId,
-  setSelectedBlockId,
-  setActiveTab,
   isPreviewMode,
   duplicateBlock,
   deleteBlock,
@@ -18,13 +17,12 @@ export function BuilderCanvas({
   blocks: any[];
   deviceView: 'desktop' | 'tablet' | 'mobile';
   selectedBlockId: string | null;
-  setSelectedBlockId: (id: string) => void;
-  setActiveTab: (tab: 'blocks' | 'settings') => void;
   isPreviewMode: boolean;
   duplicateBlock: (blockId: string) => void;
   deleteBlock: (blockId: string) => void;
   hoverHighlight: 'padding' | 'margin' | null;
 }) {
+  const actions = useBlockActions();
   return (
     <div className="flex-1 overflow-auto bg-gray-100 p-8 min-h-0">
       <DevicePreview device={deviceView}>
@@ -51,8 +49,7 @@ export function BuilderCanvas({
                           {...provided.dragHandleProps}
                           className={`relative group ${snapshot.isDragging ? 'opacity-50' : ''} ${selectedBlockId === block.id ? 'ring-2 ring-blue-500' : ''}`}
                           onClick={() => {
-                            setSelectedBlockId(block.id);
-                            setActiveTab('settings');
+                            actions?.onSelect(block.id);
                           }}
                         >
                           <BlockRenderer

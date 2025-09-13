@@ -25,7 +25,7 @@ import PreformattedBlock from "./preformatted/PreformattedBlock";
 import TableBlock from "./table/TableBlock";
 
 export const blockRegistry: Record<string, BlockDefinition> = {
-  // Gutenberg-compatible ids
+  // Gutenberg-compatible ids (deprecated aliases removed per new architecture)
   "core/heading": HeadingBlock,
   "core/paragraph": TextBlock,
   "core/button": ButtonBlock,
@@ -49,20 +49,20 @@ export const blockRegistry: Record<string, BlockDefinition> = {
   "core/preformatted": PreformattedBlock,
   "core/table": TableBlock,
   
-  // Backward compatibility with existing saved data
-  heading: HeadingBlock,
-  text: TextBlock,
-  button: ButtonBlock,
-  image: ImageBlock,
-  video: VideoBlock,
-  audio: AudioBlock,
-  spacer: SpacerBlock,
-  columns: ColumnsBlock,
-  quote: QuoteBlock,
-  list: ListBlock,
+  // Backward compatibility with existing saved data - removed as db will be reset
+
+
+
+
+
+
+
+
+
+
   
   // Custom blocks (keep for backward compatibility)
-  divider: DividerBlock,
+
 };
 
 export function getDefaultBlock(type: string, id: string): BlockConfig | null {
@@ -80,6 +80,7 @@ export function getDefaultBlock(type: string, id: string): BlockConfig | null {
       ...def.defaultStyles,
     },
     settings: {},
+    children: def.isContainer ? [] : undefined,
   };
 }
 

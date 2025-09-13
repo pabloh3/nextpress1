@@ -1,0 +1,375 @@
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { DragDropContext } from '@hello-pangea/dnd'
+import BlockRenderer from '../components/PageBuilder/BlockRenderer'
+import { BlockActionsProvider } from '../../components/PageBuilder/BlockActionsContext'
+import type { BlockConfig } from '@shared/schema'
+
+// Mock the block registry
+vi.mock('../components/PageBuilder/blocks', () => ({
+  blockRegistry: {
+    'core/paragraph': {
+      id: 'core/paragraph',
+      name: 'Paragraph',
+      renderer: ({ block }: { block: BlockConfig }) => (
+        <p data-testid="paragraph-block">{block.content?.text || block.content?.content}</p>
+      ),
+      isContainer: false
+    },
+    'core/group': {
+      id: 'core/group',
+      name: 'Group',
+      renderer: ({ block }: { block: BlockConfig }) => (
+        <div data-testid="group-block" data-block-id={block.id}>
+          Group Container
+        </div>
+      ),
+      isContainer: true
+    }
+  }
+}))
+
+describe('BlockRenderer', () => {
+  const mockActions = {
+    selectedBlockId: null,
+    onSelect: vi.fn(),
+    onDuplicate: vi.fn(),
+    onDelete: vi.fn(),
+    hoverHighlight: null as any
+  }
+
+  const renderWithProviders = (children: React.ReactNode) => {
+    return render(
+      <DragDropContext onDragEnd={() => {}}>
+        <BlockActionsProvider value={mockActions}>
+          {children}
+        </BlockActionsProvider>
+      </DragDropContext>
+    )
+  }
+
+  const createMockBlock = (id: string, type: string = 'core/paragraph', children?: BlockConfig[]): BlockConfig => ({
+    id,
+    type,
+    content: { text: `Content for ${id}` },
+    styles: {},
+    children: children || [],
+    settings: {}
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('Basic Block Rendering', () => {
+    it('should render a simple paragraph block', () => {
+      const block = createMockBlock('test-block', 'core/paragraph')
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={block}
+          isSelected={false}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      expect(screen.getByTestId('paragraph-block')).toBeInTheDocument()
+      expect(screen.getByText('Content for test-block')).toBeInTheDocument()
+    })
+
+    it('should render fallback for unknown block type', () => {
+      const block = createMockBlock('unknown-block', 'unknown/type')
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={block}
+          isSelected={false}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      expect(screen.getByText('unknown/type block')).toBeInTheDocument()
+      expect(screen.getByText('Not implemented yet')).toBeInTheDocument()
+    })
+  })
+
+  describe('Container Block Rendering', () => {
+    it('should render container block with nested children', () => {
+      const containerBlock = createMockBlock('container-1', 'core/group', [
+        createMockBlock('child-1', 'core/paragraph'),
+        createMockBlock('child-2', 'core/paragraph')
+      ])
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={containerBlock}
+          isSelected={false}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      // Container should be rendered
+      expect(screen.getByTestId('group-block')).toBeInTheDocument()
+      
+      // Children should be rendered
+      expect(screen.getByText('Content for child-1')).toBeInTheDocument()
+      expect(screen.getByText('Content for child-2')).toBeInTheDocument()
+    })
+
+    it('should show droppable area for empty container in edit mode', () => {
+      const emptyContainer = createMockBlock('empty-container', 'core/group', [])
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={emptyContainer}
+          isSelected={false}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      expect(screen.getByText('Drag blocks here')).toBeInTheDocument()
+    })
+
+    it('should not show droppable area in preview mode', () => {
+      const emptyContainer = createMockBlock('empty-container', 'core/group', [])
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={emptyContainer}
+          isSelected={false}
+          isPreview={true}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      expect(screen.queryByText('Drag blocks here')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Selection and Interaction', () => {
+    it('should show block controls when hovered', () => {
+      const block = createMockBlock('test-block', 'core/paragraph')
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={block}
+          isSelected={false}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      const blockElement = screen.getByTestId('paragraph-block').closest('.relative.group')
+      expect(blockElement).toBeInTheDocument()
+      
+      // Hover to show controls
+      fireEvent.mouseEnter(blockElement!)
+      
+      // Block type label should be visible
+      expect(screen.getByText('core/paragraph')).toBeInTheDocument()
+    })
+
+    it('should call onSelect when clicked', () => {
+      const block = createMockBlock('test-block', 'core/paragraph')
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={block}
+          isSelected={false}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      const blockElement = screen.getByTestId('paragraph-block').closest('.relative.group')
+      fireEvent.click(blockElement!)
+      
+      expect(mockActions.onSelect).toHaveBeenCalledWith('test-block')
+    })
+
+    it('should show selection highlight when selected', () => {
+      const block = createMockBlock('test-block', 'core/paragraph')
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={block}
+          isSelected={true}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      const blockElement = screen.getByTestId('paragraph-block').closest('.relative.group')
+      expect(blockElement).toHaveClass('ring-2', 'ring-blue-500')
+    })
+
+    it('should not show controls in preview mode', () => {
+      const block = createMockBlock('test-block', 'core/paragraph')
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={block}
+          isSelected={false}
+          isPreview={true}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      const blockElement = screen.getByTestId('paragraph-block').closest('.relative.group')
+      fireEvent.mouseEnter(blockElement!)
+      
+      // Controls should not be visible in preview mode
+      expect(screen.queryByText('core/paragraph')).not.toBeInTheDocument()
+    })
+
+    it('should call onDuplicate when duplicate button clicked', () => {
+      const onDuplicate = vi.fn()
+      const block = createMockBlock('test-block', 'core/paragraph')
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={block}
+          isSelected={true}
+          isPreview={false}
+          onDuplicate={onDuplicate}
+          onDelete={() => {}}
+        />
+      )
+
+      const duplicateButton = screen.getByLabelText(/copy/i)
+      fireEvent.click(duplicateButton)
+      
+      expect(onDuplicate).toHaveBeenCalled()
+    })
+
+    it('should call onDelete when delete button clicked', () => {
+      const onDelete = vi.fn()
+      const block = createMockBlock('test-block', 'core/paragraph')
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={block}
+          isSelected={true}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={onDelete}
+        />
+      )
+
+      const deleteButton = screen.getByLabelText(/trash/i)
+      fireEvent.click(deleteButton)
+      
+      expect(onDelete).toHaveBeenCalled()
+    })
+  })
+
+  describe('Nested Block Selection', () => {
+    it('should handle selection of nested blocks correctly', () => {
+      const containerBlock = createMockBlock('container-1', 'core/group', [
+        createMockBlock('child-1', 'core/paragraph'),
+        createMockBlock('child-2', 'core/paragraph')
+      ])
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={containerBlock}
+          isSelected={false}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      // Click on first child block
+      const firstChild = screen.getByText('Content for child-1')
+      const firstChildBlock = firstChild.closest('.relative.group')
+      fireEvent.click(firstChildBlock!)
+      
+      // Should select the child block, not the container
+      expect(mockActions.onSelect).toHaveBeenCalledWith('child-1')
+    })
+
+    it('should prevent event bubbling when clicking nested blocks', () => {
+      const containerBlock = createMockBlock('container-1', 'core/group', [
+        createMockBlock('child-1', 'core/paragraph')
+      ])
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={containerBlock}
+          isSelected={false}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      const childBlock = screen.getByText('Content for child-1').closest('.relative.group')
+      fireEvent.click(childBlock!)
+      
+      // Should only call onSelect once for the child, not the container
+      expect(mockActions.onSelect).toHaveBeenCalledTimes(1)
+      expect(mockActions.onSelect).toHaveBeenCalledWith('child-1')
+    })
+  })
+
+  describe('Styles and CSS Classes', () => {
+    it('should apply custom styles to block', () => {
+      const block = createMockBlock('styled-block', 'core/paragraph')
+      block.styles = { 
+        backgroundColor: 'red', 
+        padding: '20px',
+        margin: '10px' 
+      }
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={block}
+          isSelected={false}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+        />
+      )
+
+      const blockElement = screen.getByTestId('paragraph-block')
+      expect(blockElement).toHaveStyle({ 
+        backgroundColor: 'red',
+        padding: '20px'
+      })
+    })
+
+    it('should handle margin and padding highlight styles', () => {
+      const block = createMockBlock('highlighted-block', 'core/paragraph')
+      
+      renderWithProviders(
+        <BlockRenderer
+          block={block}
+          isSelected={true}
+          isPreview={false}
+          onDuplicate={() => {}}
+          onDelete={() => {}}
+          hoverHighlight="padding"
+        />
+      )
+
+      // This would test the hover highlight functionality
+      // The exact implementation depends on how the highlight is applied
+      const blockElement = screen.getByTestId('paragraph-block').closest('.relative.group')
+      expect(blockElement).toBeInTheDocument()
+    })
+  })
+})

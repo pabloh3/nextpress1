@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Post, Template, BlockConfig } from '@shared/schema';
 import { DragDropContext } from '@hello-pangea/dnd';
 import { generateBlockId } from './utils';
@@ -8,6 +8,7 @@ import { usePageSave } from '../../hooks/usePageSave';
 import { BuilderSidebar } from './BuilderSidebar';
 import { BuilderTopBar } from './BuilderTopBar';
 import { BuilderCanvas } from './BuilderCanvas';
+import { BlockActionsProvider } from './BlockActionsContext';
 
 interface PageBuilderProps {
   post?: Post | Template;
@@ -29,8 +30,7 @@ export default function PageBuilder({
   const data = template || post;
   const isTemplate = !!template;
 
-  // Block state management
-  const { blocks, setBlocks, updateBlock, duplicateBlock, deleteBlock } =
+  const { blocks, setBlocks, updateBlock, duplicateBlock, deleteBlock, findBlockById } =
     useBlockManager(
       propBlocks ||
         (data
@@ -40,35 +40,26 @@ export default function PageBuilder({
           : [])
     );
 
-  // UI state
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const [deviceView, setDeviceView] = useState<'desktop' | 'tablet' | 'mobile'>(
-    'desktop'
-  );
+  const [deviceView, setDeviceView] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'blocks' | 'settings'>('blocks');
-  const [hoverHighlight, setHoverHighlight] = useState<
-    'padding' | 'margin' | null
-  >(null);
+  const [hoverHighlight, setHoverHighlight] = useState<'padding' | 'margin' | null>(null);
 
-  // Sync blocks with parent when propBlocks change
   useEffect(() => {
     if (propBlocks) {
       setBlocks(propBlocks);
     }
   }, [propBlocks, setBlocks]);
 
-  // Communicate block changes to parent
   useEffect(() => {
     onBlocksChange?.(blocks);
   }, [blocks, onBlocksChange]);
 
-  const selectedBlock = blocks.find((block) => block.id === selectedBlockId);
+  const selectedBlock = selectedBlockId ? findBlockById(selectedBlockId) : null;
 
-  // Data saving
   const saveMutation = usePageSave({ isTemplate, data, onSave });
 
-  // Drag-and-drop handler
   const { handleDragEnd } = useDragAndDropHandler(
     blocks,
     setBlocks,
@@ -76,61 +67,61 @@ export default function PageBuilder({
     setActiveTab
   );
 
-  // Save handler
-  const handleSave = () => {
-    saveMutation.mutate(blocks);
-  };
+  const handleDuplicate = useCallback((id: string) => {
+    const res = duplicateBlock(id, generateBlockId);
+    const newId = (res.data as any)?.newId;
+    if (newId) {
+      setSelectedBlockId(newId);
+      setActiveTab('settings');
+    }
+  }, [duplicateBlock]);
 
-  // Preview handler
-  const handlePreview = () => {
-    let previewUrl = '';
-    if (isTemplate && data) {
-      previewUrl = `/preview/template/${data.id}`;
-    } else if (data) {
-      const postType = (data as any).type === 'page' ? 'page' : 'post';
-      previewUrl = `/preview/${postType}/${data.id}`;
+  const handleDelete = useCallback((id: string) => {
+    deleteBlock(id);
+    if (selectedBlockId === id) {
+      setSelectedBlockId(null);
     }
-    if (previewUrl) {
-      window.open(previewUrl, '_blank');
-    } else {
-      setIsPreviewMode(!isPreviewMode);
-    }
-    onPreview?.();
-  };
+  }, [deleteBlock, selectedBlockId]);
 
   return (
     <div className="flex h-full bg-gray-50">
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <BuilderSidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          selectedBlock={selectedBlock}
-          updateBlock={updateBlock}
-          setHoverHighlight={setHoverHighlight}
-        />
-        <div className="flex-1 flex flex-col">
-          <BuilderTopBar
-            data={data}
-            isTemplate={isTemplate}
-            deviceView={deviceView}
-            setDeviceView={setDeviceView}
-            blocks={blocks}
-          />
-          <BuilderCanvas
-            blocks={blocks}
-            deviceView={deviceView}
-            selectedBlockId={selectedBlockId}
-            setSelectedBlockId={setSelectedBlockId}
+      <BlockActionsProvider
+        value={{
+          selectedBlockId,
+            onSelect: (id) => { setSelectedBlockId(id); setActiveTab('settings'); },
+          onDuplicate: handleDuplicate,
+          onDelete: handleDelete,
+          hoverHighlight,
+        }}
+      >
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <BuilderSidebar
+            activeTab={activeTab}
             setActiveTab={setActiveTab}
-            isPreviewMode={isPreviewMode}
-            duplicateBlock={(blockId) =>
-              duplicateBlock(blockId, generateBlockId)
-            }
-            deleteBlock={deleteBlock}
-            hoverHighlight={hoverHighlight}
+            selectedBlock={selectedBlock}
+            updateBlock={updateBlock}
+            setHoverHighlight={setHoverHighlight}
           />
-        </div>
-      </DragDropContext>
+          <div className="flex-1 flex flex-col">
+            <BuilderTopBar
+              data={data}
+              isTemplate={isTemplate}
+              deviceView={deviceView}
+              setDeviceView={setDeviceView}
+              blocks={blocks}
+            />
+            <BuilderCanvas
+              blocks={blocks}
+              deviceView={deviceView}
+              selectedBlockId={selectedBlockId}
+              isPreviewMode={isPreviewMode}
+              duplicateBlock={handleDuplicate}
+              deleteBlock={handleDelete}
+              hoverHighlight={hoverHighlight}
+            />
+          </div>
+        </DragDropContext>
+      </BlockActionsProvider>
     </div>
   );
 }

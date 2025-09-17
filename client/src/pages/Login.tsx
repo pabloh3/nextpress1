@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -19,6 +20,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -38,10 +40,11 @@ export default function Login() {
         title: "Success",
         description: "Logged in successfully",
       });
-      // Small delay to ensure session is saved, then redirect
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
+      
+      // Invalidate the user query to force a refetch and then navigate
+      await queryClient.invalidateQueries({ queryKey: ['user'] });
+      setLocation('/');
+
     } catch (error) {
       toast({
         title: "Error",

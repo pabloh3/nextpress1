@@ -86,35 +86,49 @@ function findParent(list: BlockConfig[], parentId: string | null): { container: 
 export function moveExistingBlock(rootBlocks: BlockConfig[], sourceParentId: string | null, sourceIndex: number, destParentId: string | null, destIndex: number): BlockConfig[] {
   const clone = structuredClone(rootBlocks) as BlockConfig[];
 
-  // Find source container
   const { container: sourceContainer } = findParent(clone, sourceParentId);
   if (!sourceContainer || sourceIndex < 0 || sourceIndex >= sourceContainer.length) {
-      console.error("Source not found", { sourceParentId, sourceIndex });
-      return rootBlocks; // Source not found
-  }
-
-  const sameParent = sourceParentId === destParentId;
-  // No-op scenarios (dropping in the same place or immediately after itself within same container)
-  if (sameParent && (destIndex === sourceIndex || destIndex === sourceIndex + 1)) {
+    console.error("Source not found", { sourceParentId, sourceIndex });
     return rootBlocks;
   }
 
-  // Remove block from source
-  const [movedBlock] = sourceContainer.splice(sourceIndex, 1);
+  const movedBlock = sourceContainer[sourceIndex];
   if (!movedBlock) {
-      return rootBlocks; // Block not found
+    return rootBlocks;
   }
 
-  // Find destination container
+  // Prevent moving a block into itself or its descendants
+  if (movedBlock.id === destParentId) {
+    console.error("Cannot move a block into itself.");
+    return rootBlocks;
+  }
+  if (destParentId !== null) {
+      const isDescendant = findBlock([movedBlock], destParentId);
+      if (isDescendant) {
+        console.error("Cannot move a block into one of its own descendants.");
+        return rootBlocks;
+      }
+  }
+
+  const sameParent = sourceParentId === destParentId;
+  // No-op scenarios (dropping in the same place)
+  if (sameParent && destIndex === sourceIndex) {
+    return rootBlocks;
+  }
+
+  // Find destination container *before* mutation
   const { container: destContainer } = findParent(clone, destParentId);
   if (!destContainer) {
-      console.error("Destination not found", {destParentId, destIndex, clone});
-      return rootBlocks; // Destination not found
+    console.error("Destination not found", { destParentId, destIndex });
+    return rootBlocks;
   }
+
+  // Now, perform the move
+  sourceContainer.splice(sourceIndex, 1);
 
   let targetIndex = destIndex;
   if (sameParent && destIndex > sourceIndex) {
-    targetIndex = destIndex - 1; // account for removal shifting indices
+    targetIndex = destIndex - 1;
   }
   if (targetIndex < 0) targetIndex = 0;
   if (targetIndex > destContainer.length) targetIndex = destContainer.length;

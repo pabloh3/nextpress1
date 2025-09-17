@@ -273,7 +273,7 @@ export const createUserSchema = createInsertSchema(users, {
   lastName: z.string().min(1, "Last name is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(["administrator", "editor", "author", "contributor", "subscriber"]),
-  status: z.enum(["active", "inactive", "pending"]),
+  status: z.enum(["active", "inactive", "pending"]).default("active"),
 }).omit({ 
   id: true,
   createdAt: true,

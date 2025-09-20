@@ -103,7 +103,7 @@ export function moveExistingBlock(rootBlocks: BlockConfig[], sourceParentId: str
     return rootBlocks;
   }
   if (destParentId !== null) {
-      const isDescendant = findBlock([movedBlock], destParentId);
+      const isDescendant = findBlock(movedBlock.children || [], destParentId);
       if (isDescendant) {
         console.error("Cannot move a block into one of its own descendants.");
         return rootBlocks;

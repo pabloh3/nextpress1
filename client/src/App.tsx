@@ -77,7 +77,6 @@ function Router() {
           <Route
             path="/"
             component={() => (
-              // <PublicPageView type="homepage" />
               <Landing />
             )}
           />

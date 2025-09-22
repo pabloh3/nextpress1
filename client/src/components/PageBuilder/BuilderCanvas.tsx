@@ -43,23 +43,23 @@ export function BuilderCanvas({
                   blocks.map((block, index) => (
                     <Draggable key={block.id} draggableId={block.id} index={index}>
                       {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={`relative group ${snapshot.isDragging ? 'opacity-50' : ''} ${selectedBlockId === block.id ? 'ring-2 ring-blue-500' : ''}`}
-                          onClick={() => {
-                            actions?.onSelect(block.id);
-                          }}
-                        >
-                          <BlockRenderer
-                            block={block}
-                            isSelected={selectedBlockId === block.id}
-                            isPreview={isPreviewMode}
-                            onDuplicate={() => duplicateBlock(block.id)}
-                            onDelete={() => deleteBlock(block.id)}
-                            hoverHighlight={selectedBlockId === block.id ? hoverHighlight : null}
-                          />
+                         <div
+                           ref={provided.innerRef}
+                           {...provided.draggableProps}
+                           className={`relative group ${snapshot.isDragging ? 'opacity-50' : ''} ${selectedBlockId === block.id ? 'ring-2 ring-blue-500' : ''}`}
+                           onClick={() => {
+                             actions?.onSelect(block.id);
+                           }}
+                         >
+                           <BlockRenderer
+                             block={block}
+                             isSelected={selectedBlockId === block.id}
+                             isPreview={isPreviewMode}
+                             onDuplicate={() => duplicateBlock(block.id)}
+                             onDelete={() => deleteBlock(block.id)}
+                             hoverHighlight={selectedBlockId === block.id ? hoverHighlight : null}
+                             dragHandleProps={provided.dragHandleProps}
+                           />
                         </div>
                       )}
                     </Draggable>

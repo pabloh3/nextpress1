@@ -8,6 +8,18 @@ export function findBlock(rootBlocks: BlockConfig[], targetId: string): BlockCon
       if (block.id === targetId) {
         return block;
       }
+      
+      // Check for ColumnsBlock structure - search within columns
+      if (block.type === 'core/columns' && block.content?.columns) {
+        const columns = (block.content as any).columns;
+        for (const column of columns) {
+          if (Array.isArray(column.children)) {
+            const found = search(column.children);
+            if (found) return found;
+          }
+        }
+      }
+      
       if (Array.isArray(block.children)) {
         const found = search(block.children);
         if (found) return found;
@@ -51,6 +63,26 @@ export function insertNewBlock(rootBlocks: BlockConfig[], parentId: string | nul
         b.children.splice(index, 0, newBlock!);
         return true;
       }
+      
+      // Check for ColumnsBlock structure - insert into column containers
+      if (b.type === 'core/columns' && b.content?.columns) {
+        const columns = (b.content as any).columns;
+        for (const column of columns) {
+          if (column.id === parentId) {
+            if (!Array.isArray(column.children)) column.children = [];
+            column.children.splice(index, 0, newBlock!);
+            return true;
+          }
+        }
+        
+        // Also recursively search in column children for nested blocks
+        for (const column of columns) {
+          if (Array.isArray(column.children) && insert(column.children)) {
+            return true;
+          }
+        }
+      }
+      
       if (b.children && insert(b.children)) return true;
     }
     return false;
@@ -74,6 +106,27 @@ function findParent(list: BlockConfig[], parentId: string | null): { container: 
             }
             return { container: block.children, parentBlock: block };
         }
+        
+        // Check for ColumnsBlock structure - look for column IDs
+        if (block && block.type === 'core/columns' && block.content?.columns) {
+            const columns = (block.content as any).columns;
+            for (const column of columns) {
+                if (column.id === parentId) {
+                    if (!Array.isArray(column.children)) {
+                        column.children = [];
+                    }
+                    return { container: column.children, parentBlock: block };
+                }
+            }
+            
+            // Also add column children to the queue for recursive search
+            for (const column of columns) {
+                if (Array.isArray(column.children)) {
+                    queue.push(...column.children);
+                }
+            }
+        }
+        
         if (block && Array.isArray(block.children)) {
             queue.push(...block.children);
         }
@@ -113,6 +166,12 @@ export function moveExistingBlock(rootBlocks: BlockConfig[], sourceParentId: str
   const sameParent = sourceParentId === destParentId;
   // No-op scenarios (dropping in the same place)
   if (sameParent && destIndex === sourceIndex) {
+    return rootBlocks;
+  }
+  
+  // Additional no-op case: when moving to immediately after itself in same container
+  // (e.g., moving from index 0 to index 1 in same container)
+  if (sameParent && destIndex === sourceIndex + 1) {
     return rootBlocks;
   }
 

@@ -144,8 +144,11 @@ export default function BlockRenderer({
         } 
       }}
     >
-       {!isPreview && (effectiveSelected || isHovered) && (
-         <div className="absolute -top-10 left-0 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded shadow-sm p-1">
+       {!isPreview && (
+         <div 
+           className="absolute -top-10 left-0 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded shadow-sm p-1 transition-opacity duration-200"
+           style={{ opacity: (effectiveSelected || isHovered) ? 1 : 0 }}
+         >
            <span className="text-xs text-gray-600 px-2">
              {blockRegistry[block.type]?.name || block.type}
            </span>

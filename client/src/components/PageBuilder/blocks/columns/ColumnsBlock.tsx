@@ -399,6 +399,13 @@ const ColumnsBlock: BlockDefinition = {
     verticalAlignment: 'top',
     horizontalAlignment: 'left',
     direction: 'row',
+    columns: [
+      {
+        id: 'col-1',
+        width: '1fr',
+        children: [],
+      },
+    ],
   },
   defaultStyles: {},
   renderer: ColumnsRenderer,

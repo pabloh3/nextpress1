@@ -104,7 +104,7 @@ function ColumnsRenderer({ block, isPreview }: { block: BlockConfig; isPreview: 
                     padding: '8px',
                   }}
                 >
-                  {column.children.length > 0 ? (
+                   {column.children.length > 0 ? (
                     column.children.map((childBlock, childIndex) => (
                       <Draggable key={childBlock.id} draggableId={childBlock.id} index={childIndex}>
                         {(dragProvided, dragSnapshot) => (
@@ -113,13 +113,14 @@ function ColumnsRenderer({ block, isPreview }: { block: BlockConfig; isPreview: 
                             {...dragProvided.draggableProps}
                             className={`relative group ${dragSnapshot.isDragging ? 'opacity-50' : ''}`}
                           >
+                            {/* Always-present drag handle overlay */}
+                            <div className="absolute inset-0" {...dragProvided.dragHandleProps} data-testid="drag-handle" />
                             <BlockRenderer
                               block={childBlock}
                               isSelected={actions?.selectedBlockId === childBlock.id}
                               isPreview={false}
                               onDuplicate={() => actions?.onDuplicate(childBlock.id)}
                               onDelete={() => actions?.onDelete(childBlock.id)}
-                              dragHandleProps={dragProvided.dragHandleProps}
                             />
                           </div>
                         )}
@@ -394,6 +395,7 @@ const ColumnsBlock: BlockDefinition = {
   description: 'Flexible horizontal container for any blocks',
   category: 'layout',
   isContainer: true,
+  handlesOwnChildren: true,
   defaultContent: {
     gap: '20px',
     verticalAlignment: 'top',

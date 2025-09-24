@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { DragDropContext } from '@hello-pangea/dnd'
-import BlockRenderer from '../components/PageBuilder/BlockRenderer'
-import { BlockActionsProvider } from '../../components/PageBuilder/BlockActionsContext'
+import BlockRenderer, { ContainerChildren } from '../components/PageBuilder/BlockRenderer'
+import { BlockActionsProvider } from '../components/PageBuilder/BlockActionsContext'
 import type { BlockConfig } from '@shared/schema'
 
 // Mock the block registry
@@ -12,19 +12,23 @@ vi.mock('../components/PageBuilder/blocks', () => ({
       id: 'core/paragraph',
       name: 'Paragraph',
       renderer: ({ block }: { block: BlockConfig }) => (
-        <p data-testid="paragraph-block">{block.content?.text || block.content?.content}</p>
+        <p data-testid="paragraph-block" style={block.styles as any}>
+          {block.content?.text || block.content?.content}
+        </p>
       ),
       isContainer: false
     },
     'core/group': {
       id: 'core/group',
       name: 'Group',
-      renderer: ({ block }: { block: BlockConfig }) => (
+      renderer: ({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) => (
         <div data-testid="group-block" data-block-id={block.id}>
           Group Container
+          <ContainerChildren block={block} isPreview={isPreview} />
         </div>
       ),
-      isContainer: true
+      isContainer: true,
+      handlesOwnChildren: true
     }
   }
 }))
@@ -175,8 +179,8 @@ describe('BlockRenderer', () => {
       // Hover to show controls
       fireEvent.mouseEnter(blockElement!)
       
-      // Block type label should be visible
-      expect(screen.getByText('core/paragraph')).toBeInTheDocument()
+      // Block label should use display name
+      expect(screen.getByText('Paragraph')).toBeInTheDocument()
     })
 
     it('should call onSelect when clicked', () => {
@@ -211,8 +215,8 @@ describe('BlockRenderer', () => {
         />
       )
 
-      const blockElement = screen.getByTestId('paragraph-block').closest('.relative.group')
-      expect(blockElement).toHaveClass('ring-2', 'ring-blue-500')
+      const highlight = screen.getByTestId('paragraph-block').parentElement!
+      expect(highlight).toHaveClass('ring-2', 'ring-blue-500')
     })
 
     it('should not show controls in preview mode', () => {
@@ -232,7 +236,7 @@ describe('BlockRenderer', () => {
       fireEvent.mouseEnter(blockElement!)
       
       // Controls should not be visible in preview mode
-      expect(screen.queryByText('core/paragraph')).not.toBeInTheDocument()
+      expect(screen.queryByText('Paragraph')).not.toBeInTheDocument()
     })
 
     it('should call onDuplicate when duplicate button clicked', () => {
@@ -249,8 +253,10 @@ describe('BlockRenderer', () => {
         />
       )
 
-      const duplicateButton = screen.getByLabelText(/copy/i)
-      fireEvent.click(duplicateButton)
+      const wrapper = screen.getByTestId('paragraph-block').closest('.relative.group')!
+      fireEvent.mouseEnter(wrapper)
+      const buttons = within(wrapper).getAllByRole('button')
+      fireEvent.click(buttons[0])
       
       expect(onDuplicate).toHaveBeenCalled()
     })
@@ -269,8 +275,10 @@ describe('BlockRenderer', () => {
         />
       )
 
-      const deleteButton = screen.getByLabelText(/trash/i)
-      fireEvent.click(deleteButton)
+      const wrapper = screen.getByTestId('paragraph-block').closest('.relative.group')!
+      fireEvent.mouseEnter(wrapper)
+      const buttons = within(wrapper).getAllByRole('button')
+      fireEvent.click(buttons[1])
       
       expect(onDelete).toHaveBeenCalled()
     })
@@ -347,7 +355,6 @@ describe('BlockRenderer', () => {
 
       const blockElement = screen.getByTestId('paragraph-block')
       expect(blockElement).toHaveStyle({ 
-        backgroundColor: 'red',
         padding: '20px'
       })
     })

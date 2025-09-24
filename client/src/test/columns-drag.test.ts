@@ -2,14 +2,17 @@ import { vi } from 'vitest';
 import { insertNewBlock, moveExistingBlock } from '../lib/handlers/treeUtils';
 import type { BlockConfig } from '@shared/schema';
 
-// Mock the getDefaultBlock function since we're testing
+// Mock the blockRegistry used by treeUtils
 vi.mock('../components/PageBuilder/blocks', () => ({
-  getDefaultBlock: (type: string, id: string) => ({
-    id,
-    type,
-    content: type === 'core/heading' ? { text: 'New heading', level: 1 } : { text: 'New block' },
-    children: []
-  })
+  blockRegistry: {
+    'core/heading': {
+      id: 'core/heading',
+      name: 'Heading',
+      isContainer: false,
+      defaultContent: { text: 'New heading', level: 1 },
+      defaultStyles: {}
+    }
+  }
 }));
 
 describe('Columns Block Tree Utilities', () => {

@@ -78,17 +78,24 @@ export function useBlockManager(initialBlocks: BlockConfig[] = []) {
 
   const duplicateBlock = useCallback((blockId: string, generateBlockId: () => string) => {
     let newId: string | undefined;
+    let didDuplicate = false;
     setBlocks(prev => {
       const { next, duplicatedId } = duplicateBlockDeep(prev, blockId, generateBlockId);
       newId = duplicatedId;
+      didDuplicate = Boolean(duplicatedId);
       return next;
     });
-    return { status: true, data: { newId } };
+    return { status: didDuplicate, data: didDuplicate ? { newId } : null };
   }, []);
 
   const deleteBlock = useCallback((blockId: string) => {
-    setBlocks(prev => deleteBlockDeep(prev, blockId).next);
-    return { status: true, data: null };
+    let removed = false;
+    setBlocks(prev => {
+      const { next, removed: didRemove } = deleteBlockDeep(prev, blockId);
+      removed = didRemove;
+      return next;
+    });
+    return { status: removed, data: null };
   }, []);
 
   return {

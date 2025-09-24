@@ -109,6 +109,7 @@ export default function PageBuilder({
               deviceView={deviceView}
               setDeviceView={setDeviceView}
               blocks={blocks}
+              onSaveClick={() => { saveMutation.mutate(blocks); onSave?.(data as any); }}
             />
             <BuilderCanvas
               blocks={blocks}

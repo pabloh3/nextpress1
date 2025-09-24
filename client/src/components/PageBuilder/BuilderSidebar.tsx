@@ -24,14 +24,14 @@ export function BuilderSidebar({
         <h2 className="text-lg font-semibold">Page Builder</h2>
       </div>
       <Tabs value={activeTab} onValueChange={value => setActiveTab(value as 'blocks' | 'settings')} className="flex-1 flex flex-col p-4 min-h-0">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="blocks" className="flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Blocks
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" /> Settings
-          </TabsTrigger>
-        </TabsList>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="blocks" className="flex items-center gap-2" onClick={() => setActiveTab('blocks')}>
+              <Plus className="w-4 h-4" /> Blocks
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2" onClick={() => setActiveTab('settings')}>
+              <Settings className="w-4 h-4" /> Settings
+            </TabsTrigger>
+          </TabsList>
         <TabsContent value="blocks" className="flex-1 mt-4 overflow-hidden">
           <ScrollArea className="h-full">
             <BlockLibrary />

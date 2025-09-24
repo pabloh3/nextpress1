@@ -68,10 +68,23 @@ export const blockRegistry: Record<string, BlockDefinition> = {
 export function getDefaultBlock(type: string, id: string): BlockConfig | null {
   const def = blockRegistry[type];
   if (!def) return null;
+
+  // Deep clone default content to avoid shared references across instances
+  const content = structuredClone(def.defaultContent ?? {});
+
+  // Ensure unique column IDs for Columns block instances to prevent droppable collisions
+  if (type === 'core/columns' && content && Array.isArray(content.columns)) {
+    content.columns = content.columns.map((col: any, i: number) => ({
+      ...col,
+      id: `${id}-col-${i + 1}`,
+      children: Array.isArray(col?.children) ? col.children : [],
+    }));
+  }
+
   return {
     id,
     type,
-    content: def.defaultContent,
+    content,
     styles: {
       padding: '20px',
       margin: '0px',

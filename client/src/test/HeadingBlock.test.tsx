@@ -91,7 +91,9 @@ describe('HeadingBlock', () => {
       render(<Renderer block={block} isPreview={false} />)
       
       const heading = screen.getByRole('heading')
-      expect(heading).toHaveStyle({ color: 'red', fontSize: '24px' })
+      // Accept either literal or computed rgb equivalent
+      expect(getComputedStyle(heading).color).toBe('rgb(255, 0, 0)')
+      expect(getComputedStyle(heading).fontSize).toBe('24px')
     })
 
     it('should handle legacy text property', () => {
@@ -127,7 +129,7 @@ describe('HeadingBlock', () => {
       
       render(<Settings block={block} onUpdate={onUpdate} />)
       
-      expect(screen.getByLabelText(/text/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/^text$/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/heading level/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/text align/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/anchor/i)).toBeInTheDocument()
@@ -141,7 +143,7 @@ describe('HeadingBlock', () => {
       
       render(<Settings block={block} onUpdate={onUpdate} />)
       
-      const textInput = screen.getByLabelText(/text/i)
+      const textInput = screen.getByLabelText(/^text$/i)
       fireEvent.change(textInput, { target: { value: 'New Text' } })
       
       expect(onUpdate).toHaveBeenCalledWith({

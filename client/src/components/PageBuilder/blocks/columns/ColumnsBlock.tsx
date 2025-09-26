@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { useBlockActions } from "../../BlockActionsContext";
 import BlockRenderer from "../../BlockRenderer";
+import { generateBlockId } from "../../utils";
 
 interface ColumnItem {
   id: string;
@@ -97,11 +98,12 @@ function ColumnsRenderer({ block, isPreview }: { block: BlockConfig; isPreview: 
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                   style={{
-                    minHeight: column.children.length === 0 ? '120px' : 'auto',
+                    minHeight: '60px', // Always maintain minimum drop zone height
                     border: snapshot.isDraggingOver ? '2px solid #3b82f6' : '2px dashed #e2e8f0',
                     borderRadius: '4px',
                     background: snapshot.isDraggingOver ? 'rgba(59,130,246,0.06)' : undefined,
                     padding: '8px',
+                    paddingBottom: column.children.length > 0 ? '20px' : '8px', // Add extra bottom padding for drop zone when there are children
                   }}
                 >
                    {column.children.length > 0 ? (
@@ -112,16 +114,16 @@ function ColumnsRenderer({ block, isPreview }: { block: BlockConfig; isPreview: 
                             ref={dragProvided.innerRef}
                             {...dragProvided.draggableProps}
                             className={`relative group ${dragSnapshot.isDragging ? 'opacity-50' : ''}`}
-                          >
-                            {/* Always-present drag handle overlay */}
-                            <div className="absolute inset-0" {...dragProvided.dragHandleProps} data-testid="drag-handle" />
-                            <BlockRenderer
-                              block={childBlock}
-                              isSelected={actions?.selectedBlockId === childBlock.id}
-                              isPreview={false}
-                              onDuplicate={() => actions?.onDuplicate(childBlock.id)}
-                              onDelete={() => actions?.onDelete(childBlock.id)}
-                            />
+                           >
+                             {/* Pass drag handle props to BlockRenderer instead of overlay */}
+                             <BlockRenderer
+                               block={childBlock}
+                               isSelected={actions?.selectedBlockId === childBlock.id}
+                               isPreview={false}
+                               onDuplicate={() => actions?.onDuplicate(childBlock.id)}
+                               onDelete={() => actions?.onDelete(childBlock.id)}
+                               dragHandleProps={dragProvided.dragHandleProps}
+                             />
                           </div>
                         )}
                       </Draggable>
@@ -162,7 +164,7 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 
   const addColumn = () => {
     const newColumn: ColumnItem = {
-      id: `col-${Date.now()}`,
+      id: generateBlockId(),
       width: 'auto',
       children: [],
     };
@@ -181,8 +183,8 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 
   const addQuickColumns = (count: number) => {
     const width = `${(100 / count).toFixed(2)}%`;
-    const newColumns: ColumnItem[] = Array.from({ length: count }, (_, i) => ({
-      id: `col-${Date.now()}-${i}`,
+    const newColumns: ColumnItem[] = Array.from({ length: count }, () => ({
+      id: generateBlockId(),
       width,
       children: [],
     }));
@@ -403,8 +405,8 @@ const ColumnsBlock: BlockDefinition = {
     direction: 'row',
     columns: [
       {
-        id: 'col-1',
-        width: '1fr',
+        id: 'default-col-1',
+        width: '1fr', 
         children: [],
       },
     ],

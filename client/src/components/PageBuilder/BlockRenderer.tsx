@@ -35,10 +35,11 @@ export function ContainerChildren({ block, isPreview }: { block: BlockConfig; is
           {...provided.droppableProps}
           data-container-children="true"
           style={{
-            minHeight: children.length === 0 ? '120px' : 'auto',
+            minHeight: '60px', // Always maintain minimum drop zone height
             border: snapshot.isDraggingOver ? '2px solid #3b82f6' : '2px dashed #e2e8f0',
             borderRadius: '4px',
             background: snapshot.isDraggingOver ? 'rgba(59,130,246,0.06)' : undefined,
+            paddingBottom: children.length > 0 ? '20px' : '0px', // Add padding for drop zone when there are children
           }}
         >
           {children.length > 0 ? (
@@ -48,17 +49,17 @@ export function ContainerChildren({ block, isPreview }: { block: BlockConfig; is
                   <div
                     ref={dragProvided.innerRef}
                     {...dragProvided.draggableProps}
-                    className={`relative group ${dragSnapshot.isDragging ? 'opacity-50' : ''}`}
-                  >
-                     {/* Attach an always-present drag handle to satisfy DnD in tests */}
-                     <div className="absolute inset-0" {...dragProvided.dragHandleProps} data-testid="drag-handle" />
-                     <BlockRenderer
-                       block={child}
-                       isSelected={actions?.selectedBlockId === child.id}
-                       isPreview={false}
-                       onDuplicate={() => actions?.onDuplicate(child.id)}
-                       onDelete={() => actions?.onDelete(child.id)}
-                     />
+                     className={`relative group ${dragSnapshot.isDragging ? 'opacity-50' : ''}`}
+                   >
+                      {/* Only use drag handle props on the visible drag handle, not here */}
+                      <BlockRenderer
+                        block={child}
+                        isSelected={actions?.selectedBlockId === child.id}
+                        isPreview={false}
+                        onDuplicate={() => actions?.onDuplicate(child.id)}
+                        onDelete={() => actions?.onDelete(child.id)}
+                        dragHandleProps={dragProvided.dragHandleProps}
+                      />
                   </div>
                 )}
               </Draggable>
@@ -171,44 +172,59 @@ export default function BlockRenderer({
         } 
       }}
     >
-      {!isPreview && (effectiveSelected || isHovered) && (
-        <div 
-          className="absolute -top-10 left-0 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded shadow-sm p-1"
-        >
-          <span className="text-xs text-gray-600 px-2">
-            {blockRegistry[block.type]?.name || block.type}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Duplicate block"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDuplicate();
-            }}
-            className="h-6 w-6 p-0"
-          >
-            <Copy className="w-3 h-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Delete block"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-          >
-            <Trash2 className="w-3 h-3" />
-          </Button>
-          <div 
-            className="w-6 h-6 flex items-center justify-center cursor-move"
-            {...dragHandleProps}
-          >
-            <Move className="w-3 h-3 text-gray-400" />
-          </div>
-        </div>
+      {!isPreview && (
+        <>
+          {/* Always present drag handle - invisible when not selected/hovered, visible in toolbar when selected/hovered */}
+          {dragHandleProps && (
+            <>
+              {!(effectiveSelected || isHovered) ? (
+                <div 
+                  className="absolute inset-0 opacity-0 pointer-events-none"
+                  {...dragHandleProps}
+                  data-testid="invisible-drag-handle"
+                />
+              ) : (
+                <div 
+                  className="absolute -top-10 left-0 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded shadow-sm p-1"
+                >
+                  <span className="text-xs text-gray-600 px-2">
+                    {blockRegistry[block.type]?.name || block.type}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Duplicate block"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDuplicate();
+                    }}
+                    className="h-6 w-6 p-0"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Delete block"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                  <div 
+                    className="w-6 h-6 flex items-center justify-center cursor-move"
+                    {...dragHandleProps}
+                  >
+                    <Move className="w-3 h-3 text-gray-400" />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </>
       )}
 
       <div className={`${!isPreview ? 'cursor-pointer' : ''} transition-all duration-200`}>

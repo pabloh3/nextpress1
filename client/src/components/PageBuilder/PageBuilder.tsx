@@ -30,21 +30,31 @@ export default function PageBuilder({
   const data = template || post;
   const isTemplate = !!template;
 
-  const { blocks, setBlocks, updateBlock, duplicateBlock, deleteBlock, findBlockById } =
-    useBlockManager(
-      propBlocks ||
-        (data
-          ? (isTemplate
-              ? ((data as any).blocks as BlockConfig[])
-              : ((data as any).builderData as BlockConfig[])) || []
-          : [])
-    );
+  const {
+    blocks,
+    setBlocks,
+    updateBlock,
+    duplicateBlock,
+    deleteBlock,
+    findBlockById,
+  } = useBlockManager(
+    propBlocks ||
+      (data
+        ? (isTemplate
+            ? ((data as any).blocks as BlockConfig[])
+            : ((data as any).builderData as BlockConfig[])) || []
+        : [])
+  );
 
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const [deviceView, setDeviceView] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [deviceView, setDeviceView] = useState<'desktop' | 'tablet' | 'mobile'>(
+    'desktop'
+  );
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'blocks' | 'settings'>('blocks');
-  const [hoverHighlight, setHoverHighlight] = useState<'padding' | 'margin' | null>(null);
+  const [hoverHighlight, setHoverHighlight] = useState<
+    'padding' | 'margin' | null
+  >(null);
 
   useEffect(() => {
     if (propBlocks) {
@@ -67,34 +77,44 @@ export default function PageBuilder({
     setActiveTab
   );
 
-  const handleDuplicate = useCallback((id: string) => {
-    const res = duplicateBlock(id, generateBlockId);
-    const newId = (res.data as any)?.newId;
-    if (newId) {
-      setSelectedBlockId(newId);
-      setActiveTab('settings');
-    }
-  }, [duplicateBlock]);
+  const handleDuplicate = useCallback(
+    (id: string) => {
+      const res = duplicateBlock(id, generateBlockId);
+      const newId = (res.data as any)?.newId;
+      if (newId) {
+        setSelectedBlockId(newId);
+        setActiveTab('settings');
+      }
+    },
+    [duplicateBlock]
+  );
 
-  const handleDelete = useCallback((id: string) => {
-    deleteBlock(id);
-    if (selectedBlockId === id) {
-      setSelectedBlockId(null);
-    }
-  }, [deleteBlock, selectedBlockId]);
+  const handleDelete = useCallback(
+    (id: string) => {
+      deleteBlock(id);
+      if (selectedBlockId === id) {
+        setSelectedBlockId(null);
+      }
+    },
+    [deleteBlock, selectedBlockId]
+  );
 
   return (
     <div className="flex h-full bg-gray-50">
       <BlockActionsProvider
         value={{
           selectedBlockId,
-            onSelect: (id) => { setSelectedBlockId(id); setActiveTab('settings'); },
+          onSelect: (id) => {
+            setSelectedBlockId(id);
+            setActiveTab('settings');
+          },
           onDuplicate: handleDuplicate,
           onDelete: handleDelete,
           hoverHighlight,
-        }}
-      >
-        <DragDropContext onDragEnd={handleDragEnd}>
+        }}>
+        <DragDropContext
+          onDragEnd={handleDragEnd}
+          onDragStart={() => console.log('Drag started, id:', selectedBlockId)}>
           <BuilderSidebar
             activeTab={activeTab}
             setActiveTab={setActiveTab}
@@ -109,7 +129,10 @@ export default function PageBuilder({
               deviceView={deviceView}
               setDeviceView={setDeviceView}
               blocks={blocks}
-              onSaveClick={() => { saveMutation.mutate(blocks); onSave?.(data as any); }}
+              onSaveClick={() => {
+                saveMutation.mutate(blocks);
+                onSave?.(data as any);
+              }}
             />
             <BuilderCanvas
               blocks={blocks}

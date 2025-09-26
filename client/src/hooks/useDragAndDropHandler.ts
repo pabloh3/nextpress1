@@ -18,18 +18,9 @@ export function useDragAndDropHandler(
       const { source, destination, draggableId } = result;
 
       try {
-        const isFromLibrary = source.droppableId === 'block-library';
-        const sourceParentId = source.droppableId === 'canvas' ? null : source.droppableId === 'block-library' ? null : source.droppableId;
-        const destParentId = destination.droppableId === 'canvas' ? null : destination.droppableId === 'block-library' ? null : destination.droppableId;
-
-        // Debug log for DnD flow to help diagnose disappearing blocks
-        console.debug('[DnD] DragEnd', {
-          draggableId,
-          source: { droppableId: source.droppableId, index: source.index },
-          destination: { droppableId: destination.droppableId, index: destination.index },
-          sourceParentId,
-          destParentId,
-        });
+        const isFromLibrary = source.droppableId.startsWith('block-library');
+        const sourceParentId = source.droppableId === 'canvas' ? null : source.droppableId.startsWith('block-library') ? null : source.droppableId;
+        const destParentId = destination.droppableId === 'canvas' ? null : destination.droppableId.startsWith('block-library') ? null : destination.droppableId;
 
         if (isFromLibrary) {
           const result = insertNewBlock(blocks, destParentId, destination.index, draggableId);

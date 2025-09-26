@@ -89,13 +89,13 @@ export function useBlockManager(initialBlocks: BlockConfig[] = []) {
   }, []);
 
   const deleteBlock = useCallback((blockId: string) => {
-    let removed = false;
+    let wasRemoved = false;
     setBlocks(prev => {
-      const { next, removed: didRemove } = deleteBlockDeep(prev, blockId);
-      removed = didRemove;
+      const { next, removed } = deleteBlockDeep(prev, blockId);
+      wasRemoved = removed;
       return next;
     });
-    return { status: removed, data: null };
+    return { status: wasRemoved, data: null };
   }, []);
 
   return {

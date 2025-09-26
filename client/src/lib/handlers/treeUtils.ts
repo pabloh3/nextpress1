@@ -229,7 +229,7 @@ export function moveExistingBlock(rootBlocks: BlockConfig[], sourceParentId: str
   if (sameParent && destIndex > sourceIndex) {
     targetIndex = destIndex - 1;
   }
-  if (targetIndex < 0 || Number.isNaN(targetIndex as any)) targetIndex = 0;
+  if (targetIndex < 0 || Number.isNaN(targetIndex)) targetIndex = 0;
   if (targetIndex > destContainer.length) targetIndex = destContainer.length;
 
   destContainer.splice(targetIndex, 0, movedBlock);

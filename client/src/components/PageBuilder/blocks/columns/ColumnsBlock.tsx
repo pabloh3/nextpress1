@@ -183,8 +183,9 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 
   const addQuickColumns = (count: number) => {
     const width = `${(100 / count).toFixed(2)}%`;
-    const newColumns: ColumnItem[] = Array.from({ length: count }, () => ({
-      id: generateBlockId(),
+    const ids = Array.from({ length: count }, () => generateBlockId());
+    const newColumns: ColumnItem[] = ids.map(id => ({
+      id,
       width,
       children: [],
     }));

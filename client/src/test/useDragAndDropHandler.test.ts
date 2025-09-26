@@ -367,8 +367,9 @@ describe('useDragAndDropHandler', () => {
       
       // Verify that the block maintains its properties during the move
       const updatedBlocks = setBlocks.mock.calls[0][0]
-      const next = Array.isArray(updatedBlocks) ? updatedBlocks : updatedBlocks(blocks)
-      
+      // In our implementation, setBlocks is called with a function updater.
+      // If this changes, update the test accordingly.
+      const next = typeof updatedBlocks === 'function' ? updatedBlocks(blocks) : updatedBlocks
       // The moved block should still exist and have the same content
       const movedBlock = next.find((b: BlockConfig) => 
         b.id === 'nested1' || b.children?.some(child => child.id === 'nested1')

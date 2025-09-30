@@ -12,6 +12,7 @@ export interface BlockDefinition {
   defaultContent: any;
   defaultStyles: Record<string, any>;
   isContainer?: boolean; // identifies blocks that can contain children
+  handlesOwnChildren?: boolean; // renderer manages its own children
   renderer: (props: { block: BlockConfig; isPreview: boolean }) => JSX.Element;
   settings: (props: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) => JSX.Element;
 }

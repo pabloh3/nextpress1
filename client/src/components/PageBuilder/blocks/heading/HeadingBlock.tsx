@@ -65,12 +65,12 @@ function HeadingSettings({ block, onUpdate }: { block: HeadingBlockConfig; onUpd
         />
       </div>
       <div>
-        <Label htmlFor="heading-level">Heading Level</Label>
+        <Label id="heading-level-label" htmlFor="heading-level-trigger">Heading Level</Label>
         <Select
           value={block.content?.level?.toString() || '2'}
           onValueChange={(value) => updateContent({ level: parseInt(value) })}
         >
-          <SelectTrigger>
+          <SelectTrigger id="heading-level-trigger" aria-labelledby="heading-level-label heading-level-trigger">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -84,12 +84,12 @@ function HeadingSettings({ block, onUpdate }: { block: HeadingBlockConfig; onUpd
         </Select>
       </div>
       <div>
-        <Label htmlFor="heading-align">Text Align</Label>
+        <Label id="heading-align-label" htmlFor="heading-align-trigger">Text Align</Label>
         <Select
           value={block.content?.textAlign || 'left'}
           onValueChange={(value) => updateContent({ textAlign: value })}
         >
-          <SelectTrigger>
+          <SelectTrigger id="heading-align-trigger" aria-labelledby="heading-align-label heading-align-trigger">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

@@ -32,6 +32,8 @@ export function BuilderCanvas({
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
+                role="region"
+                aria-label="Canvas"
                 className={`min-h-full p-4 ${snapshot.isDraggingOver ? 'bg-blue-50' : ''}`}
               >
                 {blocks.length === 0 ? (

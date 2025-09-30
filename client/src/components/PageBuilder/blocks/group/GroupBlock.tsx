@@ -281,6 +281,7 @@ const GroupBlock: BlockDefinition = {
   description: 'Gather blocks in a layout container',
   category: 'layout',
   isContainer: true,
+  handlesOwnChildren: true,
   defaultContent: {
     tagName: 'div',
     className: '',

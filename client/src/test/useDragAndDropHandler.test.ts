@@ -3,6 +3,7 @@ import { renderHook, act } from '@testing-library/react'
 import { useDragAndDropHandler } from '../hooks/useDragAndDropHandler'
 import type { BlockConfig } from '@shared/schema'
 import type { DropResult } from '@hello-pangea/dnd'
+import * as toastModule from '@/hooks/use-toast'
 
 // Mock the block registry
 vi.mock('../components/PageBuilder/blocks', () => ({
@@ -80,10 +81,11 @@ describe('useDragAndDropHandler', () => {
       expect(setBlocks).not.toHaveBeenCalled()
     })
 
-    it('should do nothing if dropped in same position', () => {
+    it('should do nothing if dropped in same position (and not show error toast)', () => {
       const { result } = renderHook(() => 
         useDragAndDropHandler(blocks, setBlocks, setSelectedBlockId, setActiveTab)
       )
+      const toastSpy = vi.spyOn(toastModule, 'toast')
 
       const dropResult: DropResult = {
         draggableId: 'block1',
@@ -100,12 +102,14 @@ describe('useDragAndDropHandler', () => {
       })
 
       expect(setBlocks).not.toHaveBeenCalled()
+      expect(toastSpy).not.toHaveBeenCalled()
     })
 
-    it('should no-op when dropping immediately after itself in same container', () => {
+    it('should no-op when dropping immediately after itself in same container (no error toast)', () => {
       const { result } = renderHook(() => 
         useDragAndDropHandler(blocks, setBlocks, setSelectedBlockId, setActiveTab)
       )
+      const toastSpy = vi.spyOn(toastModule, 'toast')
 
       const dropResult: DropResult = {
         draggableId: 'nested1',
@@ -121,12 +125,9 @@ describe('useDragAndDropHandler', () => {
         result.current.handleDragEnd(dropResult)
       })
 
-      // moveExistingBlock should treat this as no-op
-      expect(setBlocks).toHaveBeenCalled()
-      const updated = setBlocks.mock.calls[0][0]
-      const nextBlocks = typeof updated === 'function' ? updated(blocks) : updated
-      const container = nextBlocks.find((b: BlockConfig) => b.id === 'container1')!
-      expect(container.children!.map(c => c.id)).toEqual(['nested1','nested2'])
+      // moveExistingBlock should treat this as no-op and not call setBlocks
+      expect(setBlocks).not.toHaveBeenCalled()
+      expect(toastSpy).not.toHaveBeenCalled()
     })
 
     it('should reorder downward correctly when moving to end', () => {
@@ -365,11 +366,12 @@ describe('useDragAndDropHandler', () => {
       expect(setBlocks).toHaveBeenCalled()
       
       // Verify that the block maintains its properties during the move
-      const updateFunction = setBlocks.mock.calls[0][0]
-      const updatedBlocks = updateFunction(blocks)
-      
+      const updatedBlocks = setBlocks.mock.calls[0][0]
+      // In our implementation, setBlocks is called with a function updater.
+      // If this changes, update the test accordingly.
+      const next = typeof updatedBlocks === 'function' ? updatedBlocks(blocks) : updatedBlocks
       // The moved block should still exist and have the same content
-      const movedBlock = updatedBlocks.find((b: BlockConfig) => 
+      const movedBlock = next.find((b: BlockConfig) => 
         b.id === 'nested1' || b.children?.some(child => child.id === 'nested1')
       )
       expect(movedBlock).toBeDefined()

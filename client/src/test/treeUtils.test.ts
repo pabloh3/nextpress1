@@ -145,5 +145,43 @@ describe('treeUtils', () => {
       const grp = next[0];
       expect(grp.children?.map(c => c.id)).toEqual(['b','a']);
     });
+
+    it('reorders root-level blocks (canvas to canvas) downward to end', () => {
+      const blocks: BlockConfig[] = [makeBlock('a'), makeBlock('b'), makeBlock('c')];
+      const next = moveExistingBlock(blocks, null, 0, null, 3); // move 'a' to end
+      expect(next.map(b => b.id)).toEqual(['b','c','a']);
+    });
+
+    it('reorders a columns container at root and preserves structure', () => {
+      const columnsBlock: BlockConfig = {
+        id: 'cols',
+        type: 'core/columns',
+        content: {
+          columns: [
+            { id: 'col-1', width: 50, children: [makeBlock('c1')] },
+            { id: 'col-2', width: 50, children: [] }
+          ]
+        } as any,
+        styles: {},
+        settings: {},
+        children: []
+      } as any;
+
+      const blocks: BlockConfig[] = [makeBlock('p1'), columnsBlock, makeBlock('p2')];
+
+      // Move columns block to the front
+      const next1 = moveExistingBlock(blocks, null, 1, null, 0);
+      expect(next1.map(b => b.id)).toEqual(['cols','p1','p2']);
+      const cols1 = next1[0] as any;
+      expect(cols1.content.columns[0].id).toBe('col-1');
+      expect(cols1.content.columns[0].children.map((c: any) => c.id)).toEqual(['c1']);
+
+      // Then move columns block to the end using an index beyond length
+      const next2 = moveExistingBlock(next1, null, 0, null, 999);
+      expect(next2.map(b => b.id)).toEqual(['p1','p2','cols']);
+      const cols2 = next2[2] as any;
+      expect(cols2.content.columns[0].id).toBe('col-1');
+      expect(cols2.content.columns[0].children.map((c: any) => c.id)).toEqual(['c1']);
+    });
   });
 });

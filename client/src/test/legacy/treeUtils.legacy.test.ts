@@ -3,7 +3,11 @@ import {
   findBlock,
   findBlockPath, 
   insertNewBlock, 
-  moveExistingBlock 
+  moveExistingBlock,
+  findBlockDeep,
+  updateBlockDeep,
+  deleteBlockDeep,
+  duplicateBlockDeep
 } from '../../lib/handlers/treeUtils'
 import type { BlockConfig } from '@shared/schema'
 

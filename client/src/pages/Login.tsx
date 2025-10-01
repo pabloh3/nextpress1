@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Link, useLocation } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
+import { Eye, EyeOff } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -29,6 +30,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<LoginForm>({
@@ -95,13 +97,24 @@ export default function Login() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Enter your password"
-                        {...field}
-                      />
-                    </FormControl>
+                     <FormControl>
+                       <div className="relative">
+                         <Input
+                           type={showPassword ? "text" : "password"}
+                           placeholder="Enter your password"
+                           {...field}
+                         />
+                         <Button
+                           type="button"
+                           variant="ghost"
+                           size="sm"
+                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                           onClick={() => setShowPassword(!showPassword)}
+                         >
+                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                         </Button>
+                       </div>
+                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

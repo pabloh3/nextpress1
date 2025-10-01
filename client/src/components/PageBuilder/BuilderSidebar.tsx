@@ -3,7 +3,7 @@ import BlockLibrary from './BlockLibrary';
 import BlockSettings from './BlockSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Settings } from 'lucide-react';
+import { Plus, Settings, Sidebar } from 'lucide-react';
 
 export function BuilderSidebar({
   activeTab,
@@ -20,18 +20,28 @@ export function BuilderSidebar({
 }) {
   return (
     <div className="w-80 bg-white border-r border-gray-200 flex flex-col min-h-0">
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200 flex items-center gap-2 w-full justify-between">
         <h2 className="text-lg font-semibold">Page Builder</h2>
+        <Sidebar className="w-5 h-5 text-black mt-1" />
       </div>
-      <Tabs value={activeTab} onValueChange={value => setActiveTab(value as 'blocks' | 'settings')} className="flex-1 flex flex-col p-4 min-h-0">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="blocks" className="flex items-center gap-2" onClick={() => setActiveTab('blocks')}>
-              <Plus className="w-4 h-4" /> Blocks
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2" onClick={() => setActiveTab('settings')}>
-              <Settings className="w-4 h-4" /> Settings
-            </TabsTrigger>
-          </TabsList>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as 'blocks' | 'settings')}
+        className="flex-1 flex flex-col p-4 min-h-0">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger
+            value="blocks"
+            className="flex items-center gap-2"
+            onClick={() => setActiveTab('blocks')}>
+            <Plus className="w-4 h-4" /> Blocks
+          </TabsTrigger>
+          <TabsTrigger
+            value="settings"
+            className="flex items-center gap-2"
+            onClick={() => setActiveTab('settings')}>
+            <Settings className="w-4 h-4" /> Settings
+          </TabsTrigger>
+        </TabsList>
         <TabsContent value="blocks" className="flex-1 mt-4 overflow-hidden">
           <ScrollArea className="h-full">
             <BlockLibrary />
@@ -42,11 +52,13 @@ export function BuilderSidebar({
             {selectedBlock ? (
               <BlockSettings
                 block={selectedBlock}
-                onUpdate={updates => updateBlock(selectedBlock.id, updates)}
-                onHoverArea={area => setHoverHighlight(area)}
+                onUpdate={(updates) => updateBlock(selectedBlock.id, updates)}
+                onHoverArea={(area) => setHoverHighlight(area)}
               />
             ) : (
-              <div className="text-center text-gray-500 mt-8">Select a block to edit its settings</div>
+              <div className="text-center text-gray-500 mt-8">
+                Select a block to edit its settings
+              </div>
             )}
           </ScrollArea>
         </TabsContent>

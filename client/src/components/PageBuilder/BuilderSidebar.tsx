@@ -2,7 +2,7 @@ import React from 'react';
 import BlockLibrary from './BlockLibrary';
 import BlockSettings from './BlockSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Plus, Settings, Sidebar } from 'lucide-react';
 
 export function BuilderSidebar({
@@ -43,12 +43,19 @@ export function BuilderSidebar({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="blocks" className="flex-1 mt-4 overflow-hidden">
-          <ScrollArea className="h-full">
-            <BlockLibrary />
-          </ScrollArea>
+          <div className="h-full overflow-x-hidden">
+            <ScrollArea className="h-full">
+              <div className="max-w-full">
+                <BlockLibrary />
+              </div>
+              <ScrollBar orientation="vertical" />
+            </ScrollArea>
+          </div>
         </TabsContent>
         <TabsContent value="settings" className="flex-1 mt-4 overflow-hidden">
-          <ScrollArea className="h-full">
+          <div className="h-full overflow-x-hidden">
+            <ScrollArea className="h-full">
+              <div className="max-w-full">
             {selectedBlock ? (
               <BlockSettings
                 block={selectedBlock}
@@ -56,11 +63,14 @@ export function BuilderSidebar({
                 onHoverArea={(area) => setHoverHighlight(area)}
               />
             ) : (
-              <div className="text-center text-gray-500 mt-8">
-                Select a block to edit its settings
+                  <div className="text-center text-gray-500 mt-8">
+                    Select a block to edit its settings
+                  </div>
+                )}
               </div>
-            )}
-          </ScrollArea>
+              <ScrollBar orientation="vertical" />
+            </ScrollArea>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

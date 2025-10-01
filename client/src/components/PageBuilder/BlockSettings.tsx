@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
- 
+
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -348,6 +348,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                   placeholder="/* Add your custom CSS here */&#10;.my-block {&#10;  /* styles */&#10;}"
                   rows={8}
                   className="font-mono text-sm"
+                  wrap="soft"
                 />
                 <p className="text-xs text-gray-500">
                   CSS will be applied to this block only. Use standard CSS syntax.

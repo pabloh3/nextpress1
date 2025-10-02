@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Smartphone, Tablet, Monitor } from 'lucide-react';
+import { Smartphone, Tablet, Monitor, Sidebar } from 'lucide-react';
 
 export function BuilderTopBar({
   data,
@@ -9,6 +9,8 @@ export function BuilderTopBar({
   deviceView,
   setDeviceView,
   blocks,
+  sidebarVisible,
+  onToggleSidebar,
   onSaveClick,
 }: {
   data: any;
@@ -16,12 +18,27 @@ export function BuilderTopBar({
   deviceView: 'desktop' | 'tablet' | 'mobile';
   setDeviceView: (view: 'desktop' | 'tablet' | 'mobile') => void;
   blocks: any[];
+  sidebarVisible: boolean;
+  onToggleSidebar: () => void;
   onSaveClick?: () => void;
 }) {
   return (
     <div className="bg-white border-b border-gray-200 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
+          {!sidebarVisible && (
+            <>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onToggleSidebar}
+                className="p-1 h-auto"
+              >
+                <Sidebar className="w-5 h-5 text-black" />
+              </Button>
+              <Separator orientation="vertical" className="h-6" />
+            </>
+          )}
           <h3 className="font-medium">{data ? (isTemplate ? data.name : data.title) : 'Untitled'}</h3>
           <Separator orientation="vertical" className="h-6" />
           <div className="flex items-center gap-2">

@@ -3,6 +3,7 @@ import BlockLibrary from './BlockLibrary';
 import BlockSettings from './BlockSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { Plus, Settings, Sidebar } from 'lucide-react';
 
 export function BuilderSidebar({
@@ -11,32 +12,38 @@ export function BuilderSidebar({
   selectedBlock,
   updateBlock,
   setHoverHighlight,
+  sidebarVisible,
+  onToggleSidebar,
 }: {
   activeTab: 'blocks' | 'settings';
   setActiveTab: (tab: 'blocks' | 'settings') => void;
   selectedBlock: any;
   updateBlock: (blockId: string, updates: any) => void;
   setHoverHighlight: (area: 'padding' | 'margin' | null) => void;
+  sidebarVisible: boolean;
+  onToggleSidebar: () => void;
 }) {
   return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col min-h-0">
+    <div className="w-80 bg-white border-r border-gray-200 flex flex-col min-h-0 transition-all duration-1000 ease-linear">
       <div className="p-4 border-b border-gray-200 flex items-center gap-2 w-full justify-between">
-        <h2 className="text-lg font-semibold">Page Builder</h2>
-        <Sidebar className="w-5 h-5 text-black mt-1" aria-hidden="true" />
+        <h2 className="text-lg font-semibold">Nextpress Builder</h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggleSidebar}
+          className="p-1 h-auto">
+          <Sidebar className="w-5 h-5 text-black" />
+        </Button>
       </div>
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as 'blocks' | 'settings')}
         className="flex-1 flex flex-col p-4 min-h-0">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger
-            value="blocks"
-            className="flex items-center gap-2">
+          <TabsTrigger value="blocks" className="flex items-center gap-2">
             <Plus className="w-4 h-4" /> Blocks
           </TabsTrigger>
-          <TabsTrigger
-            value="settings"
-            className="flex items-center gap-2">
+          <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="w-4 h-4" /> Settings
           </TabsTrigger>
         </TabsList>
@@ -54,13 +61,15 @@ export function BuilderSidebar({
           <div className="h-full overflow-x-hidden">
             <ScrollArea className="h-full">
               <div className="max-w-full">
-            {selectedBlock ? (
-              <BlockSettings
-                block={selectedBlock}
-                onUpdate={(updates) => updateBlock(selectedBlock.id, updates)}
-                onHoverArea={(area) => setHoverHighlight(area)}
-              />
-            ) : (
+                {selectedBlock ? (
+                  <BlockSettings
+                    block={selectedBlock}
+                    onUpdate={(updates) =>
+                      updateBlock(selectedBlock.id, updates)
+                    }
+                    onHoverArea={(area) => setHoverHighlight(area)}
+                  />
+                ) : (
                   <div className="text-center text-gray-500 mt-8">
                     Select a block to edit its settings
                   </div>

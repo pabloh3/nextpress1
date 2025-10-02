@@ -177,7 +177,7 @@ export default function BlockRenderer({
           {/* Invisible drag handle overlay when draggable but not hovered/selected */}
           {dragHandleProps && !(effectiveSelected || isHovered) && (
             <div 
-              className="absolute inset-0 opacity-0 pointer-events-none"
+              className="absolute inset-0 opacity-0 pointer-events-auto"
               {...dragHandleProps}
               data-testid="invisible-drag-handle"
             />

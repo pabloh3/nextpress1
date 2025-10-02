@@ -31,14 +31,12 @@ export function BuilderSidebar({
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger
             value="blocks"
-            className="flex items-center gap-2"
-            onClick={() => setActiveTab('blocks')}>
+            className="flex items-center gap-2">
             <Plus className="w-4 h-4" /> Blocks
           </TabsTrigger>
           <TabsTrigger
             value="settings"
-            className="flex items-center gap-2"
-            onClick={() => setActiveTab('settings')}>
+            className="flex items-center gap-2">
             <Settings className="w-4 h-4" /> Settings
           </TabsTrigger>
         </TabsList>

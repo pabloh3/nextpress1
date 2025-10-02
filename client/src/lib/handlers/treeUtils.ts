@@ -326,7 +326,7 @@ export function updateBlockDeep(rootBlocks: BlockConfig[], targetId: string, upd
   return { found, next };
 }
 
-export function deleteBlockDeep(rootBlocks: BlockConfig[], targetId: string): { removed: boolean; next: BlockConfig[] } {
+export function deleteBlockDeep(rootBlocks: BlockConfig[], targetId: string): { removed: boolean; found: boolean; next: BlockConfig[] } {
   let removed = false;
   function walk(list: BlockConfig[]): BlockConfig[] {
     let mutated = false;
@@ -372,7 +372,7 @@ export function deleteBlockDeep(rootBlocks: BlockConfig[], targetId: string): { 
     return mutated ? filtered : list;
   }
   const next = walk(rootBlocks);
-  return { removed, next };
+  return { removed, found: removed, next };
 }
 
 export function duplicateBlockDeep(rootBlocks: BlockConfig[], targetId: string, generateBlockId: () => string): { found: boolean; next: BlockConfig[]; duplicatedId: string } {

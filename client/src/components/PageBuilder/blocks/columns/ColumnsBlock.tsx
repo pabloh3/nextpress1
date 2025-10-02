@@ -407,7 +407,7 @@ const ColumnsBlock: BlockDefinition = {
     columns: [
       {
         id: 'default-col-1',
-        width: '1fr', 
+        width: '100%',
         children: [],
       },
     ],

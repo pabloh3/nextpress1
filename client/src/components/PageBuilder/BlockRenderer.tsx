@@ -174,55 +174,56 @@ export default function BlockRenderer({
     >
       {!isPreview && (
         <>
-          {/* Always present drag handle - invisible when not selected/hovered, visible in toolbar when selected/hovered */}
-          {dragHandleProps && (
-            <>
-              {!(effectiveSelected || isHovered) ? (
+          {/* Invisible drag handle overlay when draggable but not hovered/selected */}
+          {dragHandleProps && !(effectiveSelected || isHovered) && (
+            <div 
+              className="absolute inset-0 opacity-0 pointer-events-none"
+              {...dragHandleProps}
+              data-testid="invisible-drag-handle"
+            />
+          )}
+
+          {/* Toolbar visible when hovered or selected, regardless of drag availability */}
+          {(effectiveSelected || isHovered) && (
+            <div 
+              className="absolute -top-10 left-0 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded shadow-sm p-1"
+            >
+              <span className="text-xs text-gray-600 px-2">
+                {blockRegistry[block.type]?.name || block.type}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Duplicate block"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate();
+                }}
+                className="h-6 w-6 p-0"
+              >
+                <Copy className="w-3 h-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Delete block"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+              {dragHandleProps && (
                 <div 
-                  className="absolute inset-0 opacity-0 pointer-events-none"
+                  className="w-6 h-6 flex items-center justify-center cursor-move"
                   {...dragHandleProps}
-                  data-testid="invisible-drag-handle"
-                />
-              ) : (
-                <div 
-                  className="absolute -top-10 left-0 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded shadow-sm p-1"
                 >
-                  <span className="text-xs text-gray-600 px-2">
-                    {blockRegistry[block.type]?.name || block.type}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label="Duplicate block"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDuplicate();
-                    }}
-                    className="h-6 w-6 p-0"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label="Delete block"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete();
-                    }}
-                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                  <div 
-                    className="w-6 h-6 flex items-center justify-center cursor-move"
-                    {...dragHandleProps}
-                  >
-                    <Move className="w-3 h-3 text-gray-400" />
-                  </div>
+                  <Move className="w-3 h-3 text-gray-400" />
                 </div>
               )}
-            </>
+            </div>
           )}
         </>
       )}

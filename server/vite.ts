@@ -24,7 +24,16 @@ export async function setupVite(app: Express, server: Server) {
     middlewareMode: true,
     hmr: { server },
     allowedHosts: true as const,
-  };
+    watch: {
+      usePolling: true,
+      interval: 300,
+      awaitWriteFinish: {
+        stabilityThreshold: 500,
+        pollInterval: 100,
+      },
+      ignored: ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/build/**", "**/server/**"],
+    },
+  } as const;
 
   const vite = await createViteServer({
     ...viteConfig,

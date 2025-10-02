@@ -22,7 +22,7 @@ export function BuilderSidebar({
     <div className="w-80 bg-white border-r border-gray-200 flex flex-col min-h-0">
       <div className="p-4 border-b border-gray-200 flex items-center gap-2 w-full justify-between">
         <h2 className="text-lg font-semibold">Page Builder</h2>
-        <Sidebar className="w-5 h-5 text-black mt-1" />
+        <Sidebar className="w-5 h-5 text-black mt-1" aria-hidden="true" />
       </div>
       <Tabs
         value={activeTab}

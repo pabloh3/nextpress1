@@ -15,5 +15,5 @@ export interface BlockDefinition {
   handlesOwnChildren?: boolean; // renderer manages its own children
   hasSettings?: boolean; // indicates if the block has settings UI
   renderer: (props: { block: BlockConfig; isPreview: boolean }) => JSX.Element;
-  settings: (props: { block: BlockConfig }) => JSX.Element;
+  settings: (props: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) => JSX.Element;
 }

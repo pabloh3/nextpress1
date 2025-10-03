@@ -13,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { Plus, Trash2, SquareMousePointer, Settings, Wrench } from 'lucide-react';
-import { useBlockManager } from '@/hooks/useBlockManager';
 
 interface ButtonItem {
   id: string;
@@ -94,14 +93,19 @@ function ButtonsRenderer({
   );
 }
 
-function ButtonsSettings({ block }: { block: BlockConfig }) {
+function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const buttons: ButtonItem[] = Array.isArray((block.content as any)?.buttons)
     ? (block.content as any).buttons
     : [];
-  const { updateBlockContent } = useBlockManager();
+  
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const updateButtons = (newButtons: ButtonItem[]) => {

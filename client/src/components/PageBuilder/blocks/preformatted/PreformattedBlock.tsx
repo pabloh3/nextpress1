@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { FileText as PreformattedIcon, Settings, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function PreformattedRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const content = (block.content as any)?.content || '';
@@ -38,20 +37,24 @@ function PreformattedRenderer({ block }: { block: BlockConfig; isPreview: boolea
   );
 }
 
-function PreformattedSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent, updateBlockStyles } = useBlockManager();
+function PreformattedSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
   
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, {
-      ...block.content,
-      ...contentUpdates,
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
     });
   };
 
   const updateStyles = (styleUpdates: any) => {
-    updateBlockStyles(block.id, {
-      ...block.styles,
-      ...styleUpdates,
+    onUpdate({
+      styles: {
+        ...block.styles,
+        ...styleUpdates,
+      },
     });
   };
 
@@ -84,37 +87,36 @@ function PreformattedSettings({ block }: { block: BlockConfig }) {
       {/* Settings Card */}
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="preformatted-bg-color" className="text-sm font-medium text-gray-700">Background Color</Label>
-              <div className="flex gap-3 mt-1">
-                <Input
-                  id="preformatted-bg-color"
-                  type="color"
-                  value={block.styles?.backgroundColor || "#f8f9fa"}
-                  onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
-                  className="w-12 h-9 p-1 border-gray-200"
-                />
-                <Input
-                  value={block.styles?.backgroundColor || "#f8f9fa"}
-                  onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
-                  placeholder="#f8f9fa"
-                  className="flex-1 h-9 text-sm"
-                />
-              </div>
+          <div>
+            <Label htmlFor="preformatted-bg-color" className="text-sm font-medium text-gray-700">Background Color</Label>
+            <div className="flex gap-3 mt-1">
+              <Input
+                id="preformatted-bg-color"
+                type="color"
+                value={block.styles?.backgroundColor || "#f8f9fa"}
+                onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
+                className="w-12 h-9 p-1 border-gray-200"
+              />
+              <Input
+                value={block.styles?.backgroundColor || "#f8f9fa"}
+                onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
+                placeholder="#f8f9fa"
+                className="flex-1 h-9 text-sm"
+              />
             </div>
+          </div>
 
-            <div>
-              <Label htmlFor="preformatted-text-color" className="text-sm font-medium text-gray-700">Text Color</Label>
-              <div className="flex gap-3 mt-1">
-                <Input
-                  id="preformatted-text-color"
-                  type="color"
-                  value={block.styles?.color || "#000000"}
-                  onChange={(e) => updateStyles({ color: e.target.value })}
-                  className="w-12 h-9 p-1 border-gray-200"
-                />
-                <Input
+          <div>
+            <Label htmlFor="preformatted-text-color" className="text-sm font-medium text-gray-700">Text Color</Label>
+            <div className="flex gap-3 mt-1">
+              <Input
+                id="preformatted-text-color"
+                type="color"
+                value={block.styles?.color || "#000000"}
+                onChange={(e) => updateStyles({ color: e.target.value })}
+                className="w-12 h-9 p-1 border-gray-200"
+              />
+              <Input
                   value={block.styles?.color || "#000000"}
                   onChange={(e) => updateStyles({ color: e.target.value })}
                   placeholder="#000000"
@@ -122,7 +124,6 @@ function PreformattedSettings({ block }: { block: BlockConfig }) {
                 />
               </div>
             </div>
-          </div>
 
           <div>
             <Label htmlFor="preformatted-font-size" className="text-sm font-medium text-gray-700">Font Size</Label>

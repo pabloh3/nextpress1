@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Code2 as HtmlIcon, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function HtmlRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
   const content = (block.content as any)?.content || '';
@@ -47,11 +46,16 @@ function HtmlRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boo
   );
 }
 
-function HtmlSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function HtmlSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
   
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   return (

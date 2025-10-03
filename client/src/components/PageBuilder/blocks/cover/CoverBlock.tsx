@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Square as CoverIcon, Settings, Wrench } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const url = (block.content as any)?.url || '';
@@ -128,16 +127,26 @@ function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function CoverSettings({ block }: { block: BlockConfig }) {
+function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
-  const { updateBlockContent, updateBlockStyles } = useBlockManager();
+  
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const updateStyles = (styleUpdates: any) => {
-    updateBlockStyles(block.id, styleUpdates);
+    onUpdate({
+      styles: {
+        ...block.styles,
+        ...styleUpdates,
+      },
+    });
   };
 
   return (

@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Minus as MinusIcon, Settings } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function DividerRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   return (
@@ -25,11 +24,16 @@ function DividerRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
   );
 }
 
-function DividerSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function DividerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   return (

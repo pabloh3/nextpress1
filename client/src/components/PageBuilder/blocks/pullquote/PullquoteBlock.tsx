@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Quote as QuoteIcon, Settings, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function PullquoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const value = (block.content as any)?.value || '';
@@ -60,15 +59,25 @@ function PullquoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }
   );
 }
 
-function PullquoteSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent, updateBlockStyles } = useBlockManager();
+function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const updateStyles = (styleUpdates: any) => {
-    updateBlockStyles(block.id, styleUpdates);
+    onUpdate({
+      styles: {
+        ...block.styles,
+        ...styleUpdates,
+      },
+    });
   };
 
   return (

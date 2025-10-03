@@ -42,12 +42,22 @@ export function useBlockManager(initialBlocks: BlockConfig[] = []) {
   }, []);
 
   const updateBlockContent = useCallback((blockId: string, contentUpdates: any) => {
-    return updateBlock(blockId, { content: contentUpdates });
-  }, [updateBlock]);
+    const block = findBlockById(blockId);
+    if (!block) return { status: false, data: null };
+    
+    // Merge content updates with existing content
+    const mergedContent = { ...block.content, ...contentUpdates };
+    return updateBlock(blockId, { content: mergedContent });
+  }, [updateBlock, findBlockById]);
 
   const updateBlockStyles = useCallback((blockId: string, styleUpdates: Record<string, any>) => {
-    return updateBlock(blockId, { styles: styleUpdates });
-  }, [updateBlock]);
+    const block = findBlockById(blockId);
+    if (!block) return { status: false, data: null };
+    
+    // Merge style updates with existing styles
+    const mergedStyles = { ...block.styles, ...styleUpdates };
+    return updateBlock(blockId, { styles: mergedStyles });
+  }, [updateBlock, findBlockById]);
 
   return {
     blocks,

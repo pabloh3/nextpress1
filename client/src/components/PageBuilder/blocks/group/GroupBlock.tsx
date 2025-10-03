@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { ContainerChildren } from "../../BlockRenderer";
 import { Package as GroupIcon, Settings, Layout, Palette, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 export interface GroupBlockConfig extends BlockConfig {
   content: { 
@@ -61,15 +60,25 @@ function GroupRenderer({ block, isPreview }: { block: BlockConfig; isPreview: bo
   );
 }
 
-function GroupSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent, updateBlockStyles } = useBlockManager();
+function GroupSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
   
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const updateStyles = (styleUpdates: any) => {
-    updateBlockStyles(block.id, styleUpdates);
+    onUpdate({
+      styles: {
+        ...block.styles,
+        ...styleUpdates,
+      },
+    });
   };
 
   const displayOptions = [

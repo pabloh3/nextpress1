@@ -12,7 +12,6 @@ import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { useBlockActions } from "../../BlockActionsContext";
 import BlockRenderer from "../../BlockRenderer";
 import { generateBlockId } from "../../utils";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 interface ColumnItem {
   id: string;
@@ -146,16 +145,18 @@ function ColumnsRenderer({ block, isPreview }: { block: BlockConfig; isPreview: 
   );
 }
 
-function ColumnsSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
   const columns: ColumnItem[] = Array.isArray((block.content as any)?.columns)
     ? (block.content as any).columns
     : [];
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, {
-      ...(block.content || {}),
-      ...contentUpdates,
+    onUpdate({
+      content: {
+        ...(block.content || {}),
+        ...contentUpdates,
+      },
     });
   };
 

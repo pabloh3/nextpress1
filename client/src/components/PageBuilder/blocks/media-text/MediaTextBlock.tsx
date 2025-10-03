@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { Image as ImageIcon, Settings, Link, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const {
@@ -76,12 +75,17 @@ function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }
   );
 }
 
-function MediaTextSettings({ block }: { block: BlockConfig }) {
+function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
-  const { updateBlockContent } = useBlockManager();
+  
   
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   return (
@@ -143,60 +147,60 @@ function MediaTextSettings({ block }: { block: BlockConfig }) {
       {/* Settings Card */}
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="media-position" className="text-sm font-medium text-gray-700">Media Position</Label>
-              <Select
-                value={(block.content as any)?.mediaPosition || 'left'}
-                onValueChange={(value) => updateContent({ mediaPosition: value })}
-              >
-                <SelectTrigger id="media-position" className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="media-width" className="text-sm font-medium text-gray-700">Media Width (%)</Label>
-              <Input
-                id="media-width"
-                type="number"
-                min={0}
-                max={100}
-                value={(block.content as any)?.mediaWidth ?? 50}
-                onChange={(e) => updateContent({ mediaWidth: Number(e.target.value) })}
-                className="h-9"
-              />
-            </div>
+          <div>
+            <Label htmlFor="media-position" className="text-sm font-medium text-gray-700">Media Position</Label>
+            <Select
+              value={(block.content as any)?.mediaPosition || 'left'}
+              onValueChange={(value) => updateContent({ mediaPosition: value })}
+            >
+              <SelectTrigger id="media-position" className="h-9 mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="left">Left</SelectItem>
+                <SelectItem value="right">Right</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="stacked-mobile" className="text-sm font-medium text-gray-700">Stack on mobile</Label>
-              <Switch
-                id="stacked-mobile"
-                checked={Boolean((block.content as any)?.isStackedOnMobile)}
-                onCheckedChange={(checked) => updateContent({ isStackedOnMobile: checked })}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="image-fill" className="text-sm font-medium text-gray-700">Image fill</Label>
-              <Switch
-                id="image-fill"
-                checked={Boolean((block.content as any)?.imageFill)}
-                onCheckedChange={(checked) => updateContent({ imageFill: checked })}
-              />
-            </div>
+          
+          <div>
+            <Label htmlFor="media-width" className="text-sm font-medium text-gray-700">Media Width (%)</Label>
+            <Input
+              id="media-width"
+              type="number"
+              min={0}
+              max={100}
+              value={(block.content as any)?.mediaWidth ?? 50}
+              onChange={(e) => updateContent({ mediaWidth: Number(e.target.value) })}
+              className="h-9 mt-1"
+            />
           </div>
+          
+          <div className="flex items-center justify-between">
+            <Label htmlFor="stacked-mobile" className="text-sm font-medium text-gray-700">Stack on mobile</Label>
+            <Switch
+              id="stacked-mobile"
+              checked={Boolean((block.content as any)?.isStackedOnMobile)}
+              onCheckedChange={(checked) => updateContent({ isStackedOnMobile: checked })}
+              />
+            </div>
+          
+          <div className="flex items-center justify-between">
+            <Label htmlFor="image-fill" className="text-sm font-medium text-gray-700">Image fill</Label>
+            <Switch
+              id="image-fill"
+              checked={Boolean((block.content as any)?.imageFill)}
+              onCheckedChange={(checked) => updateContent({ imageFill: checked })}
+            />
+          </div>
+          
           <div>
             <Label htmlFor="vertical-align" className="text-sm font-medium text-gray-700">Vertical alignment</Label>
             <Select
               value={(block.content as any)?.verticalAlignment || 'center'}
               onValueChange={(value) => updateContent({ verticalAlignment: value })}
             >
-              <SelectTrigger id="vertical-align" className="h-9">
+              <SelectTrigger id="vertical-align" className="h-9 mt-1">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -222,33 +226,34 @@ function MediaTextSettings({ block }: { block: BlockConfig }) {
               className="mt-1 h-9"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="media-target" className="text-sm font-medium text-gray-700">Link Target</Label>
-              <Select
-                value={(block.content as any)?.linkTarget || '_self'}
-                onValueChange={(value) => updateContent({ linkTarget: value })}
-              >
-                <SelectTrigger id="media-target" className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_self">Same Window</SelectItem>
-                  <SelectItem value="_blank">New Window</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="media-rel" className="text-sm font-medium text-gray-700">Rel</Label>
-              <Input
-                id="media-rel"
-                value={(block.content as any)?.rel || ''}
-                onChange={(e) => updateContent({ rel: e.target.value })}
-                placeholder="noopener noreferrer"
-                className="h-9"
-              />
-            </div>
+          
+          <div>
+            <Label htmlFor="media-target" className="text-sm font-medium text-gray-700">Link Target</Label>
+            <Select
+              value={(block.content as any)?.linkTarget || '_self'}
+              onValueChange={(value) => updateContent({ linkTarget: value })}
+            >
+              <SelectTrigger id="media-target" className="h-9 mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_self">Same Window</SelectItem>
+                <SelectItem value="_blank">New Window</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
+          <div>
+            <Label htmlFor="media-rel" className="text-sm font-medium text-gray-700">Rel</Label>
+            <Input
+              id="media-rel"
+              value={(block.content as any)?.rel || ''}
+              onChange={(e) => updateContent({ rel: e.target.value })}
+              placeholder="noopener noreferrer"
+              className="h-9 mt-1"
+            />
+          </div>
+          
           <div>
             <Label htmlFor="media-title" className="text-sm font-medium text-gray-700">Title</Label>
             <Input

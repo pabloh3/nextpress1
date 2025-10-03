@@ -110,41 +110,40 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
       {/* Settings Card */}
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="audio-controls" className="text-sm font-medium text-gray-700">Show Controls</Label>
-              <Switch
-                id="audio-controls"
-                checked={((block.content as any)?.controls ?? true) !== false}
-                onCheckedChange={(checked) => updateContent({ controls: checked })}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="audio-autoplay" className="text-sm font-medium text-gray-700">Autoplay</Label>
-              <Switch
-                id="audio-autoplay"
-                checked={Boolean((block.content as any)?.autoplay)}
-                onCheckedChange={(checked) => updateContent({ autoplay: checked })}
-              />
-            </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="audio-controls" className="text-sm font-medium text-gray-700">Show Controls</Label>
+            <Switch
+              id="audio-controls"
+              checked={((block.content as any)?.controls ?? true) !== false}
+              onCheckedChange={(checked) => updateContent({ controls: checked })}
+            />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="audio-loop" className="text-sm font-medium text-gray-700">Loop</Label>
-              <Switch
-                id="audio-loop"
-                checked={Boolean((block.content as any)?.loop)}
-                onCheckedChange={(checked) => updateContent({ loop: checked })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="audio-preload" className="text-sm font-medium text-gray-700">Preload</Label>
-              <Select
-                value={(block.content as any)?.preload || 'none'}
-                onValueChange={(value) => updateContent({ preload: value })}
+          <div className="flex items-center justify-between">
+            <Label htmlFor="audio-autoplay" className="text-sm font-medium text-gray-700">Autoplay</Label>
+            <Switch
+              id="audio-autoplay"
+              checked={Boolean((block.content as any)?.autoplay)}
+              onCheckedChange={(checked) => updateContent({ autoplay: checked })}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <Label htmlFor="audio-loop" className="text-sm font-medium text-gray-700">Loop</Label>
+            <Switch
+              id="audio-loop"
+              checked={Boolean((block.content as any)?.loop)}
+              onCheckedChange={(checked) => updateContent({ loop: checked })}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="audio-preload" className="text-sm font-medium text-gray-700">Preload</Label>
+            <Select
+              value={(block.content as any)?.preload || 'none'}
+              onValueChange={(value) => updateContent({ preload: value })}
               >
-                <SelectTrigger id="audio-preload" className="h-9">
+                <SelectTrigger id="audio-preload" className="h-9 mt-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -154,7 +153,6 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
                 </SelectContent>
               </Select>
             </div>
-          </div>
           
           <div>
             <Label htmlFor="audio-align" className="text-sm font-medium text-gray-700">Alignment</Label>

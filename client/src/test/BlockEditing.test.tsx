@@ -317,7 +317,7 @@ describe('Block Editing', () => {
       const block: BlockConfig = {
         id: 'heading-1',
         type: 'core/heading',
-        content: undefined,
+        content: {},
         styles: {},
         children: [],
         settings: {},

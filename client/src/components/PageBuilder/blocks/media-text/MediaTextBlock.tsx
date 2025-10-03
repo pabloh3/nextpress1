@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { Image as ImageIcon, Settings, Link, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const {
@@ -76,12 +75,17 @@ function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }
   );
 }
 
-function MediaTextSettings({ block }: { block: BlockConfig }) {
+function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
-  const { updateBlockContent } = useBlockManager();
+  
   
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   return (

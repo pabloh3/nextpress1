@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, Settings, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 interface TextBlockContent {
   content?: string;
@@ -43,11 +42,14 @@ function TextRenderer({ block }: { block: TextBlockConfig; isPreview: boolean })
   );
 }
 
-function TextSettings({ block }: { block: TextBlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
-  
+function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const alignmentOptions = [

@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { FileText as PreformattedIcon, Settings, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function PreformattedRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const content = (block.content as any)?.content || '';
@@ -38,20 +37,24 @@ function PreformattedRenderer({ block }: { block: BlockConfig; isPreview: boolea
   );
 }
 
-function PreformattedSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent, updateBlockStyles } = useBlockManager();
+function PreformattedSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
   
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, {
-      ...block.content,
-      ...contentUpdates,
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
     });
   };
 
   const updateStyles = (styleUpdates: any) => {
-    updateBlockStyles(block.id, {
-      ...block.styles,
-      ...styleUpdates,
+    onUpdate({
+      styles: {
+        ...block.styles,
+        ...styleUpdates,
+      },
     });
   };
 

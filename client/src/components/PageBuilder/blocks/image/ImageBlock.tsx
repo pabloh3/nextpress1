@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, Maximize, Settings, Link, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 interface ImageBlockContent {
   url?: string;
@@ -84,16 +83,25 @@ function ImageRenderer({ block }: { block: ImageBlockConfig; isPreview: boolean 
   );
 }
 
-function ImageSettings({ block }: { block: ImageBlockConfig }) {
+function ImageSettings({ block, onUpdate }: { block: ImageBlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
-  const { updateBlockContent, updateBlockStyles } = useBlockManager();
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const updateStyles = (styleUpdates: any) => {
-    updateBlockStyles(block.id, styleUpdates);
+    onUpdate({
+      styles: {
+        ...block.styles,
+        ...styleUpdates,
+      },
+    });
   };
 
   const alignmentOptions = [

@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { AudioLines as AudioIcon, Settings, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const {
@@ -57,14 +56,16 @@ function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function AudioSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
   const [isPickerOpen, setPickerOpen] = useState(false);
   
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, {
-      ...block.content,
-      ...contentUpdates,
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
     });
   };
 

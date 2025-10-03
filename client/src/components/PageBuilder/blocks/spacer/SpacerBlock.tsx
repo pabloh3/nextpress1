@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Space as SpaceIcon } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function SpacerRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const height = block.content?.height ?? 100;
@@ -25,11 +24,16 @@ function SpacerRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Settings, Wrench } from "lucide-react";
 
-function SpacerSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function SpacerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   return (

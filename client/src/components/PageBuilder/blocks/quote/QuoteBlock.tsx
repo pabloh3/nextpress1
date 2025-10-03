@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Quote as QuoteIcon } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function QuoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const valueHtmlRaw: string | undefined = block.content?.value;
@@ -59,11 +58,16 @@ function QuoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Settings, Wrench } from "lucide-react";
 
-function QuoteSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   return (

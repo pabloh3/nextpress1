@@ -131,7 +131,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
     const def = blockRegistry[block.type];
     if (def?.settings) {
       const SettingsComp = def.settings;
-      return <SettingsComp block={block} />;
+      return <SettingsComp block={block} onUpdate={onUpdate} />;
     }
     return (
       <div className="text-center text-gray-500 py-8">

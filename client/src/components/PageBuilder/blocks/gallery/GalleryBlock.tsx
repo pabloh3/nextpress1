@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Image as ImageIcon } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 interface GalleryImage {
   id: number;
@@ -104,16 +103,21 @@ function GalleryRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Settings, Wrench } from "lucide-react";
 
-function GallerySettings({ block }: { block: BlockConfig }) {
+function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
-  const { updateBlockContent } = useBlockManager();
+  
   
   const images: GalleryImage[] = Array.isArray((block.content as any)?.images)
     ? (block.content as any).images
     : [];
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const updateImages = (newImages: GalleryImage[]) => {

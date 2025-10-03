@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Plus, Trash2, Table as TableIcon, Settings, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 interface TableCell {
   content: string;
@@ -117,14 +116,19 @@ function TableRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function TableSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function TableSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
   const body: TableRow[] = (block.content as any)?.body || [];
   const head: TableRow[] = (block.content as any)?.head || [];
   const foot: TableRow[] = (block.content as any)?.foot || [];
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const updateTableData = (section: 'body' | 'head' | 'foot', newData: TableRow[]) => {

@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { File as FileIcon, Download, Settings, Wrench } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const url = (block.content as any)?.href || '';
@@ -99,12 +98,17 @@ function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function FileSettings({ block }: { block: BlockConfig }) {
+function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
-  const { updateBlockContent } = useBlockManager();
+  
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const formatFileSize = (bytes: number): string => {

@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Minus as SeparatorIcon, Settings, Wrench } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function SeparatorRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const className = [
@@ -30,15 +29,25 @@ function SeparatorRenderer({ block }: { block: BlockConfig; isPreview: boolean }
   );
 }
 
-function SeparatorSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent, updateBlockStyles } = useBlockManager();
+function SeparatorSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const updateStyles = (styleUpdates: any) => {
-    updateBlockStyles(block.id, styleUpdates);
+    onUpdate({
+      styles: {
+        ...block.styles,
+        ...styleUpdates,
+      },
+    });
   };
 
   return (

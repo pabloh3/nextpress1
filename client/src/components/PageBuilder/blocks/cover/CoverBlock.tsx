@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
-import { Square as CoverIcon } from "lucide-react";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Square as CoverIcon, Settings, Wrench } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { useBlockManager } from "@/hooks/useBlockManager";
 
@@ -141,160 +142,192 @@ function CoverSettings({ block }: { block: BlockConfig }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="cover-content">Cover Content</Label>
-        <Textarea
-          id="cover-content"
-          value={(block.content as any)?.innerContent || '<p>Write title…</p>'}
-          onChange={(e) => updateContent({ innerContent: e.target.value })}
-          placeholder="Enter your cover content (HTML allowed)"
-          rows={4}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="cover-background-type">Background Type</Label>
-        <Select
-          value={(block.content as any)?.backgroundType || 'image'}
-          onValueChange={(value) => updateContent({ backgroundType: value })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="image">Image</SelectItem>
-            <SelectItem value="video">Video</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="cover-media">Background {(block.content as any)?.backgroundType === 'video' ? 'Video' : 'Image'}</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            id="cover-media"
-            value={(block.content as any)?.url || ''}
-            onChange={(e) => updateContent({ url: e.target.value })}
-            placeholder={`https://example.com/${(block.content as any)?.backgroundType === 'video' ? 'video.mp4' : 'image.jpg'}`}
-          />
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => setPickerOpen(true)}
-          >
-            Choose from library
-          </Button>
-        </div>
-        <MediaPickerDialog
-          open={isPickerOpen}
-          onOpenChange={setPickerOpen}
-          kind={(block.content as any)?.backgroundType === 'video' ? 'video' : 'image'}
-          onSelect={(m) => {
-            updateContent({
-              url: m.url,
-              alt: (block.content as any)?.alt || m.alt || m.originalName || m.filename,
-            });
-          }}
-        />
-      </div>
-
-      {(block.content as any)?.backgroundType === 'image' && (
-        <>
+      {/* Content Card */}
+      <CollapsibleCard title="Content" icon={CoverIcon} defaultOpen={true}>
+        <div className="space-y-4">
           <div>
-            <Label htmlFor="cover-alt">Alt Text</Label>
-            <Input
-              id="cover-alt"
-              value={(block.content as any)?.alt || ''}
-              onChange={(e) => updateContent({ alt: e.target.value })}
-              placeholder="Background image description"
+            <Label htmlFor="cover-content" className="text-sm font-medium text-gray-700">Cover Content</Label>
+            <Textarea
+              id="cover-content"
+              value={(block.content as any)?.innerContent || '<p>Write title…</p>'}
+              onChange={(e) => updateContent({ innerContent: e.target.value })}
+              placeholder="Enter your cover content (HTML allowed)"
+              rows={4}
+              className="mt-1"
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <Label htmlFor="cover-parallax">Fixed Background</Label>
-            <Switch
-              id="cover-parallax"
-              checked={(block.content as any)?.hasParallax || false}
-              onCheckedChange={(checked) => updateContent({ hasParallax: checked })}
+          <div>
+            <Label htmlFor="cover-background-type" className="text-sm font-medium text-gray-700">Background Type</Label>
+            <Select
+              value={(block.content as any)?.backgroundType || 'image'}
+              onValueChange={(value) => updateContent({ backgroundType: value })}
+            >
+              <SelectTrigger id="cover-background-type" className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="image">Image</SelectItem>
+                <SelectItem value="video">Video</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="cover-media" className="text-sm font-medium text-gray-700">Background {(block.content as any)?.backgroundType === 'video' ? 'Video' : 'Image'}</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <Input
+                id="cover-media"
+                value={(block.content as any)?.url || ''}
+                onChange={(e) => updateContent({ url: e.target.value })}
+                placeholder={`https://example.com/${(block.content as any)?.backgroundType === 'video' ? 'video.mp4' : 'image.jpg'}`}
+                className="h-9"
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={() => setPickerOpen(true)}
+              >
+                Choose
+              </Button>
+            </div>
+            <MediaPickerDialog
+              open={isPickerOpen}
+              onOpenChange={setPickerOpen}
+              kind={(block.content as any)?.backgroundType === 'video' ? 'video' : 'image'}
+              onSelect={(m) => {
+                updateContent({
+                  url: m.url,
+                  alt: (block.content as any)?.alt || m.alt || m.originalName || m.filename,
+                });
+              }}
             />
           </div>
-        </>
-      )}
 
-      <div>
-        <Label htmlFor="cover-min-height">Minimum Height (px)</Label>
-        <Input
-          id="cover-min-height"
-          type="number"
-          value={(block.content as any)?.minHeight || 400}
-          onChange={(e) => updateContent({ minHeight: parseInt(e.target.value) || 400 })}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="cover-content-position">Content Position</Label>
-        <Select
-          value={(block.content as any)?.contentPosition || 'center center'}
-          onValueChange={(value) => updateContent({ contentPosition: value })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="top left">Top Left</SelectItem>
-            <SelectItem value="top center">Top Center</SelectItem>
-            <SelectItem value="top right">Top Right</SelectItem>
-            <SelectItem value="center left">Center Left</SelectItem>
-            <SelectItem value="center center">Center Center</SelectItem>
-            <SelectItem value="center right">Center Right</SelectItem>
-            <SelectItem value="bottom left">Bottom Left</SelectItem>
-            <SelectItem value="bottom center">Bottom Center</SelectItem>
-            <SelectItem value="bottom right">Bottom Right</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="cover-overlay-opacity">Overlay Opacity (%)</Label>
-        <div className="flex items-center space-x-4">
-          <Slider
-            value={[(block.content as any)?.dimRatio || 50]}
-            onValueChange={([value]) => updateContent({ dimRatio: value })}
-            max={100}
-            min={0}
-            step={5}
-            className="flex-1"
-          />
-          <Input
-            type="number"
-            value={(block.content as any)?.dimRatio || 50}
-            onChange={(e) => updateContent({ dimRatio: parseInt(e.target.value) || 50 })}
-            className="w-20"
-            min="0"
-            max="100"
-          />
+          {(block.content as any)?.backgroundType === 'image' && (
+            <div>
+              <Label htmlFor="cover-alt" className="text-sm font-medium text-gray-700">Alt Text</Label>
+              <Input
+                id="cover-alt"
+                value={(block.content as any)?.alt || ''}
+                onChange={(e) => updateContent({ alt: e.target.value })}
+                placeholder="Background image description"
+                className="mt-1 h-9"
+              />
+            </div>
+          )}
         </div>
-      </div>
+      </CollapsibleCard>
 
-      <div>
-        <Label htmlFor="cover-overlay-color">Overlay Color</Label>
-        <Input
-          id="cover-overlay-color"
-          type="color"
-          value={(block.content as any)?.customOverlayColor || '#000000'}
-          onChange={(e) => updateContent({ customOverlayColor: e.target.value })}
-        />
-      </div>
+      {/* Settings Card */}
+      <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
+        <div className="space-y-4">
+          {(block.content as any)?.backgroundType === 'image' && (
+            <div className="flex items-center justify-between">
+              <Label htmlFor="cover-parallax" className="text-sm font-medium text-gray-700">Fixed Background</Label>
+              <Switch
+                id="cover-parallax"
+                checked={(block.content as any)?.hasParallax || false}
+                onCheckedChange={(checked) => updateContent({ hasParallax: checked })}
+              />
+            </div>
+          )}
 
-      <div>
-        <Label htmlFor="cover-class">Additional CSS Class(es)</Label>
-        <Input
-          id="cover-class"
-          value={block.content?.className || ''}
-          onChange={(e) => updateContent({ className: e.target.value })}
-          placeholder="e.g. is-light has-background-gradient"
-        />
-      </div>
+          <div>
+            <Label htmlFor="cover-min-height" className="text-sm font-medium text-gray-700">Minimum Height (px)</Label>
+            <Input
+              id="cover-min-height"
+              type="number"
+              value={(block.content as any)?.minHeight || 400}
+              onChange={(e) => updateContent({ minHeight: parseInt(e.target.value) || 400 })}
+              className="mt-1 h-9"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="cover-content-position" className="text-sm font-medium text-gray-700">Content Position</Label>
+            <Select
+              value={(block.content as any)?.contentPosition || 'center center'}
+              onValueChange={(value) => updateContent({ contentPosition: value })}
+            >
+              <SelectTrigger id="cover-content-position" className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="top left">Top Left</SelectItem>
+                <SelectItem value="top center">Top Center</SelectItem>
+                <SelectItem value="top right">Top Right</SelectItem>
+                <SelectItem value="center left">Center Left</SelectItem>
+                <SelectItem value="center center">Center Center</SelectItem>
+                <SelectItem value="center right">Center Right</SelectItem>
+                <SelectItem value="bottom left">Bottom Left</SelectItem>
+                <SelectItem value="bottom center">Bottom Center</SelectItem>
+                <SelectItem value="bottom right">Bottom Right</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="cover-overlay-opacity" className="text-sm font-medium text-gray-700">Overlay Opacity (%)</Label>
+            <div className="flex items-center space-x-4 mt-1">
+              <Slider
+                aria-label="Overlay opacity percentage"
+                value={[(block.content as any)?.dimRatio || 50]}
+                onValueChange={([value]) => updateContent({ dimRatio: value })}
+                max={100}
+                min={0}
+                step={5}
+                className="flex-1"
+              />
+              <Input
+                id="cover-overlay-opacity"
+                type="number"
+                value={(block.content as any)?.dimRatio || 50}
+                onChange={(e) => updateContent({ dimRatio: parseInt(e.target.value) || 50 })}
+                className="w-20 h-9"
+                min="0"
+                max="100"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="cover-overlay-color" className="text-sm font-medium text-gray-700">Overlay Color</Label>
+            <div className="flex gap-3 mt-1">
+              <Input
+                id="cover-overlay-color"
+                type="color"
+                value={(block.content as any)?.customOverlayColor || '#000000'}
+                onChange={(e) => updateContent({ customOverlayColor: e.target.value })}
+                className="w-12 h-9 p-1 border-gray-200"
+              />
+              <Input
+                value={(block.content as any)?.customOverlayColor || '#000000'}
+                onChange={(e) => updateContent({ customOverlayColor: e.target.value })}
+                placeholder="#000000"
+                className="flex-1 h-9 text-sm"
+              />
+            </div>
+          </div>
+        </div>
+      </CollapsibleCard>
+
+      {/* Advanced Card */}
+      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="cover-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
+            <Input
+              id="cover-class"
+              value={block.content?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="e.g. is-light has-background-gradient"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

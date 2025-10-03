@@ -11,7 +11,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, SquareMousePointer } from 'lucide-react';
+import { CollapsibleCard } from '@/components/ui/collapsible-card';
+import { Plus, Trash2, SquareMousePointer, Settings, Wrench } from 'lucide-react';
 import { useBlockManager } from '@/hooks/useBlockManager';
 
 interface ButtonItem {
@@ -134,108 +135,126 @@ function ButtonsSettings({ block }: { block: BlockConfig }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <Label>Buttons</Label>
-        <Button type="button" variant="outline" size="sm" onClick={addButton}>
-          <Plus className="w-4 h-4 mr-1" />
-          Add Button
-        </Button>
-      </div>
-
-      {buttons.map((button, index) => (
-        <div key={button.id || index} className="border rounded p-4 space-y-3">
+      {/* Content Card */}
+      <CollapsibleCard title="Content" icon={SquareMousePointer} defaultOpen={true}>
+        <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <Label className="font-medium">Button {index + 1}</Label>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => removeButton(index)}
-              className="text-red-600">
-              <Trash2 className="w-4 h-4" />
+            <Label className="text-sm font-medium text-gray-700">Buttons</Label>
+            <Button type="button" variant="outline" size="sm" onClick={addButton}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add Button
             </Button>
           </div>
 
-          <div>
-            <Label htmlFor={`btn-text-${index}`}>Button Text</Label>
-            <Input
-              id={`btn-text-${index}`}
-              value={button.text}
-              onChange={(e) => updateButton(index, { text: e.target.value })}
-              placeholder="Button text"
-            />
-          </div>
+          {buttons.map((button, index) => (
+            <div key={button.id || index} className="border rounded p-4 space-y-3 bg-gray-50">
+              <div className="flex justify-between items-center">
+                <Label className="text-sm font-medium text-gray-700">Button {index + 1}</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeButton(index)}
+                  className="text-red-600">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
 
-          <div>
-            <Label htmlFor={`btn-url-${index}`}>URL</Label>
-            <Input
-              id={`btn-url-${index}`}
-              value={button.url}
-              onChange={(e) => updateButton(index, { url: e.target.value })}
-              placeholder="https://example.com"
-            />
-          </div>
+              <div>
+                <Label htmlFor={`btn-text-${index}`} className="text-sm font-medium text-gray-700">Button Text</Label>
+                <Input
+                  id={`btn-text-${index}`}
+                  value={button.text}
+                  onChange={(e) => updateButton(index, { text: e.target.value })}
+                  placeholder="Button text"
+                  className="mt-1 h-9"
+                />
+              </div>
 
+              <div>
+                <Label htmlFor={`btn-url-${index}`} className="text-sm font-medium text-gray-700">URL</Label>
+                <Input
+                  id={`btn-url-${index}`}
+                  value={button.url}
+                  onChange={(e) => updateButton(index, { url: e.target.value })}
+                  placeholder="https://example.com"
+                  className="mt-1 h-9"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor={`btn-target-${index}`} className="text-sm font-medium text-gray-700">Link Target</Label>
+                <Select
+                  value={button.linkTarget || '_self'}
+                  onValueChange={(value: '_self' | '_blank') =>
+                    updateButton(index, { linkTarget: value })
+                  }>
+                  <SelectTrigger id={`btn-target-${index}`} className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_self">Same Window</SelectItem>
+                    <SelectItem value="_blank">New Window</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CollapsibleCard>
+
+      {/* Settings Card */}
+      <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
+        <div className="space-y-4">
           <div>
-            <Label htmlFor={`btn-target-${index}`}>Link Target</Label>
+            <Label htmlFor="buttons-layout" className="text-sm font-medium text-gray-700">Layout</Label>
             <Select
-              value={button.linkTarget || '_self'}
-              onValueChange={(value: '_self' | '_blank') =>
-                updateButton(index, { linkTarget: value })
-              }>
-              <SelectTrigger>
+              value={(block.content as any)?.layout || 'flex-start'}
+              onValueChange={(value) => updateContent({ layout: value })}>
+              <SelectTrigger id="buttons-layout" className="h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="_self">Same Window</SelectItem>
-                <SelectItem value="_blank">New Window</SelectItem>
+                <SelectItem value="flex-start">Left</SelectItem>
+                <SelectItem value="center">Center</SelectItem>
+                <SelectItem value="flex-end">Right</SelectItem>
+                <SelectItem value="space-between">Space Between</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="buttons-orientation" className="text-sm font-medium text-gray-700">Orientation</Label>
+            <Select
+              value={(block.content as any)?.orientation || 'horizontal'}
+              onValueChange={(value) => updateContent({ orientation: value })}>
+              <SelectTrigger id="buttons-orientation" className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="horizontal">Horizontal</SelectItem>
+                <SelectItem value="vertical">Vertical</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
-      ))}
+      </CollapsibleCard>
 
-      <div>
-        <Label htmlFor="buttons-layout">Layout</Label>
-        <Select
-          value={(block.content as any)?.layout || 'flex-start'}
-          onValueChange={(value) => updateContent({ layout: value })}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="flex-start">Left</SelectItem>
-            <SelectItem value="center">Center</SelectItem>
-            <SelectItem value="flex-end">Right</SelectItem>
-            <SelectItem value="space-between">Space Between</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="buttons-orientation">Orientation</Label>
-        <Select
-          value={(block.content as any)?.orientation || 'horizontal'}
-          onValueChange={(value) => updateContent({ orientation: value })}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="horizontal">Horizontal</SelectItem>
-            <SelectItem value="vertical">Vertical</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="buttons-class">Additional CSS Class(es)</Label>
-        <Input
-          id="buttons-class"
-          value={block.content?.className || ''}
-          onChange={(e) => updateContent({ className: e.target.value })}
-          placeholder="e.g. is-style-outline"
-        />
-      </div>
+      {/* Advanced Card */}
+      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="buttons-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
+            <Input
+              id="buttons-class"
+              value={block.content?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="e.g. is-style-outline"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

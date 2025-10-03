@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Quote as QuoteIcon } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function PullquoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const value = (block.content as any)?.value || '';
@@ -58,23 +59,15 @@ function PullquoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }
   );
 }
 
-function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function PullquoteSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent, updateBlockStyles } = useBlockManager();
+
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
-        ...styleUpdates,
-      },
-    });
+    updateBlockStyles(block.id, styleUpdates);
   };
 
   return (
@@ -168,6 +161,7 @@ const PullquoteBlock: BlockDefinition = {
   },
   renderer: PullquoteRenderer,
   settings: PullquoteSettings,
+  hasSettings: true,
 };
 
 export default PullquoteBlock;

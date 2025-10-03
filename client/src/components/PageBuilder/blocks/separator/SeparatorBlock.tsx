@@ -4,6 +4,7 @@ import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Minus as SeparatorIcon } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function SeparatorRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const className = [
@@ -28,23 +29,15 @@ function SeparatorRenderer({ block }: { block: BlockConfig; isPreview: boolean }
   );
 }
 
-function SeparatorSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function SeparatorSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent, updateBlockStyles } = useBlockManager();
+
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
-        ...styleUpdates,
-      },
-    });
+    updateBlockStyles(block.id, styleUpdates);
   };
 
   return (
@@ -96,6 +89,7 @@ const SeparatorBlock: BlockDefinition = {
   },
   renderer: SeparatorRenderer,
   settings: SeparatorSettings,
+  hasSettings: true,
 };
 
 export default SeparatorBlock;

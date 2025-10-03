@@ -10,6 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Square as CoverIcon } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const url = (block.content as any)?.url || '';
@@ -126,25 +127,16 @@ function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function CoverSettings({ block }: { block: BlockConfig }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
+  const { updateBlockContent, updateBlockStyles } = useBlockManager();
 
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
-        ...styleUpdates,
-      },
-    });
+    updateBlockStyles(block.id, styleUpdates);
   };
 
   return (
@@ -329,6 +321,7 @@ const CoverBlock: BlockDefinition = {
   defaultStyles: {},
   renderer: CoverRenderer,
   settings: CoverSettings,
+  hasSettings: true,
 };
 
 export default CoverBlock;

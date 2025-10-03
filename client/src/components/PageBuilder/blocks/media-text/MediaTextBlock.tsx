@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { Image as ImageIcon } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const {
@@ -74,15 +75,12 @@ function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }
   );
 }
 
-function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function MediaTextSettings({ block }: { block: BlockConfig }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
+  const { updateBlockContent } = useBlockManager();
+  
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   return (
@@ -291,6 +289,7 @@ const MediaTextBlock: BlockDefinition = {
   defaultStyles: {},
   renderer: MediaTextRenderer,
   settings: MediaTextSettings,
+  hasSettings: true,
 };
 
 export default MediaTextBlock;

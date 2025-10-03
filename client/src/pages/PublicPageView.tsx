@@ -112,7 +112,7 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
         {type === 'post' && (
           <>
             <meta property="article:published_time" content={publishDate.toISOString()} />
-            <meta property="article:modified_time" content={data.updatedAt || publishDate.toISOString()} />
+            <meta property="article:modified_time" content={typeof data.updatedAt === 'string' ? data.updatedAt : new Date(data.updatedAt || publishDate).toISOString()} />
           </>
         )}
       </Helmet>

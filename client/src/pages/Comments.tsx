@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -171,7 +171,7 @@ export default function CommentsPage() {
     }
   };
 
-  const filteredComments = commentsData?.comments?.filter((comment: Comment) =>
+  const filteredComments = (commentsData as any)?.comments?.filter((comment: Comment) =>
     comment.content.toLowerCase().includes(search.toLowerCase()) ||
     comment.authorName?.toLowerCase().includes(search.toLowerCase()) ||
     comment.authorEmail?.toLowerCase().includes(search.toLowerCase())
@@ -190,7 +190,7 @@ export default function CommentsPage() {
             <div className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5 text-wp-blue" />
               <span className="text-sm text-gray-600">
-                {commentsData?.total || 0} total comments
+                {(commentsData as any)?.total || 0} total comments
               </span>
             </div>
           </div>
@@ -280,13 +280,13 @@ export default function CommentsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {getStatusBadge(comment.status)}
+                          {getStatusBadge(comment.status || 'pending')}
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div>{new Date(comment.createdAt).toLocaleDateString()}</div>
+                            <div>{new Date(comment.createdAt || '').toLocaleDateString()}</div>
                             <div className="text-gray-500">
-                              {new Date(comment.createdAt).toLocaleTimeString()}
+                              {new Date(comment.createdAt || '').toLocaleTimeString()}
                             </div>
                           </div>
                         </TableCell>
@@ -338,10 +338,10 @@ export default function CommentsPage() {
               )}
 
               {/* Pagination */}
-              {commentsData && commentsData.total_pages > 1 && (
+              {(commentsData && (commentsData as any).total_pages > 1 && (
                 <div className="flex items-center justify-between mt-6">
                   <div className="text-sm text-gray-500">
-                    Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, commentsData.total)} of {commentsData.total} comments
+                    Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, (commentsData as any).total)} of {(commentsData as any).total} comments
                   </div>
                   <div className="flex space-x-2">
                     <Button 
@@ -355,14 +355,14 @@ export default function CommentsPage() {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      disabled={page >= commentsData.total_pages}
+                      disabled={page >= (commentsData as any).total_pages}
                       onClick={() => setPage(page + 1)}
                     >
                       Next
                     </Button>
                   </div>
                 </div>
-              )}
+              )) as React.ReactNode}
             </CardContent>
           </Card>
         </div>
@@ -413,7 +413,7 @@ export default function CommentsPage() {
                 <label htmlFor="status" className="block text-sm font-medium mb-1">
                   Status
                 </label>
-                <Select name="status" defaultValue={editingComment.status}>
+                <Select name="status" defaultValue={editingComment.status || 'pending'}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

@@ -1,7 +1,8 @@
 import React from "react";
 import type { BlockConfig } from "@shared/schema";
 import type { BlockDefinition } from "../types";
-import { Grid3x3 as GridIcon, Plus, Trash2 } from "lucide-react";
+import { Grid3x3 as GridIcon, Plus, Trash2, Settings, Wrench } from "lucide-react";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +12,7 @@ import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { useBlockActions } from "../../BlockActionsContext";
 import BlockRenderer from "../../BlockRenderer";
 import { generateBlockId } from "../../utils";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 interface ColumnItem {
   id: string;
@@ -144,17 +146,16 @@ function ColumnsRenderer({ block, isPreview }: { block: BlockConfig; isPreview: 
   );
 }
 
-function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function ColumnsSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent } = useBlockManager();
   const columns: ColumnItem[] = Array.isArray((block.content as any)?.columns)
     ? (block.content as any).columns
     : [];
 
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...(block.content || {}),
-        ...contentUpdates,
-      }
+    updateBlockContent(block.id, {
+      ...(block.content || {}),
+      ...contentUpdates,
     });
   };
 
@@ -194,18 +195,16 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Column Management</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <CollapsibleCard title="Content" icon={GridIcon} defaultOpen={true}>
+        <div className="space-y-3">
           <div className="flex justify-between items-center">
-            <Label>Columns ({columns.length})</Label>
+            <Label aria-label="Number of columns">Columns ({columns.length})</Label>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={addColumn}
+              aria-label="Add column"
             >
               <Plus className="w-4 h-4 mr-1" />
               Add Column
@@ -213,66 +212,34 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
           </div>
 
           <div className="grid grid-cols-4 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => addQuickColumns(2)}
-              className="text-xs"
-            >
-              2 Cols
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => addQuickColumns(3)}
-              className="text-xs"
-            >
-              3 Cols
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => addQuickColumns(4)}
-              className="text-xs"
-            >
-              4 Cols
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => addQuickColumns(6)}
-              className="text-xs"
-            >
-              6 Cols
-            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => addQuickColumns(2)} className="text-xs" aria-label="2 columns">2 Cols</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => addQuickColumns(3)} className="text-xs" aria-label="3 columns">3 Cols</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => addQuickColumns(4)} className="text-xs" aria-label="4 columns">4 Cols</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => addQuickColumns(6)} className="text-xs" aria-label="6 columns">6 Cols</Button>
           </div>
 
           {columns.map((column, index) => (
             <div key={column.id} className="border rounded p-3 space-y-2">
               <div className="flex justify-between items-center">
-                <Label className="font-medium text-sm">Column {index + 1}</Label>
+                <Label className="font-medium text-sm" aria-label={`Column ${index + 1}`}>Column {index + 1}</Label>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => removeColumn(index)}
                   className="text-red-600 h-6 w-6 p-0"
+                  aria-label={`Remove column ${index + 1}`}
                 >
                   <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
-              
               <div>
                 <Label htmlFor={`col-width-${index}`} className="text-xs">Width</Label>
                 <Select
                   value={column.width || 'auto'}
                   onValueChange={(value) => updateColumn(index, { width: value })}
                 >
-                  <SelectTrigger className="h-8">
+                  <SelectTrigger className="h-9" id={`col-width-${index}`} aria-label={`Column ${index + 1} width`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -292,14 +259,11 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
               </div>
             </div>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Layout Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
+        <div className="space-y-3">
           <div className="grid grid-cols-12 gap-2 items-center">
             <div className="col-span-4">
               <Label htmlFor="columns-direction">Direction</Label>
@@ -309,7 +273,7 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
                 value={(block.content as any)?.direction || 'row'}
                 onValueChange={(value) => updateContent({ direction: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9" id="columns-direction" aria-label="Columns direction">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -327,30 +291,29 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
             <div className="col-span-8">
               <Input
                 id="columns-gap"
+                className="h-9"
                 value={(block.content as any)?.gap || '20px'}
                 onChange={(e) => updateContent({ gap: e.target.value })}
                 placeholder="e.g. 10px, 2rem"
+                aria-label="Gap between columns"
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Alignment</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
+        <div className="space-y-3">
           <div className="grid grid-cols-12 gap-2 items-center">
             <div className="col-span-4">
-              <Label htmlFor="vertical-align">Vertical</Label>
+              <Label htmlFor="vertical-align">Vertical Alignment</Label>
             </div>
             <div className="col-span-8">
               <Select
                 value={(block.content as any)?.verticalAlignment || 'top'}
                 onValueChange={(value) => updateContent({ verticalAlignment: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9" id="vertical-align" aria-label="Vertical alignment">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -365,14 +328,14 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 
           <div className="grid grid-cols-12 gap-2 items-center">
             <div className="col-span-4">
-              <Label htmlFor="horizontal-align">Horizontal</Label>
+              <Label htmlFor="horizontal-align">Horizontal Alignment</Label>
             </div>
             <div className="col-span-8">
               <Select
                 value={(block.content as any)?.horizontalAlignment || 'left'}
                 onValueChange={(value) => updateContent({ horizontalAlignment: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9" id="horizontal-align" aria-label="Horizontal alignment">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -385,8 +348,8 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
               </Select>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

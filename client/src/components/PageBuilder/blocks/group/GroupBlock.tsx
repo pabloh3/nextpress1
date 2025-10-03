@@ -4,9 +4,10 @@ import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { ContainerChildren } from "../../BlockRenderer";
-import { Package as GroupIcon } from "lucide-react";
+import { Package as GroupIcon, Settings, Layout, Palette, Wrench } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 export interface GroupBlockConfig extends BlockConfig {
   content: { 
@@ -60,216 +61,226 @@ function GroupRenderer({ block, isPreview }: { block: BlockConfig; isPreview: bo
   );
 }
 
-function GroupSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function GroupSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent, updateBlockStyles } = useBlockManager();
+  
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
-        ...styleUpdates,
-      },
-    });
+    updateBlockStyles(block.id, styleUpdates);
   };
+
+  const displayOptions = [
+    { value: 'block', label: 'Block' },
+    { value: 'flex', label: 'Flex' }
+  ];
+
+  const htmlTagOptions = [
+    { value: 'div', label: 'div' },
+    { value: 'section', label: 'section' },
+    { value: 'article', label: 'article' },
+    { value: 'main', label: 'main' },
+    { value: 'header', label: 'header' },
+    { value: 'footer', label: 'footer' },
+    { value: 'aside', label: 'aside' },
+    { value: 'nav', label: 'nav' }
+  ];
+
+  const currentDisplay = (block.content as any)?.display || 'block';
+  const currentTag = (block.content as any)?.tagName || 'div';
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Container Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-12 gap-2 items-center">
-            <div className="col-span-4">
-              <Label htmlFor="group-tag">HTML Tag</Label>
+      <CollapsibleCard
+        title="Settings"
+        icon={Settings}
+        defaultOpen={true}
+      >
+        <div className="space-y-4">
+          {/* HTML Tag */}
+          <div>
+            <Label>HTML Tag</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {htmlTagOptions.slice(0, 4).map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => updateContent({ tagName: option.value })}
+                  className={`flex items-center justify-center p-3 text-sm font-medium rounded-lg border transition-colors ${
+                    currentTag === option.value
+                      ? 'bg-gray-200 text-gray-800 border-gray-200 hover:bg-gray-300'
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
-            <div className="col-span-8">
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {htmlTagOptions.slice(4).map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => updateContent({ tagName: option.value })}
+                  className={`flex items-center justify-center p-3 text-sm font-medium rounded-lg border transition-colors ${
+                    currentTag === option.value
+                      ? 'bg-gray-200 text-gray-800 border-gray-200 hover:bg-gray-300'
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Display Type */}
+          <div>
+            <Label>Display Type</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {displayOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => updateContent({ display: option.value })}
+                  className={`flex items-center justify-center p-3 text-sm font-medium rounded-lg border transition-colors ${
+                    currentDisplay === option.value
+                      ? 'bg-gray-200 text-gray-800 border-gray-200 hover:bg-gray-300'
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CollapsibleCard>
+
+      {currentDisplay === 'flex' && (
+        <CollapsibleCard
+          title="Flex Layout"
+          icon={Layout}
+          defaultOpen={true}
+        >
+          <div className="space-y-4">
+            {/* Flex Direction */}
+            <div>
+              <Label htmlFor="flex-direction">Direction</Label>
               <Select
-                value={(block.content as any)?.tagName || 'div'}
-                onValueChange={(value) => updateContent({ tagName: value })}
+                value={(block.content as any)?.flexDirection || 'column'}
+                onValueChange={(value) => updateContent({ flexDirection: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="div">div</SelectItem>
-                  <SelectItem value="section">section</SelectItem>
-                  <SelectItem value="article">article</SelectItem>
-                  <SelectItem value="main">main</SelectItem>
-                  <SelectItem value="header">header</SelectItem>
-                  <SelectItem value="footer">footer</SelectItem>
-                  <SelectItem value="aside">aside</SelectItem>
-                  <SelectItem value="nav">nav</SelectItem>
+                  <SelectItem value="row">Horizontal (Row)</SelectItem>
+                  <SelectItem value="column">Vertical (Column)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="grid grid-cols-12 gap-2 items-center">
-            <div className="col-span-4">
-              <Label htmlFor="group-display">Display</Label>
-            </div>
-            <div className="col-span-8">
+            {/* Align Items */}
+            <div>
+              <Label htmlFor="align-items">Align Items</Label>
               <Select
-                value={(block.content as any)?.display || 'block'}
-                onValueChange={(value) => updateContent({ display: value })}
+                value={(block.content as any)?.alignItems || 'flex-start'}
+                onValueChange={(value) => updateContent({ alignItems: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="block">Block</SelectItem>
-                  <SelectItem value="flex">Flex</SelectItem>
+                  <SelectItem value="flex-start">Start</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="flex-end">End</SelectItem>
+                  <SelectItem value="stretch">Stretch</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="grid grid-cols-12 gap-2 items-center">
-            <div className="col-span-4">
-              <Label htmlFor="group-class">CSS Class</Label>
+            {/* Justify Content */}
+            <div>
+              <Label htmlFor="justify-content">Justify Content</Label>
+              <Select
+                value={(block.content as any)?.justifyContent || 'flex-start'}
+                onValueChange={(value) => updateContent({ justifyContent: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="flex-start">Start</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="flex-end">End</SelectItem>
+                  <SelectItem value="space-between">Space Between</SelectItem>
+                  <SelectItem value="space-around">Space Around</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="col-span-8">
+
+            {/* Gap */}
+            <div>
+              <Label htmlFor="flex-gap">Gap</Label>
               <Input
-                id="group-class"
-                value={block.content?.className || ''}
-                onChange={(e) => updateContent({ className: e.target.value })}
-                placeholder="e.g. has-background is-style-rounded"
+                id="flex-gap"
+                value={(block.content as any)?.gap || '0px'}
+                onChange={(e) => updateContent({ gap: e.target.value })}
+                placeholder="e.g. 10px, 1rem"
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {(block.content as any)?.display === 'flex' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Flex Layout</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-4">
-                <Label htmlFor="flex-direction">Direction</Label>
-              </div>
-              <div className="col-span-8">
-                <Select
-                  value={(block.content as any)?.flexDirection || 'column'}
-                  onValueChange={(value) => updateContent({ flexDirection: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="row">Horizontal (Row)</SelectItem>
-                    <SelectItem value="column">Vertical (Column)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-4">
-                <Label htmlFor="align-items">Align Items</Label>
-              </div>
-              <div className="col-span-8">
-                <Select
-                  value={(block.content as any)?.alignItems || 'flex-start'}
-                  onValueChange={(value) => updateContent({ alignItems: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="flex-start">Start</SelectItem>
-                    <SelectItem value="center">Center</SelectItem>
-                    <SelectItem value="flex-end">End</SelectItem>
-                    <SelectItem value="stretch">Stretch</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-4">
-                <Label htmlFor="justify-content">Justify Content</Label>
-              </div>
-              <div className="col-span-8">
-                <Select
-                  value={(block.content as any)?.justifyContent || 'flex-start'}
-                  onValueChange={(value) => updateContent({ justifyContent: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="flex-start">Start</SelectItem>
-                    <SelectItem value="center">Center</SelectItem>
-                    <SelectItem value="flex-end">End</SelectItem>
-                    <SelectItem value="space-between">Space Between</SelectItem>
-                    <SelectItem value="space-around">Space Around</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-4">
-                <Label htmlFor="flex-gap">Gap</Label>
-              </div>
-              <div className="col-span-8">
-                <Input
-                  id="flex-gap"
-                  value={(block.content as any)?.gap || '0px'}
-                  onChange={(e) => updateContent({ gap: e.target.value })}
-                  placeholder="e.g. 10px, 1rem"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        </CollapsibleCard>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Styling</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-12 gap-2 items-center">
-            <div className="col-span-4">
-              <Label htmlFor="group-background">Background</Label>
-            </div>
-            <div className="col-span-8">
-              <Input
-                id="group-background"
-                type="color"
-                value={block.styles?.backgroundColor || "#ffffff"}
-                onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
-              />
-            </div>
+      <CollapsibleCard
+        title="Styling"
+        icon={Palette}
+        defaultOpen={false}
+      >
+        <div className="space-y-4">
+          {/* Background Color */}
+          <div>
+            <Label htmlFor="group-background">Background Color</Label>
+            <Input
+              id="group-background"
+              type="color"
+              value={block.styles?.backgroundColor || "#ffffff"}
+              onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
+            />
           </div>
 
-          <div className="grid grid-cols-12 gap-2 items-center">
-            <div className="col-span-4">
-              <Label htmlFor="group-padding">Padding</Label>
-            </div>
-            <div className="col-span-8">
-              <Input
-                id="group-padding"
-                value={block.styles?.padding || "1.25em 2.375em"}
-                onChange={(e) => updateStyles({ padding: e.target.value })}
-                placeholder="e.g. 20px, 1em 2em"
-              />
-            </div>
+          {/* Padding */}
+          <div>
+            <Label htmlFor="group-padding">Padding</Label>
+            <Input
+              id="group-padding"
+              value={block.styles?.padding || "1.25em 2.375em"}
+              onChange={(e) => updateStyles({ padding: e.target.value })}
+              placeholder="e.g. 20px, 1em 2em"
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CollapsibleCard>
+
+      <CollapsibleCard
+        title="Advanced"
+        icon={Wrench}
+        defaultOpen={false}
+      >
+        <div className="space-y-4">
+          {/* CSS Class */}
+          <div>
+            <Label htmlFor="group-class">Additional CSS Class(es)</Label>
+            <Input
+              id="group-class"
+              value={block.content?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="e.g. has-background is-style-rounded"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }
@@ -296,6 +307,7 @@ const GroupBlock: BlockDefinition = {
   },
   renderer: GroupRenderer,
   settings: GroupSettings,
+  hasSettings: true,
 };
 
 export default GroupBlock;

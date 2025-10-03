@@ -23,7 +23,7 @@ export default function MediaPickerDialog({ open, onOpenChange, onSelect, kind =
     queryKey: ["/api/media", { per_page: 100, page: 1 }],
   });
 
-  const items: Media[] = (data?.media as Media[]) || [];
+  const items: Media[] = (data as any)?.media || [];
 
   const filtered = useMemo(() => {
     const matchesKind = (m: Media) => {

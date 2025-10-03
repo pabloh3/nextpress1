@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Table as TableIcon } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 interface TableCell {
   content: string;
@@ -115,18 +116,14 @@ function TableRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function TableSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function TableSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent } = useBlockManager();
   const body: TableRow[] = (block.content as any)?.body || [];
   const head: TableRow[] = (block.content as any)?.head || [];
   const foot: TableRow[] = (block.content as any)?.foot || [];
 
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   const updateTableData = (section: 'body' | 'head' | 'foot', newData: TableRow[]) => {
@@ -376,6 +373,7 @@ const TableBlock: BlockDefinition = {
   },
   renderer: TableRenderer,
   settings: TableSettings,
+  hasSettings: true,
 };
 
 export default TableBlock;

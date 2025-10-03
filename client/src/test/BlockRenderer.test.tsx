@@ -255,7 +255,7 @@ describe('BlockRenderer', () => {
 
       const wrapper = screen.getByTestId('paragraph-block').closest('.relative.group')!
       fireEvent.mouseEnter(wrapper)
-      const buttons = within(wrapper).getAllByRole('button')
+      const buttons = within(wrapper as HTMLElement).getAllByRole('button')
       fireEvent.click(buttons[0])
       
       expect(onDuplicate).toHaveBeenCalled()
@@ -277,7 +277,7 @@ describe('BlockRenderer', () => {
 
       const wrapper = screen.getByTestId('paragraph-block').closest('.relative.group')!
       fireEvent.mouseEnter(wrapper)
-      const buttons = within(wrapper).getAllByRole('button')
+      const buttons = within(wrapper as HTMLElement).getAllByRole('button')
       fireEvent.click(buttons[1])
       
       expect(onDelete).toHaveBeenCalled()

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Minus as MinusIcon } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function DividerRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   return (
@@ -23,14 +24,11 @@ function DividerRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
   );
 }
 
-function DividerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function DividerSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent } = useBlockManager();
+
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   return (
@@ -99,6 +97,7 @@ const DividerBlock: BlockDefinition = {
   },
   renderer: DividerRenderer,
   settings: DividerSettings,
+  hasSettings: true,
 };
 
 export default DividerBlock;

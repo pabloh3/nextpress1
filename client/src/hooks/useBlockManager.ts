@@ -41,11 +41,21 @@ export function useBlockManager(initialBlocks: BlockConfig[] = []) {
     return { status: wasRemoved, data: null };
   }, []);
 
+  const updateBlockContent = useCallback((blockId: string, contentUpdates: any) => {
+    return updateBlock(blockId, { content: contentUpdates });
+  }, [updateBlock]);
+
+  const updateBlockStyles = useCallback((blockId: string, styleUpdates: Record<string, any>) => {
+    return updateBlock(blockId, { styles: styleUpdates });
+  }, [updateBlock]);
+
   return {
     blocks,
     setBlocks,
     findBlockById,
     updateBlock,
+    updateBlockContent,
+    updateBlockStyles,
     duplicateBlock,
     deleteBlock,
   };

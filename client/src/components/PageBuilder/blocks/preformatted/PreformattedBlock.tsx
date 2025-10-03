@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { FileText as PreformattedIcon } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function PreformattedRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const content = (block.content as any)?.content || '';
@@ -36,22 +37,20 @@ function PreformattedRenderer({ block }: { block: BlockConfig; isPreview: boolea
   );
 }
 
-function PreformattedSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function PreformattedSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent, updateBlockStyles } = useBlockManager();
+  
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
+    updateBlockContent(block.id, {
+      ...block.content,
+      ...contentUpdates,
     });
   };
 
   const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
-        ...styleUpdates,
-      },
+    updateBlockStyles(block.id, {
+      ...block.styles,
+      ...styleUpdates,
     });
   };
 

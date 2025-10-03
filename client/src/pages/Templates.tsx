@@ -167,7 +167,7 @@ export default function Templates() {
       name: template.name,
       description: template.description || "",
       type: template.type as any,
-      applyTo: template.applyTo || "all",
+      applyTo: (template.applyTo as any) || "all",
       priority: template.priority || 0,
       isActive: template.isActive ?? true,
       conditions: (template.conditions as TemplateCondition[]) || [],
@@ -236,7 +236,7 @@ export default function Templates() {
     );
   };
 
-  const filteredTemplates = templatesData?.filter((template: Template) =>
+  const filteredTemplates = (templatesData as any)?.filter((template: Template) =>
     template.name.toLowerCase().includes(search.toLowerCase()) ||
     template.description?.toLowerCase().includes(search.toLowerCase())
   ) || [];
@@ -567,7 +567,7 @@ export default function Templates() {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            {new Date(template.createdAt).toLocaleDateString()}
+                             {new Date(template.createdAt || '').toLocaleDateString()}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">

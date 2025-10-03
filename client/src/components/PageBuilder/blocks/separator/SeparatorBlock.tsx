@@ -3,7 +3,8 @@ import type { BlockConfig } from "@shared/schema";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Minus as SeparatorIcon } from "lucide-react";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Minus as SeparatorIcon, Settings, Wrench } from "lucide-react";
 import { useBlockManager } from "@/hooks/useBlockManager";
 
 function SeparatorRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
@@ -42,33 +43,61 @@ function SeparatorSettings({ block }: { block: BlockConfig }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="separator-color">Color</Label>
-        <Input
-          id="separator-color"
-          type="color"
-          value={block.styles?.color || "#000000"}
-          onChange={(e) => updateStyles({ color: e.target.value })}
-        />
-      </div>
-      <div>
-        <Label htmlFor="separator-width">Width</Label>
-        <Input
-          id="separator-width"
-          value={block.styles?.width || "100px"}
-          onChange={(e) => updateStyles({ width: e.target.value })}
-          placeholder="e.g. 100px, 50%, auto"
-        />
-      </div>
-      <div>
-        <Label htmlFor="separator-class">Additional CSS Class(es)</Label>
-        <Input
-          id="separator-class"
-          value={block.content?.className || ''}
-          onChange={(e) => updateContent({ className: e.target.value })}
-          placeholder="e.g. is-style-wide is-style-dots"
-        />
-      </div>
+      {/* Content Card */}
+      <CollapsibleCard title="Content" icon={SeparatorIcon} defaultOpen={true}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="separator-color" className="text-sm font-medium text-gray-700">Color</Label>
+            <div className="flex gap-3 mt-1">
+              <Input
+                id="separator-color"
+                type="color"
+                value={block.styles?.color || "#000000"}
+                onChange={(e) => updateStyles({ color: e.target.value })}
+                className="w-12 h-9 p-1 border-gray-200"
+              />
+              <Input
+                value={block.styles?.color || "#000000"}
+                onChange={(e) => updateStyles({ color: e.target.value })}
+                placeholder="#000000"
+                className="flex-1 h-9 text-sm"
+              />
+            </div>
+          </div>
+        </div>
+      </CollapsibleCard>
+
+      {/* Settings Card */}
+      <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="separator-width" className="text-sm font-medium text-gray-700">Width</Label>
+            <Input
+              id="separator-width"
+              value={block.styles?.width || "100px"}
+              onChange={(e) => updateStyles({ width: e.target.value })}
+              placeholder="e.g. 100px, 50%, auto"
+              className="mt-1 h-9"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
+
+      {/* Advanced Card */}
+      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="separator-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
+            <Input
+              id="separator-class"
+              value={block.content?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="e.g. is-style-wide is-style-dots"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

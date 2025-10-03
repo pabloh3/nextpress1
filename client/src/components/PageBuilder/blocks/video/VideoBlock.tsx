@@ -7,7 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
-import { Video as VideoIcon } from "lucide-react";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Video as VideoIcon, AlignCenter, Maximize, Settings, Wrench } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const {
@@ -175,195 +177,241 @@ function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function VideoSettings({ block }: { block: BlockConfig }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
   const [isPosterPickerOpen, setPosterPickerOpen] = useState(false);
+  const { updateBlockContent, updateBlockStyles } = useBlockManager();
+  
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
   const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
-        ...styleUpdates,
-      },
-    });
+    updateBlockStyles(block.id, styleUpdates);
   };
+
+  const alignmentOptions = [
+    { value: 'default', label: 'Default', icon: AlignCenter },
+    { value: 'wide', label: 'Wide', icon: Maximize },
+    { value: 'full', label: 'Full', icon: Maximize }
+  ];
+
+  const currentAlign = (block.content as any)?.align || 'default';
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="video-src">Video URL</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            id="video-src"
-            value={(block.content as any)?.src || ''}
-            onChange={(e) => updateContent({ src: e.target.value })}
-            placeholder="https://example.com/video.mp4"
-          />
-          <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>Choose from library</Button>
+      <CollapsibleCard
+        title="Content"
+        icon={VideoIcon}
+        defaultOpen={true}
+      >
+        <div className="space-y-4">
+          {/* Video URL */}
+          <div>
+            <Label htmlFor="video-src">Video URL</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="video-src"
+                value={(block.content as any)?.src || ''}
+                onChange={(e) => updateContent({ src: e.target.value })}
+                placeholder="https://example.com/video.mp4 or YouTube URL"
+              />
+              <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>Choose from library</Button>
+            </div>
+            <MediaPickerDialog
+              open={isPickerOpen}
+              onOpenChange={setPickerOpen}
+              kind="video"
+              onSelect={(m) => {
+                updateContent({ id: m.id, src: m.url });
+              }}
+            />
+          </div>
+
+          {/* Poster Image */}
+          <div>
+            <Label htmlFor="video-poster">Poster Image URL</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="video-poster"
+                value={(block.content as any)?.poster || ''}
+                onChange={(e) => updateContent({ poster: e.target.value })}
+                placeholder="https://example.com/poster.jpg"
+              />
+              <Button type="button" variant="outline" onClick={() => setPosterPickerOpen(true)}>Choose image</Button>
+            </div>
+            <MediaPickerDialog
+              open={isPosterPickerOpen}
+              onOpenChange={setPosterPickerOpen}
+              kind="image"
+              onSelect={(m) => updateContent({ poster: m.url })}
+            />
+          </div>
+
+          {/* Caption */}
+          <div>
+            <Label htmlFor="video-caption">Caption</Label>
+            <Input
+              id="video-caption"
+              value={(block.content as any)?.caption || ''}
+              onChange={(e) => updateContent({ caption: e.target.value })}
+              placeholder="Add a caption (optional)"
+            />
+          </div>
         </div>
-        <MediaPickerDialog
-          open={isPickerOpen}
-          onOpenChange={setPickerOpen}
-          kind="video"
-          onSelect={(m) => {
-            updateContent({ id: m.id, src: m.url });
-          }}
-        />
-      </div>
-      <div>
-        <Label htmlFor="video-poster">Poster Image URL</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            id="video-poster"
-            value={(block.content as any)?.poster || ''}
-            onChange={(e) => updateContent({ poster: e.target.value })}
-            placeholder="https://example.com/poster.jpg"
-          />
-          <Button type="button" variant="outline" onClick={() => setPosterPickerOpen(true)}>Choose image</Button>
+      </CollapsibleCard>
+
+      <CollapsibleCard
+        title="Settings"
+        icon={Settings}
+        defaultOpen={true}
+      >
+        <div className="space-y-4">
+          {/* Alignment */}
+          <div>
+            <Label>Alignment</Label>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {alignmentOptions.map((option) => {
+                const Icon = option.icon;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => updateContent({ align: option.value === 'default' ? undefined : option.value })}
+                    className={`flex items-center gap-2 p-3 text-sm font-medium rounded-lg border transition-colors ${
+                      currentAlign === option.value
+                        ? 'bg-gray-200 text-gray-800 border-gray-200 hover:bg-gray-300'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Player Controls */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="video-controls">Show Controls</Label>
+              <Switch
+                id="video-controls"
+                checked={((block.content as any)?.controls ?? true) !== false}
+                onCheckedChange={(checked) => updateContent({ controls: checked })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="video-autoplay">Autoplay</Label>
+              <Switch
+                id="video-autoplay"
+                checked={Boolean((block.content as any)?.autoplay)}
+                onCheckedChange={(checked) => updateContent({ autoplay: checked })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="video-loop">Loop</Label>
+              <Switch
+                id="video-loop"
+                checked={Boolean((block.content as any)?.loop)}
+                onCheckedChange={(checked) => updateContent({ loop: checked })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="video-muted">Muted</Label>
+              <Switch
+                id="video-muted"
+                checked={Boolean((block.content as any)?.muted)}
+                onCheckedChange={(checked) => updateContent({ muted: checked })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="video-playsinline">Plays Inline</Label>
+              <Switch
+                id="video-playsinline"
+                checked={((block.content as any)?.playsInline ?? true) !== false}
+                onCheckedChange={(checked) => updateContent({ playsInline: checked })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="video-preload">Preload</Label>
+              <Select
+                value={(block.content as any)?.preload || 'metadata'}
+                onValueChange={(value) => updateContent({ preload: value })}
+              >
+                <SelectTrigger id="video-preload">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Auto</SelectItem>
+                  <SelectItem value="metadata">Metadata</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Dimensions */}
+          <div>
+            <Label>Dimensions</Label>
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <div>
+                <Label htmlFor="video-width" className="text-sm text-gray-600">Width</Label>
+                <Input
+                  id="video-width"
+                  value={(block.styles as any)?.width || ''}
+                  onChange={(e) => updateStyles({ width: e.target.value })}
+                  placeholder="e.g. 100% or 640px"
+                />
+              </div>
+              <div>
+                <Label htmlFor="video-height" className="text-sm text-gray-600">Height</Label>
+                <Input
+                  id="video-height"
+                  value={(block.styles as any)?.height || ''}
+                  onChange={(e) => updateStyles({ height: e.target.value })}
+                  placeholder="e.g. auto or 360px"
+                />
+              </div>
+            </div>
+          </div>
         </div>
-        <MediaPickerDialog
-          open={isPosterPickerOpen}
-          onOpenChange={setPosterPickerOpen}
-          kind="image"
-          onSelect={(m) => updateContent({ poster: m.url })}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="video-controls">Show Controls</Label>
-          <Switch
-            id="video-controls"
-            checked={((block.content as any)?.controls ?? true) !== false}
-            onCheckedChange={(checked) => updateContent({ controls: checked })}
-          />
+      </CollapsibleCard>
+
+      <CollapsibleCard
+        title="Advanced"
+        icon={Wrench}
+        defaultOpen={false}
+      >
+        <div className="space-y-4">
+          {/* Anchor */}
+          <div>
+            <Label htmlFor="video-anchor">Anchor</Label>
+            <Input
+              id="video-anchor"
+              value={(block.content as any)?.anchor || ''}
+              onChange={(e) => updateContent({ anchor: e.target.value })}
+              placeholder="section-id"
+            />
+          </div>
+
+          {/* Additional CSS Class */}
+          <div>
+            <Label htmlFor="video-class">Additional CSS Class(es)</Label>
+            <Input
+              id="video-class"
+              value={(block.content as any)?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="custom-class"
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="video-autoplay">Autoplay</Label>
-          <Switch
-            id="video-autoplay"
-            checked={Boolean((block.content as any)?.autoplay)}
-            onCheckedChange={(checked) => updateContent({ autoplay: checked })}
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="video-loop">Loop</Label>
-          <Switch
-            id="video-loop"
-            checked={Boolean((block.content as any)?.loop)}
-            onCheckedChange={(checked) => updateContent({ loop: checked })}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="video-muted">Muted</Label>
-          <Switch
-            id="video-muted"
-            checked={Boolean((block.content as any)?.muted)}
-            onCheckedChange={(checked) => updateContent({ muted: checked })}
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="video-playsinline">Plays Inline</Label>
-          <Switch
-            id="video-playsinline"
-            checked={((block.content as any)?.playsInline ?? true) !== false}
-            onCheckedChange={(checked) => updateContent({ playsInline: checked })}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="video-preload">Preload</Label>
-          <Select
-            value={(block.content as any)?.preload || 'metadata'}
-            onValueChange={(value) => updateContent({ preload: value })}
-          >
-            <SelectTrigger id="video-preload">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="auto">Auto</SelectItem>
-              <SelectItem value="metadata">Metadata</SelectItem>
-              <SelectItem value="none">None</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="video-width">Width</Label>
-          <Input
-            id="video-width"
-            value={(block.styles as any)?.width || ''}
-            onChange={(e) => updateStyles({ width: e.target.value })}
-            placeholder="e.g. 100% or 640px or auto"
-          />
-        </div>
-        <div>
-          <Label htmlFor="video-height">Height</Label>
-          <Input
-            id="video-height"
-            value={(block.styles as any)?.height || ''}
-            onChange={(e) => updateStyles({ height: e.target.value })}
-            placeholder="e.g. auto or 360px"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="video-align">Alignment</Label>
-          <Select
-            value={(block.content as any)?.align || 'default'}
-            onValueChange={(value) => updateContent({ align: value === 'default' ? undefined : value })}
-          >
-            <SelectTrigger id="video-align">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Default</SelectItem>
-              <SelectItem value="wide">Wide</SelectItem>
-              <SelectItem value="full">Full</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="video-caption">Caption</Label>
-          <Input
-            id="video-caption"
-            value={(block.content as any)?.caption || ''}
-            onChange={(e) => updateContent({ caption: e.target.value })}
-            placeholder="Add a caption (optional)"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="video-anchor">Anchor</Label>
-          <Input
-            id="video-anchor"
-            value={(block.content as any)?.anchor || ''}
-            onChange={(e) => updateContent({ anchor: e.target.value })}
-            placeholder="section-id"
-          />
-        </div>
-        <div>
-          <Label htmlFor="video-class">Additional CSS Class(es)</Label>
-          <Input
-            id="video-class"
-            value={(block.content as any)?.className || ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="custom-class"
-          />
-        </div>
-      </div>
+      </CollapsibleCard>
     </div>
   );
 }
@@ -392,6 +440,7 @@ const VideoBlock: BlockDefinition = {
   defaultStyles: {},
   renderer: VideoRenderer,
   settings: VideoSettings,
+  hasSettings: true,
 };
 
 export default VideoBlock;

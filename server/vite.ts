@@ -20,10 +20,31 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  const shouldPoll =
+    process.env.CHOKIDAR_USEPOLLING === "true" ||
+    process.env.VITE_POLLING === "true" ||
+    process.env.WSL_DISTRO_NAME != null ||
+    process.env.CONTAINER === "true" ||
+    process.env.DOCKER === "true";
+
+  const watch: Record<string, any> = {
+    ignored: ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/build/**", "**/server/**"],
+  };
+
+  if (shouldPoll) {
+    watch.usePolling = true;
+    watch.interval = Number(process.env.VITE_POLL_INTERVAL ?? 300);
+    watch.awaitWriteFinish = {
+      stabilityThreshold: Number(process.env.VITE_AWF_STABILITY ?? 500),
+      pollInterval: Number(process.env.VITE_AWF_POLL ?? 100),
+    };
+  }
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
     allowedHosts: true as const,
+    watch,
   };
 
   const vite = await createViteServer({

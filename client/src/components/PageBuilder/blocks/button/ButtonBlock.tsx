@@ -3,8 +3,9 @@ import type { BlockConfig } from "@shared/schema";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MousePointer } from "lucide-react";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { MousePointer, ExternalLink, Type, Settings, Link } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function ButtonRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
   const url = block.content?.url as string | undefined;
@@ -32,78 +33,105 @@ function ButtonRenderer({ block, isPreview }: { block: BlockConfig; isPreview: b
   );
 }
 
-function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function ButtonSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent } = useBlockManager();
+  
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
+    updateBlockContent(block.id, {
+      ...block.content,
+      ...contentUpdates,
     });
   };
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="button-text">Button Text</Label>
-        <Input
-          id="button-text"
-          value={block.content?.text || ''}
-          onChange={(e) => updateContent({ text: e.target.value })}
-          placeholder="Button text"
-        />
-      </div>
-      <div>
-        <Label htmlFor="button-url">Link URL</Label>
-        <Input
-          id="button-url"
-          value={block.content?.url || ''}
-          onChange={(e) => updateContent({ url: e.target.value })}
-          placeholder="https://example.com"
-        />
-      </div>
-      <div>
-        <Label htmlFor="button-target">Link Target</Label>
-        <Select
-          value={(block.content?.linkTarget || block.content?.target || '_self')}
-          onValueChange={(value) => updateContent({ linkTarget: value, target: undefined })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_self">Same Window</SelectItem>
-            <SelectItem value="_blank">New Window</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <Label htmlFor="button-rel">Rel</Label>
-        <Input
-          id="button-rel"
-          value={block.content?.rel || ''}
-          onChange={(e) => updateContent({ rel: e.target.value })}
-          placeholder="noopener noreferrer"
-        />
-      </div>
-      <div>
-        <Label htmlFor="button-title">Title</Label>
-        <Input
-          id="button-title"
-          value={block.content?.title || ''}
-          onChange={(e) => updateContent({ title: e.target.value })}
-          placeholder="Link title"
-        />
-      </div>
-      <div>
-        <Label htmlFor="button-class">Additional CSS Class(es)</Label>
-        <Input
-          id="button-class"
-          value={block.content?.className || ''}
-          onChange={(e) => updateContent({ className: e.target.value })}
-          placeholder="e.g. is-style-outline"
-        />
-      </div>
+      <CollapsibleCard title="Content" icon={Type} defaultOpen={true}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="button-text" className="text-sm font-medium text-gray-700">Button Text</Label>
+            <Input
+              id="button-text"
+              value={block.content?.text || ''}
+              onChange={(e) => updateContent({ text: e.target.value })}
+              placeholder="Button text"
+              className="mt-1 h-9"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="button-url" className="text-sm font-medium text-gray-700">Link URL</Label>
+            <Input
+              id="button-url"
+              value={block.content?.url || ''}
+              onChange={(e) => updateContent({ url: e.target.value })}
+              placeholder="https://example.com"
+              className="mt-1 h-9"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
+      
+      <CollapsibleCard title="Link Settings" icon={Link} defaultOpen={true}>
+        <div className="space-y-3">
+          <Label className="text-sm font-medium text-gray-700">Link Target</Label>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { value: '_self', label: 'Same Window' },
+              { value: '_blank', label: 'New Window', icon: ExternalLink }
+            ].map((target) => (
+              <button
+                key={target.value}
+                onClick={() => updateContent({ linkTarget: target.value, target: undefined })}
+                className={`h-8 px-3 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${
+                  (block.content?.linkTarget || block.content?.target || '_self') === target.value
+                    ? "bg-gray-200 text-gray-800 hover:bg-gray-300" 
+                    : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                }`}
+              >
+                {target.icon && <target.icon className="w-3 h-3" />}
+                {target.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </CollapsibleCard>
+      
+      <CollapsibleCard title="Advanced" icon={Settings} defaultOpen={false}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="button-rel" className="text-sm font-medium text-gray-700">Rel Attribute</Label>
+            <Input
+              id="button-rel"
+              value={block.content?.rel || ''}
+              onChange={(e) => updateContent({ rel: e.target.value })}
+              placeholder="noopener noreferrer"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="button-title" className="text-sm font-medium text-gray-700">Title Attribute</Label>
+            <Input
+              id="button-title"
+              value={block.content?.title || ''}
+              onChange={(e) => updateContent({ title: e.target.value })}
+              placeholder="Link title"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="button-class" className="text-sm font-medium text-gray-700">CSS Classes</Label>
+            <Input
+              id="button-class"
+              value={block.content?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="e.g. is-style-outline"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

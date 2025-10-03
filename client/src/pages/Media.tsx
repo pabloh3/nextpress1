@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -182,7 +182,7 @@ export default function MediaPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const filteredMedia = mediaData?.media?.filter((media: Media) =>
+  const filteredMedia = (mediaData as any)?.media?.filter((media: Media) =>
     media.originalName.toLowerCase().includes(search.toLowerCase()) ||
     media.alt?.toLowerCase().includes(search.toLowerCase())
   ) || [];
@@ -237,96 +237,104 @@ export default function MediaPage() {
           </div>
 
           {/* Media Grid */}
-          {isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {[...Array(12)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="bg-gray-200 aspect-square rounded-lg mb-2"></div>
-                  <div className="bg-gray-200 h-4 rounded mb-1"></div>
-                  <div className="bg-gray-200 h-3 rounded w-3/4"></div>
+          {(() => {
+            if (isLoading) {
+              return (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {[...Array(12)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="bg-gray-200 aspect-square rounded-lg mb-2"></div>
+                      <div className="bg-gray-200 h-4 rounded mb-1"></div>
+                      <div className="bg-gray-200 h-3 rounded w-3/4"></div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : filteredMedia.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {filteredMedia.map((media: Media) => (
-                <Card key={media.id} className="group hover:shadow-md transition-shadow">
-                  <CardContent className="p-3">
-                    <div className="aspect-square mb-3 bg-gray-100 rounded-lg overflow-hidden relative">
-                      {media.mimeType.startsWith('image/') ? (
-                        <img 
-                          src={media.url} 
-                          alt={media.alt || media.originalName}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          {getFileIcon(media.mimeType)}
+              );
+            } else if (filteredMedia.length > 0) {
+              return (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {filteredMedia.map((media: Media) => (
+                    <Card key={media.id} className="group hover:shadow-md transition-shadow">
+                      <CardContent className="p-3">
+                        <div className="aspect-square mb-3 bg-gray-100 rounded-lg overflow-hidden relative">
+                          {media.mimeType.startsWith('image/') ? (
+                            <img 
+                              src={media.url} 
+                              alt={media.alt || media.originalName}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                             <div className="w-full h-full flex items-center justify-center text-gray-400">
+                               {getFileIcon(media.mimeType)}
+                </div>
+              )}
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-white hover:bg-white hover:text-black"
+                                onClick={() => handleEdit(media)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-white hover:bg-white hover:text-black"
+                                onClick={() => window.open(media.url, '_blank')}
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-white hover:bg-red-500"
+                                onClick={() => handleDelete(media.id)}
+                                disabled={deleteMutation.isPending}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-white hover:bg-white hover:text-black"
-                            onClick={() => handleEdit(media)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-white hover:bg-white hover:text-black"
-                            onClick={() => window.open(media.url, '_blank')}
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-white hover:bg-red-500"
-                            onClick={() => handleDelete(media.id)}
-                            disabled={deleteMutation.isPending}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium truncate" title={media.originalName}>
+                            {media.originalName}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatFileSize(media.size)}
+                          </p>
+                          <Badge variant="secondary" className="text-xs">
+                            {media.mimeType.split('/')[1].toUpperCase()}
+                          </Badge>
                         </div>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium truncate" title={media.originalName}>
-                        {media.originalName}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatFileSize(media.size)}
-                      </p>
-                      <Badge variant="secondary" className="text-xs">
-                        {media.mimeType.split('/')[1].toUpperCase()}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Image className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No media files found</h3>
-              <p className="text-gray-500 mb-4">
-                {search ? "Try adjusting your search criteria." : "Upload your first media file to get started."}
-              </p>
-              <Button onClick={() => setIsUploadOpen(true)}>
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Media
-              </Button>
-            </div>
-          )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              );
+            } else {
+              return (
+                <div className="text-center py-12">
+                  <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <Image className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No media files found</h3>
+                  <p className="text-gray-500 mb-4">
+                    {search ? "Try adjusting your search criteria." : "Upload your first media file to get started."}
+                  </p>
+                  <Button onClick={() => setIsUploadOpen(true)}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Media
+                  </Button>
+                </div>
+              );
+            }
+          })() as any}
 
           {/* Pagination */}
-          {mediaData && mediaData.total_pages > 1 && (
+          {mediaData && (mediaData as any).total_pages > 1 && (
             <div className="mt-8 flex justify-center gap-2">
               <Button
                 variant="outline"
@@ -336,12 +344,12 @@ export default function MediaPage() {
                 Previous
               </Button>
               <span className="flex items-center px-4 text-sm text-gray-600">
-                Page {page} of {mediaData.total_pages}
+                Page {page} of {(mediaData as any).total_pages}
               </span>
               <Button
                 variant="outline"
                 onClick={() => setPage(page + 1)}
-                disabled={page === mediaData.total_pages}
+                disabled={page === (mediaData as any).total_pages}
               >
                 Next
               </Button>

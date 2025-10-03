@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Code2 as HtmlIcon } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function HtmlRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
   const content = (block.content as any)?.content || '';
@@ -45,14 +46,11 @@ function HtmlRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boo
   );
 }
 
-function HtmlSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function HtmlSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent } = useBlockManager();
+  
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   return (
@@ -103,6 +101,7 @@ const HtmlBlock: BlockDefinition = {
   },
   renderer: HtmlRenderer,
   settings: HtmlSettings,
+  hasSettings: true,
 };
 
 export default HtmlBlock;

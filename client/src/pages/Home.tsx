@@ -173,19 +173,19 @@ export default function Home() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="text-center">
                       <div className="text-3xl font-bold text-wp-blue mb-2">
-                        {stats?.posts || 0}
-                      </div>
-                      <div className="text-sm text-gray-600">Published Posts</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-wp-blue mb-2">
-                        {stats?.pages || 0}
-                      </div>
-                      <div className="text-sm text-gray-600">Published Pages</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-wp-blue mb-2">
-                        {stats?.comments || 0}
+                         {(stats as any)?.posts || 0}
+                       </div>
+                       <div className="text-sm text-gray-600">Published Posts</div>
+                     </div>
+                     <div className="text-center">
+                       <div className="text-3xl font-bold text-wp-blue mb-2">
+                         {(stats as any)?.pages || 0}
+                       </div>
+                       <div className="text-sm text-gray-600">Published Pages</div>
+                     </div>
+                     <div className="text-center">
+                       <div className="text-3xl font-bold text-wp-blue mb-2">
+                         {(stats as any)?.comments || 0}
                       </div>
                       <div className="text-sm text-gray-600">Approved Comments</div>
                     </div>
@@ -199,9 +199,9 @@ export default function Home() {
                   <CardTitle>Your Recent Posts</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {recentPosts?.posts?.length > 0 ? (
-                    <div className="space-y-4">
-                      {recentPosts.posts.slice(0, 3).map((post: any) => (
+                   {(recentPosts as any)?.posts?.length > 0 ? (
+                     <div className="space-y-4">
+                       {(recentPosts as any).posts.slice(0, 3).map((post: any) => (
                         <div key={post.id} className="flex items-start space-x-4 p-4 border border-gray-100 rounded-lg hover:border-wp-blue/30 transition-colors">
                           <div className="p-2 bg-wp-blue/10 rounded-lg flex-shrink-0">
                             <FileText className="w-4 h-4 text-wp-blue" />

@@ -3,9 +3,10 @@ import type { BlockConfig } from "@shared/schema";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Type } from "lucide-react";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, Settings, Wrench } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 interface TextBlockContent {
   content?: string;
@@ -42,73 +43,130 @@ function TextRenderer({ block }: { block: TextBlockConfig; isPreview: boolean })
   );
 }
 
-function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function TextSettings({ block }: { block: TextBlockConfig }) {
+  const { updateBlockContent } = useBlockManager();
+  
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
+
+  const alignmentOptions = [
+    { 
+      value: 'left', 
+      label: 'Left', 
+      icon: AlignLeft 
+    },
+    { 
+      value: 'center', 
+      label: 'Center', 
+      icon: AlignCenter 
+    },
+    { 
+      value: 'right', 
+      label: 'Right', 
+      icon: AlignRight 
+    },
+    { 
+      value: 'justify', 
+      label: 'Justify', 
+      icon: AlignJustify 
+    }
+  ];
+
+  const currentAlign = block.content?.align || 'left';
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="text-content">Text Content</Label>
-        <Textarea
-          id="text-content"
-          value={(block.content?.content ?? block.content?.text) || ''}
-          onChange={(e) => updateContent({ content: e.target.value, text: undefined })}
-          placeholder="Enter your text content"
-          rows={4}
-        />
-      </div>
-      <div>
-        <Label htmlFor="paragraph-align">Text Align</Label>
-        <Select
-          value={block.content?.align || 'left'}
-          onValueChange={(value) => updateContent({ align: value })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="left">Left</SelectItem>
-            <SelectItem value="center">Center</SelectItem>
-            <SelectItem value="right">Right</SelectItem>
-            <SelectItem value="justify">Justify</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="flex items-center justify-between">
-        <Label htmlFor="paragraph-dropcap">Drop cap</Label>
-        <Switch
-          id="paragraph-dropcap"
-          checked={Boolean(block.content?.dropCap)}
-          onCheckedChange={(checked) => updateContent({ dropCap: checked })}
-        />
-      </div>
-      <div>
-        <Label htmlFor="paragraph-anchor">Anchor</Label>
-        <Textarea
-          id="paragraph-anchor"
-          value={block.content?.anchor || ''}
-          onChange={(e) => updateContent({ anchor: e.target.value })}
-          placeholder="Add an anchor (without #)"
-          rows={1}
-        />
-      </div>
-      <div>
-        <Label htmlFor="paragraph-class">Additional CSS Class(es)</Label>
-        <Textarea
-          id="paragraph-class"
-          value={block.content?.className || ''}
-          onChange={(e) => updateContent({ className: e.target.value })}
-          placeholder="e.g. custom-class is-style-outline"
-          rows={1}
-        />
-      </div>
+      <CollapsibleCard
+        title="Content"
+        icon={Type}
+        defaultOpen={true}
+      >
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="text-content">Text Content</Label>
+            <Textarea
+              id="text-content"
+              aria-label="Text content"
+              className="h-36"
+              value={(block.content?.content ?? block.content?.text) || ''}
+              onChange={(e) => updateContent({ content: e.target.value, text: undefined })}
+              placeholder="Enter your text content"
+              rows={4}
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
+
+      <CollapsibleCard
+        title="Settings"
+        icon={Settings}
+        defaultOpen={true}
+      >
+        <div className="space-y-4">
+          <div>
+            <Label>Text Alignment</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {alignmentOptions.map((option) => {
+                const Icon = option.icon;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => updateContent({ align: option.value })}
+                    className={`flex items-center gap-2 p-3 text-sm font-medium rounded-lg border transition-colors ${
+                      currentAlign === option.value
+                        ? 'bg-gray-200 text-gray-800 border-gray-200 hover:bg-gray-300'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <Label htmlFor="paragraph-dropcap">Drop cap</Label>
+            <Switch
+              id="paragraph-dropcap"
+              checked={Boolean(block.content?.dropCap)}
+              onCheckedChange={(checked) => updateContent({ dropCap: checked })}
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
+
+      <CollapsibleCard
+        title="Advanced"
+        icon={Wrench}
+        defaultOpen={false}
+      >
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="paragraph-anchor">Anchor</Label>
+            <Textarea
+              id="paragraph-anchor"
+              value={block.content?.anchor || ''}
+              onChange={(e) => updateContent({ anchor: e.target.value })}
+              placeholder="Add an anchor (without #)"
+              rows={1}
+            />
+          </div>
+          <div>
+            <Label htmlFor="paragraph-class">Additional CSS Class(es)</Label>
+<Textarea
+                id="paragraph-class"
+                aria-label="Additional CSS classes"
+                value={block.content?.className || ''}
+                onChange={(e) => updateContent({ className: e.target.value })}
+                placeholder="e.g. custom-class is-style-outline"
+                rows={1}
+              />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }
@@ -133,6 +191,7 @@ const TextBlock: BlockDefinition = {
   },
   renderer: TextRenderer,
   settings: TextSettings,
+  hasSettings: true,
 };
 
 export default TextBlock;

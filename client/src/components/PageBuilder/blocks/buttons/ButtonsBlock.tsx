@@ -1,23 +1,35 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema";
-import type { BlockDefinition } from "../types.ts";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Plus, Trash2, MousePointer } from "lucide-react";
+import React from 'react';
+import type { BlockConfig } from '@shared/schema';
+import type { BlockDefinition } from '../types.ts';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Plus, Trash2, SquareMousePointer } from 'lucide-react';
+import { useBlockManager } from '@/hooks/useBlockManager';
 
 interface ButtonItem {
   id: string;
   text: string;
   url: string;
-  linkTarget?: "_self" | "_blank";
+  linkTarget?: '_self' | '_blank';
   rel?: string;
   title?: string;
   className?: string;
 }
 
-function ButtonsRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+function ButtonsRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
   const buttons: ButtonItem[] = Array.isArray((block.content as any)?.buttons)
     ? (block.content as any).buttons
     : [];
@@ -25,13 +37,15 @@ function ButtonsRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
   const layout = (block.content as any)?.layout || 'flex-start';
   const orientation = (block.content as any)?.orientation || 'horizontal';
   const className = [
-    "wp-block-buttons",
+    'wp-block-buttons',
     orientation === 'vertical' ? 'is-vertical' : '',
     layout === 'center' ? 'is-content-justification-center' : '',
     layout === 'right' ? 'is-content-justification-right' : '',
     layout === 'space-between' ? 'is-content-justification-space-between' : '',
-    block.content?.className || "",
-  ].filter(Boolean).join(" ");
+    block.content?.className || '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div
@@ -44,13 +58,11 @@ function ButtonsRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
         gap: '0.5em',
         alignItems: orientation === 'vertical' ? 'flex-start' : 'center',
         flexWrap: 'wrap',
-      }}
-    >
+      }}>
       {buttons.map((button, index) => {
-        const buttonClassName = [
-          "wp-block-button",
-          button.className || "",
-        ].filter(Boolean).join(" ");
+        const buttonClassName = ['wp-block-button', button.className || '']
+          .filter(Boolean)
+          .join(' ');
 
         return (
           <div key={button.id || index} className={buttonClassName}>
@@ -71,8 +83,7 @@ function ButtonsRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
                 fontSize: '16px',
                 fontWeight: '600',
                 cursor: 'pointer',
-              }}
-            >
+              }}>
               {button.text}
             </a>
           </div>
@@ -82,18 +93,14 @@ function ButtonsRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
   );
 }
 
-function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function ButtonsSettings({ block }: { block: BlockConfig }) {
   const buttons: ButtonItem[] = Array.isArray((block.content as any)?.buttons)
     ? (block.content as any).buttons
     : [];
+  const { updateBlockContent } = useBlockManager();
 
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   const updateButtons = (newButtons: ButtonItem[]) => {
@@ -119,7 +126,9 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
   };
 
   const updateButton = (index: number, updates: Partial<ButtonItem>) => {
-    const newButtons = buttons.map((btn, i) => i === index ? { ...btn, ...updates } : btn);
+    const newButtons = buttons.map((btn, i) =>
+      i === index ? { ...btn, ...updates } : btn
+    );
     updateButtons(newButtons);
   };
 
@@ -127,17 +136,12 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <Label>Buttons</Label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addButton}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={addButton}>
           <Plus className="w-4 h-4 mr-1" />
           Add Button
         </Button>
       </div>
-      
+
       {buttons.map((button, index) => (
         <div key={button.id || index} className="border rounded p-4 space-y-3">
           <div className="flex justify-between items-center">
@@ -147,12 +151,11 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
               variant="ghost"
               size="sm"
               onClick={() => removeButton(index)}
-              className="text-red-600"
-            >
+              className="text-red-600">
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
-          
+
           <div>
             <Label htmlFor={`btn-text-${index}`}>Button Text</Label>
             <Input
@@ -162,7 +165,7 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
               placeholder="Button text"
             />
           </div>
-          
+
           <div>
             <Label htmlFor={`btn-url-${index}`}>URL</Label>
             <Input
@@ -172,13 +175,14 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
               placeholder="https://example.com"
             />
           </div>
-          
+
           <div>
             <Label htmlFor={`btn-target-${index}`}>Link Target</Label>
             <Select
               value={button.linkTarget || '_self'}
-              onValueChange={(value: "_self" | "_blank") => updateButton(index, { linkTarget: value })}
-            >
+              onValueChange={(value: '_self' | '_blank') =>
+                updateButton(index, { linkTarget: value })
+              }>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -195,8 +199,7 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
         <Label htmlFor="buttons-layout">Layout</Label>
         <Select
           value={(block.content as any)?.layout || 'flex-start'}
-          onValueChange={(value) => updateContent({ layout: value })}
-        >
+          onValueChange={(value) => updateContent({ layout: value })}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -213,8 +216,7 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
         <Label htmlFor="buttons-orientation">Orientation</Label>
         <Select
           value={(block.content as any)?.orientation || 'horizontal'}
-          onValueChange={(value) => updateContent({ orientation: value })}
-        >
+          onValueChange={(value) => updateContent({ orientation: value })}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -241,8 +243,9 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 const ButtonsBlock: BlockDefinition = {
   id: 'core/buttons',
   name: 'Buttons',
-  icon: MousePointer,
-  description: 'Prompt visitors to take action with a group of button-style links',
+  icon: SquareMousePointer,
+  description:
+    'Prompt visitors to take action with a group of button-style links',
   category: 'basic',
   defaultContent: {
     buttons: [
@@ -254,7 +257,7 @@ const ButtonsBlock: BlockDefinition = {
         rel: '',
         title: '',
         className: '',
-      }
+      },
     ],
     layout: 'flex-start',
     orientation: 'horizontal',
@@ -263,6 +266,7 @@ const ButtonsBlock: BlockDefinition = {
   defaultStyles: {},
   renderer: ButtonsRenderer,
   settings: ButtonsSettings,
+  hasSettings: true,
 };
 
 export default ButtonsBlock;

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { AudioLines as AudioIcon } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const {
@@ -55,14 +56,14 @@ function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function AudioSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent } = useBlockManager();
   const [isPickerOpen, setPickerOpen] = useState(false);
+  
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
+    updateBlockContent(block.id, {
+      ...block.content,
+      ...contentUpdates,
     });
   };
 

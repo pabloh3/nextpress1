@@ -20,10 +20,10 @@ export default function Dashboard() {
   });
 
   const statsItems = [
-    { label: "Posts", value: stats?.posts || 0, icon: FileText, color: "text-wp-blue" },
-    { label: "Pages", value: stats?.pages || 0, icon: File, color: "text-wp-blue" },
-    { label: "Comments", value: stats?.comments || 0, icon: MessageCircle, color: "text-wp-blue" },
-    { label: "Users", value: stats?.users || 0, icon: Users, color: "text-wp-blue" },
+    { label: "Posts", value: (stats as any)?.posts || 0, icon: FileText, color: "text-wp-blue" },
+    { label: "Pages", value: (stats as any)?.pages || 0, icon: File, color: "text-wp-blue" },
+    { label: "Comments", value: (stats as any)?.comments || 0, icon: MessageCircle, color: "text-wp-blue" },
+    { label: "Users", value: (stats as any)?.users || 0, icon: Users, color: "text-wp-blue" },
   ];
 
   return (
@@ -105,9 +105,9 @@ export default function Dashboard() {
                 <CardContent className="p-6">
                   {postsLoading ? (
                     <div className="text-center py-8 text-gray-500">Loading...</div>
-                  ) : recentPosts?.posts?.length > 0 ? (
+                  ) : (recentPosts as any)?.posts?.length > 0 ? (
                     <div className="space-y-4">
-                      {recentPosts.posts.map((post: any) => (
+                      {(recentPosts as any).posts.map((post: any) => (
                         <div key={post.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
                           <div className="flex-1">
                             <h4 className="font-medium text-wp-gray hover:text-wp-blue cursor-pointer">
@@ -158,10 +158,10 @@ export default function Dashboard() {
                       className="w-full h-32 object-cover rounded border mb-4"
                     />
                     <h4 className="font-semibold text-wp-gray mb-2">
-                      {activeTheme?.name || "Next Theme"}
+                      {(activeTheme as any)?.name || "Next Theme"}
                     </h4>
                     <p className="text-sm text-gray-600 mb-4">
-                      {activeTheme?.description || "A modern, responsive theme built with Next.js and Tailwind CSS."}
+                      {(activeTheme as any)?.description || "A modern, responsive theme built with Next.js and Tailwind CSS."}
                     </p>
                     <div className="flex space-x-2">
                       <Button className="flex-1 bg-wp-blue hover:bg-wp-blue-dark text-white">

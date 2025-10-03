@@ -55,6 +55,7 @@ export default function PageBuilder({
   const [hoverHighlight, setHoverHighlight] = useState<
     'padding' | 'margin' | null
   >(null);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
 
   useEffect(() => {
     if (propBlocks) {
@@ -99,6 +100,10 @@ export default function PageBuilder({
     [deleteBlock, selectedBlockId]
   );
 
+  const toggleSidebar = () => {
+    setSidebarVisible(!sidebarVisible);
+  };
+
   return (
     <div className="flex h-full bg-gray-50">
       <BlockActionsProvider
@@ -115,13 +120,17 @@ export default function PageBuilder({
         <DragDropContext
           onDragEnd={handleDragEnd}
           onDragStart={() => console.log('Drag started, id:', selectedBlockId)}>
-          <BuilderSidebar
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            selectedBlock={selectedBlock}
-            updateBlock={updateBlock}
-            setHoverHighlight={setHoverHighlight}
-          />
+          {sidebarVisible && (
+            <BuilderSidebar
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              selectedBlock={selectedBlock}
+              updateBlock={updateBlock}
+              setHoverHighlight={setHoverHighlight}
+              sidebarVisible={sidebarVisible}
+              onToggleSidebar={toggleSidebar}
+            />
+          )}
           <div className="flex-1 flex flex-col">
             <BuilderTopBar
               data={data}
@@ -129,6 +138,8 @@ export default function PageBuilder({
               deviceView={deviceView}
               setDeviceView={setDeviceView}
               blocks={blocks}
+              sidebarVisible={sidebarVisible}
+              onToggleSidebar={toggleSidebar}
               onSaveClick={() => {
                 saveMutation.mutate(blocks);
                 onSave?.(data as any);

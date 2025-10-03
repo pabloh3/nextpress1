@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Code as CodeIcon } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function CodeRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const content = (block.content as any)?.content || '';
@@ -35,14 +36,11 @@ function CodeRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function CodeSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function CodeSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent } = useBlockManager();
+  
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   return (
@@ -101,6 +99,7 @@ const CodeBlock: BlockDefinition = {
   },
   renderer: CodeRenderer,
   settings: CodeSettings,
+  hasSettings: true,
 };
 
 export default CodeBlock;

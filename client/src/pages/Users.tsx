@@ -141,7 +141,7 @@ export default function Users() {
   const onSubmit = (data: CreateUser) => {
     if (editingUser) {
       // For updates, remove password if it's empty
-      const updateData = { ...data };
+      const updateData = { ...data } as any;
       if (!updateData.password || updateData.password.trim() === "") {
         delete updateData.password;
       }
@@ -151,7 +151,7 @@ export default function Users() {
     }
   };
 
-  const users = usersData?.users || [];
+  const users = (usersData as any)?.users || [];
 
   const getRoleBadge = (role: string) => {
     const variants: Record<string, any> = {
@@ -224,7 +224,7 @@ export default function Users() {
                         No users found
                       </TableCell>
                     </TableRow>
-                  ) : users.map((user) => (
+                  ) : users.map((user: any) => (
                     <TableRow key={user.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">

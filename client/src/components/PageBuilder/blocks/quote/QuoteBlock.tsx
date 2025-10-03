@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Quote as QuoteIcon } from "lucide-react";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function QuoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const valueHtmlRaw: string | undefined = block.content?.value;
@@ -55,107 +56,128 @@ function QuoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Settings, Wrench } from "lucide-react";
+
+function QuoteSettings({ block }: { block: BlockConfig }) {
+  const { updateBlockContent } = useBlockManager();
+
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="quote-text">Quote</Label>
-        <Textarea
-          id="quote-text"
-          value={(() => {
-            const v: string | undefined = block.content?.value;
-            if (v && v.includes('<p')) {
-              // Convert HTML paragraphs to newline-separated text for editing UX
-              return v
-                .split(/<\/p>/i)
-                .map((chunk) => chunk.replace(/<p[^>]*>/i, ''))
-                .filter((line) => line !== '')
-                .join('\n');
-            }
-            return block.content?.text || '';
-          })()}
-          onChange={(e) => {
-            const lines = e.target.value.split('\n');
-            const html = lines.map((l) => `<p>${l}</p>`).join('');
-            updateContent({ value: html });
-          }}
-          placeholder={`Add your quote...`}
-          rows={4}
-        />
-      </div>
-      <div>
-        <Label htmlFor="quote-author">Citation</Label>
-        <Input
-          id="quote-author"
-          value={block.content?.citation ?? block.content?.author ?? ''}
-          onChange={(e) => updateContent({ citation: e.target.value })}
-          placeholder="Who said this (optional)"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="quote-text-align">Text Align</Label>
-          <Select
-            value={block.content?.textAlign ?? 'default'}
-            onValueChange={(value) => updateContent({ textAlign: value === 'default' ? undefined : (value as 'left' | 'center' | 'right') })}
-          >
-            <SelectTrigger id="quote-text-align">
-              <SelectValue placeholder="Default" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Default</SelectItem>
-              <SelectItem value="left">Left</SelectItem>
-              <SelectItem value="center">Center</SelectItem>
-              <SelectItem value="right">Right</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Content Card */}
+      <CollapsibleCard title="Content" icon={QuoteIcon} defaultOpen={true}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="quote-text" className="text-sm font-medium text-gray-700">Quote</Label>
+            <Textarea
+              id="quote-text"
+              value={(() => {
+                const v: string | undefined = block.content?.value;
+                if (v && v.includes('<p')) {
+                  // Convert HTML paragraphs to newline-separated text for editing UX
+                  return v
+                    .split(/<\/p>/i)
+                    .map((chunk) => chunk.replace(/<p[^>]*>/i, ''))
+                    .filter((line) => line !== '')
+                    .join('\n');
+                }
+                return block.content?.text || '';
+              })()}
+              onChange={(e) => {
+                const lines = e.target.value.split('\n');
+                const html = lines.map((l) => `<p>${l}</p>`).join('');
+                updateContent({ value: html });
+              }}
+              placeholder={`Add your quote...`}
+              rows={4}
+              className="h-32"
+              aria-label="Quote text"
+            />
+          </div>
+          <div>
+            <Label htmlFor="quote-author" className="text-sm font-medium text-gray-700">Citation</Label>
+            <Input
+              id="quote-author"
+              value={block.content?.citation ?? block.content?.author ?? ''}
+              onChange={(e) => updateContent({ citation: e.target.value })}
+              placeholder="Who said this (optional)"
+              className="h-9"
+              aria-label="Citation"
+            />
+          </div>
         </div>
-        <div>
-          <Label htmlFor="quote-align">Width</Label>
-          <Select
-            value={block.content?.align ?? 'default'}
-            onValueChange={(value) => updateContent({ align: value === 'default' ? undefined : (value as 'wide' | 'full') })}
-          >
-            <SelectTrigger id="quote-align">
-              <SelectValue placeholder="Default" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Default</SelectItem>
-              <SelectItem value="wide">Wide</SelectItem>
-              <SelectItem value="full">Full</SelectItem>
-            </SelectContent>
-          </Select>
+      </CollapsibleCard>
+
+      {/* Settings Card */}
+      <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="quote-text-align" className="text-sm font-medium text-gray-700">Text Align</Label>
+            <Select
+              value={block.content?.textAlign ?? 'default'}
+              onValueChange={(value) => updateContent({ textAlign: value === 'default' ? undefined : (value as 'left' | 'center' | 'right') })}
+            >
+              <SelectTrigger id="quote-text-align" className="h-9">
+                <SelectValue placeholder="Default" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default</SelectItem>
+                <SelectItem value="left">Left</SelectItem>
+                <SelectItem value="center">Center</SelectItem>
+                <SelectItem value="right">Right</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="quote-align" className="text-sm font-medium text-gray-700">Width</Label>
+            <Select
+              value={block.content?.align ?? 'default'}
+              onValueChange={(value) => updateContent({ align: value === 'default' ? undefined : (value as 'wide' | 'full') })}
+            >
+              <SelectTrigger id="quote-align" className="h-9">
+                <SelectValue placeholder="Default" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default</SelectItem>
+                <SelectItem value="wide">Wide</SelectItem>
+                <SelectItem value="full">Full</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="quote-anchor">Anchor</Label>
-          <Input
-            id="quote-anchor"
-            value={block.content?.anchor ?? ''}
-            onChange={(e) => updateContent({ anchor: e.target.value })}
-            placeholder="section-id"
-          />
+      </CollapsibleCard>
+
+      {/* Advanced Card */}
+      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="quote-anchor" className="text-sm font-medium text-gray-700">Anchor</Label>
+            <Input
+              id="quote-anchor"
+              value={block.content?.anchor ?? ''}
+              onChange={(e) => updateContent({ anchor: e.target.value })}
+              placeholder="section-id"
+              className="h-9"
+              aria-label="Anchor ID"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="quote-class" className="text-sm font-medium text-gray-700">CSS Class</Label>
+            <Input
+              id="quote-class"
+              value={block.content?.className ?? ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="custom-class"
+              className="h-9"
+              aria-label="CSS Class"
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="quote-class">CSS Class</Label>
-          <Input
-            id="quote-class"
-            value={block.content?.className ?? ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="custom-class"
-          />
-        </div>
-      </div>
+      </CollapsibleCard>
     </div>
   );
 }
@@ -177,6 +199,7 @@ const QuoteBlock: BlockDefinition = {
   defaultStyles: {},
   renderer: QuoteRenderer,
   settings: QuoteSettings,
+  hasSettings: true,
 };
 
 export default QuoteBlock;

@@ -58,6 +58,8 @@ export interface IStorage {
   updateComment(id: number, comment: Partial<InsertComment>): Promise<Comment>;
   deleteComment(id: number): Promise<void>;
   getCommentsCount(postId?: number, status?: string): Promise<number>;
+  approveComment(id: number): Promise<Comment>;
+  spamComment(id: number): Promise<Comment>;
   
   // Theme operations
   getThemes(): Promise<Theme[]>;
@@ -141,7 +143,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUsers(options: { limit?: number; offset?: number; role?: string } = {}): Promise<User[]> {
     const { limit = 20, offset = 0, role } = options;
-    let query = db.select().from(users);
+    let query = db.select().from(users) as any;
     
     if (role) {
       query = query.where(eq(users.role, role));
@@ -151,7 +153,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUsersCount(role?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(users);
+    let query = db.select({ count: count() }).from(users) as any;
     
     if (role) {
       query = query.where(eq(users.role, role));
@@ -191,7 +193,7 @@ export class DatabaseStorage implements IStorage {
   // Post operations
   async getPosts(options: { status?: string; type?: string; limit?: number; offset?: number } = {}): Promise<Post[]> {
     const { status, type, limit = 10, offset = 0 } = options;
-    let query = db.select().from(posts);
+    let query = db.select().from(posts) as any;
     
     const conditions = [];
     if (status) conditions.push(eq(posts.status, status));
@@ -234,7 +236,7 @@ export class DatabaseStorage implements IStorage {
 
   async getPostsCount(options: { status?: string; type?: string } = {}): Promise<number> {
     const { status, type } = options;
-    let query = db.select({ count: count() }).from(posts);
+    let query = db.select({ count: count() }).from(posts) as any;
     
     const conditions = [];
     if (status && status !== 'any') conditions.push(eq(posts.status, status));
@@ -251,7 +253,7 @@ export class DatabaseStorage implements IStorage {
   // Comment operations
   async getComments(postId?: number, options: { status?: string; limit?: number; offset?: number } = {}): Promise<Comment[]> {
     const { status, limit = 10, offset = 0 } = options;
-    let query = db.select().from(comments);
+    let query = db.select().from(comments) as any;
     
     const conditions = [];
     if (postId) conditions.push(eq(comments.postId, postId));
@@ -288,7 +290,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCommentsCount(postId?: number, status?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(comments);
+    let query = db.select({ count: count() }).from(comments) as any;
     
     const conditions = [];
     if (postId) conditions.push(eq(comments.postId, postId));
@@ -300,6 +302,24 @@ export class DatabaseStorage implements IStorage {
     
     const [result] = await query;
     return result.count;
+  }
+
+  async approveComment(id: number): Promise<Comment> {
+    const [approvedComment] = await db
+      .update(comments)
+      .set({ status: 'approved', updatedAt: new Date() })
+      .where(eq(comments.id, id))
+      .returning();
+    return approvedComment;
+  }
+
+  async spamComment(id: number): Promise<Comment> {
+    const [spamComment] = await db
+      .update(comments)
+      .set({ status: 'spam', updatedAt: new Date() })
+      .where(eq(comments.id, id))
+      .returning();
+    return spamComment;
   }
 
   // Theme operations
@@ -404,7 +424,7 @@ export class DatabaseStorage implements IStorage {
   async getMedia(options?: { limit?: number; offset?: number; mimeType?: string }): Promise<Media[]> {
     const { limit = 50, offset = 0, mimeType } = options || {};
     
-    let query = db.select().from(media).orderBy(desc(media.createdAt));
+    let query = db.select().from(media).orderBy(desc(media.createdAt)) as any;
     
     if (mimeType) {
       query = query.where(eq(media.mimeType, mimeType));
@@ -437,7 +457,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMediaCount(mimeType?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(media);
+    let query = db.select({ count: count() }).from(media) as any;
     
     if (mimeType) {
       query = query.where(eq(media.mimeType, mimeType));
@@ -447,92 +467,14 @@ export class DatabaseStorage implements IStorage {
     return result.count;
   }
 
-  // Comment operations
-  async getComments(postId?: number, options?: { status?: string; limit?: number; offset?: number }): Promise<Comment[]> {
-    const { status = 'approved', limit = 50, offset = 0 } = options || {};
-    
-    let query = db.select().from(comments).orderBy(desc(comments.createdAt));
-    
-    const conditions = [];
-    if (postId) {
-      conditions.push(eq(comments.postId, postId));
-    }
-    if (status) {
-      conditions.push(eq(comments.status, status));
-    }
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    return await query.limit(limit).offset(offset);
-  }
 
-  async getComment(id: number): Promise<Comment | undefined> {
-    const [comment] = await db.select().from(comments).where(eq(comments.id, id));
-    return comment;
-  }
 
-  async createComment(comment: InsertComment): Promise<Comment> {
-    const [newComment] = await db.insert(comments).values(comment).returning();
-    return newComment;
-  }
-
-  async updateComment(id: number, comment: Partial<InsertComment>): Promise<Comment> {
-    const [updatedComment] = await db
-      .update(comments)
-      .set({ ...comment, updatedAt: new Date() })
-      .where(eq(comments.id, id))
-      .returning();
-    return updatedComment;
-  }
-
-  async deleteComment(id: number): Promise<void> {
-    await db.delete(comments).where(eq(comments.id, id));
-  }
-
-  async approveComment(id: number): Promise<Comment> {
-    const [approvedComment] = await db
-      .update(comments)
-      .set({ status: 'approved', updatedAt: new Date() })
-      .where(eq(comments.id, id))
-      .returning();
-    return approvedComment;
-  }
-
-  async spamComment(id: number): Promise<Comment> {
-    const [spamComment] = await db
-      .update(comments)
-      .set({ status: 'spam', updatedAt: new Date() })
-      .where(eq(comments.id, id))
-      .returning();
-    return spamComment;
-  }
-
-  async getCommentsCount(postId?: number, status?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(comments);
-    
-    const conditions = [];
-    if (postId) {
-      conditions.push(eq(comments.postId, postId));
-    }
-    if (status) {
-      conditions.push(eq(comments.status, status));
-    }
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    const [result] = await query;
-    return result.count;
-  }
 
   // Template operations
   async getTemplates(options?: { type?: string; isGlobal?: boolean; isActive?: boolean; limit?: number; offset?: number }): Promise<Template[]> {
     const { type, isGlobal, isActive, limit = 50, offset = 0 } = options || {};
     
-    let query = db.select().from(templates).orderBy(desc(templates.createdAt));
+    let query = db.select().from(templates).orderBy(desc(templates.createdAt)) as any;
     
     const conditions = [];
     if (type) {
@@ -571,6 +513,9 @@ export class DatabaseStorage implements IStorage {
       ...templateData,
       name: newName,
       isActive: false, // Duplicated templates start as inactive
+      blocks: templateData.blocks as any,
+      settings: templateData.settings as any,
+      conditions: templateData.conditions as any,
     });
     
     return duplicated;
@@ -600,7 +545,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTemplatesCount(type?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(templates);
+    let query = db.select({ count: count() }).from(templates) as any;
     
     if (type) {
       query = query.where(eq(templates.type, type));
@@ -614,7 +559,7 @@ export class DatabaseStorage implements IStorage {
   async getBlocks(options?: { type?: string; isReusable?: boolean; limit?: number; offset?: number }): Promise<Block[]> {
     const { type, isReusable, limit = 50, offset = 0 } = options || {};
     
-    let query = db.select().from(blocks).orderBy(desc(blocks.createdAt));
+    let query = db.select().from(blocks).orderBy(desc(blocks.createdAt)) as any;
     
     const conditions = [];
     if (type) {
@@ -655,7 +600,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBlocksCount(type?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(blocks);
+    let query = db.select({ count: count() }).from(blocks) as any;
     
     if (type) {
       query = query.where(eq(blocks.type, type));

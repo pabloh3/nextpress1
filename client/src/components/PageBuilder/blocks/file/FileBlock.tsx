@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { File as FileIcon, Download } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
+import { useBlockManager } from "@/hooks/useBlockManager";
 
 function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const url = (block.content as any)?.href || '';
@@ -96,16 +97,12 @@ function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+function FileSettings({ block }: { block: BlockConfig }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
+  const { updateBlockContent } = useBlockManager();
 
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+    updateBlockContent(block.id, contentUpdates);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -248,6 +245,7 @@ const FileBlock: BlockDefinition = {
   },
   renderer: FileRenderer,
   settings: FileSettings,
+  hasSettings: true,
 };
 
 export default FileBlock;

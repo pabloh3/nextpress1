@@ -80,7 +80,7 @@ export default function Themes() {
         {/* Content */}
         <div className="p-6">
           {/* Current Theme */}
-          {activeTheme && (
+          {(activeTheme && (
             <div className="mb-8">
               <h2 className="text-lg font-semibold text-wp-gray mb-4">Current Theme</h2>
               <Card className="border-2 border-wp-blue">
@@ -88,23 +88,23 @@ export default function Themes() {
                   <div className="flex items-start space-x-6">
                     <img 
                       src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=200" 
-                      alt={activeTheme.name}
+                      alt={(activeTheme as any).name}
                       className="w-48 h-32 object-cover rounded border"
                     />
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-xl font-semibold text-wp-gray">{activeTheme.name}</h3>
-                        {getRendererBadge(activeTheme.renderer)}
+                         <h3 className="text-xl font-semibold text-wp-gray">{(activeTheme as any).name}</h3>
+                         {getRendererBadge((activeTheme as any).renderer)}
                         <Badge className="bg-green-500 text-white">
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Active
                         </Badge>
                       </div>
-                      <p className="text-gray-600 mb-4">{activeTheme.description}</p>
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-500">
-                          <div>Version: {activeTheme.version}</div>
-                          <div>By: {activeTheme.author}</div>
+                       <p className="text-gray-600 mb-4">{(activeTheme as any).description}</p>
+                       <div className="flex items-center justify-between">
+                         <div className="text-sm text-gray-500">
+                           <div>Version: {(activeTheme as any).version}</div>
+                           <div>By: {(activeTheme as any).author}</div>
                         </div>
                         <div className="flex space-x-3">
                           <Button variant="outline">
@@ -121,20 +121,20 @@ export default function Themes() {
                 </CardContent>
               </Card>
             </div>
-          )}
+          )) as React.ReactNode}
 
           {/* Available Themes */}
           <div>
             <h2 className="text-lg font-semibold text-wp-gray mb-4">Available Themes</h2>
             {isLoading ? (
               <div className="text-center py-8 text-gray-500">Loading themes...</div>
-            ) : themes?.length === 0 ? (
+            ) : (themes as any)?.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No themes available. Install a theme to get started.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {themes?.filter((theme: Theme) => !theme.isActive).map((theme: Theme) => (
+                {(themes as any)?.filter((theme: Theme) => !theme.isActive).map((theme: Theme) => (
                   <Card key={theme.id} className="border border-gray-200 hover:border-wp-blue transition-colors">
                     <CardContent className="p-6">
                       <div className="space-y-4">
@@ -146,7 +146,7 @@ export default function Themes() {
                         <div>
                           <div className="flex items-center justify-between mb-2">
                             <h3 className="font-semibold text-wp-gray">{theme.name}</h3>
-                            {getRendererBadge(theme.renderer)}
+                            {theme.renderer && getRendererBadge(theme.renderer)}
                           </div>
                           <p className="text-sm text-gray-600 mb-3">{theme.description}</p>
                           <div className="text-xs text-gray-500 mb-4">
@@ -157,7 +157,7 @@ export default function Themes() {
                         <div className="flex space-x-2">
                           <Button 
                             className="flex-1 bg-wp-blue hover:bg-wp-blue-dark text-white"
-                            onClick={() => handleActivate(theme.id)}
+                            onClick={() => handleActivate(theme.id || 0)}
                             disabled={activateMutation.isPending}
                           >
                             Activate

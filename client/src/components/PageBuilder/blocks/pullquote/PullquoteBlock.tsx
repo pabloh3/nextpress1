@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Quote as QuoteIcon } from "lucide-react";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Quote as QuoteIcon, Settings, Wrench } from "lucide-react";
 import { useBlockManager } from "@/hooks/useBlockManager";
 
 function PullquoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
@@ -72,73 +73,111 @@ function PullquoteSettings({ block }: { block: BlockConfig }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="pullquote-content">Quote Content</Label>
-        <Textarea
-          id="pullquote-content"
-          value={(block.content as any)?.value || ''}
-          onChange={(e) => updateContent({ value: e.target.value })}
-          placeholder="Enter your quote here..."
-          rows={4}
-        />
-      </div>
+      {/* Content Card */}
+      <CollapsibleCard title="Content" icon={QuoteIcon} defaultOpen={true}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="pullquote-content" className="text-sm font-medium text-gray-700">Quote Content</Label>
+            <Textarea
+              id="pullquote-content"
+              value={(block.content as any)?.value || ''}
+              onChange={(e) => updateContent({ value: e.target.value })}
+              placeholder="Enter your quote here..."
+              rows={4}
+              className="mt-1"
+            />
+          </div>
 
-      <div>
-        <Label htmlFor="pullquote-citation">Citation</Label>
-        <Input
-          id="pullquote-citation"
-          value={(block.content as any)?.citation || ''}
-          onChange={(e) => updateContent({ citation: e.target.value })}
-          placeholder="Quote author or source"
-        />
-      </div>
+          <div>
+            <Label htmlFor="pullquote-citation" className="text-sm font-medium text-gray-700">Citation</Label>
+            <Input
+              id="pullquote-citation"
+              value={(block.content as any)?.citation || ''}
+              onChange={(e) => updateContent({ citation: e.target.value })}
+              placeholder="Quote author or source"
+              className="mt-1 h-9"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
 
-      <div>
-        <Label htmlFor="pullquote-align">Text Align</Label>
-        <Select
-          value={(block.content as any)?.textAlign || 'center'}
-          onValueChange={(value) => updateContent({ textAlign: value })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="left">Left</SelectItem>
-            <SelectItem value="center">Center</SelectItem>
-            <SelectItem value="right">Right</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Settings Card */}
+      <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="pullquote-align" className="text-sm font-medium text-gray-700">Text Align</Label>
+            <Select
+              value={(block.content as any)?.textAlign || 'center'}
+              onValueChange={(value) => updateContent({ textAlign: value })}
+            >
+              <SelectTrigger id="pullquote-align" className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="left">Left</SelectItem>
+                <SelectItem value="center">Center</SelectItem>
+                <SelectItem value="right">Right</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div>
-        <Label htmlFor="pullquote-bg-color">Background Color</Label>
-        <Input
-          id="pullquote-bg-color"
-          type="color"
-          value={block.styles?.backgroundColor || "#f8f9fa"}
-          onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
-        />
-      </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="pullquote-bg-color" className="text-sm font-medium text-gray-700">Background Color</Label>
+              <div className="flex gap-3 mt-1">
+                <Input
+                  id="pullquote-bg-color"
+                  type="color"
+                  value={block.styles?.backgroundColor || "#f8f9fa"}
+                  onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
+                  className="w-12 h-9 p-1 border-gray-200"
+                />
+                <Input
+                  value={block.styles?.backgroundColor || "#f8f9fa"}
+                  onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
+                  placeholder="#f8f9fa"
+                  className="flex-1 h-9 text-sm"
+                />
+              </div>
+            </div>
 
-      <div>
-        <Label htmlFor="pullquote-text-color">Text Color</Label>
-        <Input
-          id="pullquote-text-color"
-          type="color"
-          value={block.styles?.color || "#000000"}
-          onChange={(e) => updateStyles({ color: e.target.value })}
-        />
-      </div>
+            <div>
+              <Label htmlFor="pullquote-text-color" className="text-sm font-medium text-gray-700">Text Color</Label>
+              <div className="flex gap-3 mt-1">
+                <Input
+                  id="pullquote-text-color"
+                  type="color"
+                  value={block.styles?.color || "#000000"}
+                  onChange={(e) => updateStyles({ color: e.target.value })}
+                  className="w-12 h-9 p-1 border-gray-200"
+                />
+                <Input
+                  value={block.styles?.color || "#000000"}
+                  onChange={(e) => updateStyles({ color: e.target.value })}
+                  placeholder="#000000"
+                  className="flex-1 h-9 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </CollapsibleCard>
 
-      <div>
-        <Label htmlFor="pullquote-class">Additional CSS Class(es)</Label>
-        <Input
-          id="pullquote-class"
-          value={block.content?.className || ''}
-          onChange={(e) => updateContent({ className: e.target.value })}
-          placeholder="e.g. is-style-solid-color"
-        />
-      </div>
+      {/* Advanced Card */}
+      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="pullquote-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
+            <Input
+              id="pullquote-class"
+              value={block.content?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="e.g. is-style-solid-color"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

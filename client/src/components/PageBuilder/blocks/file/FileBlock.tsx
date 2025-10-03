@@ -5,9 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { File as FileIcon, Download } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { File as FileIcon, Download, Settings, Wrench } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const url = (block.content as any)?.href || '';
@@ -97,12 +98,17 @@ function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function FileSettings({ block }: { block: BlockConfig }) {
+function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
-  const { updateBlockContent } = useBlockManager();
+  
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -115,110 +121,134 @@ function FileSettings({ block }: { block: BlockConfig }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="file-url">File URL</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            id="file-url"
-            value={(block.content as any)?.href || ''}
-            onChange={(e) => updateContent({ href: e.target.value, textLinkHref: e.target.value })}
-            placeholder="https://example.com/document.pdf"
-          />
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => setPickerOpen(true)}
-          >
-            Choose file
-          </Button>
+      {/* Content Card */}
+      <CollapsibleCard title="Content" icon={FileIcon} defaultOpen={true}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="file-url" className="text-sm font-medium text-gray-700">File URL</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <Input
+                id="file-url"
+                value={(block.content as any)?.href || ''}
+                onChange={(e) => updateContent({ href: e.target.value, textLinkHref: e.target.value })}
+                placeholder="https://example.com/document.pdf"
+                className="h-9"
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={() => setPickerOpen(true)}
+              >
+                Choose
+              </Button>
+            </div>
+            <MediaPickerDialog
+              open={isPickerOpen}
+              onOpenChange={setPickerOpen}
+              kind="any"
+              onSelect={(m) => {
+                updateContent({
+                  href: m.url,
+                  textLinkHref: m.url,
+                  fileName: m.originalName || m.filename,
+                  fileSize: m.size ? formatFileSize(m.size) : '',
+                });
+              }}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="file-name" className="text-sm font-medium text-gray-700">File Name</Label>
+            <Input
+              id="file-name"
+              value={(block.content as any)?.fileName || ''}
+              onChange={(e) => updateContent({ fileName: e.target.value })}
+              placeholder="document.pdf"
+              className="mt-1 h-9"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="file-size" className="text-sm font-medium text-gray-700">File Size (optional)</Label>
+            <Input
+              id="file-size"
+              value={(block.content as any)?.fileSize || ''}
+              onChange={(e) => updateContent({ fileSize: e.target.value })}
+              placeholder="2.5 MB"
+              className="mt-1 h-9"
+            />
+          </div>
         </div>
-        <MediaPickerDialog
-          open={isPickerOpen}
-          onOpenChange={setPickerOpen}
-          kind="any"
-          onSelect={(m) => {
-            updateContent({
-              href: m.url,
-              textLinkHref: m.url,
-              fileName: m.originalName || m.filename,
-              fileSize: m.size ? formatFileSize(m.size) : '',
-            });
-          }}
-        />
-      </div>
+      </CollapsibleCard>
 
-      <div>
-        <Label htmlFor="file-name">File Name</Label>
-        <Input
-          id="file-name"
-          value={(block.content as any)?.fileName || ''}
-          onChange={(e) => updateContent({ fileName: e.target.value })}
-          placeholder="document.pdf"
-        />
-      </div>
+      {/* Settings Card */}
+      <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="file-show-preview" className="text-sm font-medium text-gray-700">Show file preview</Label>
+            <Switch
+              id="file-show-preview"
+              checked={(block.content as any)?.displayPreview !== false}
+              onCheckedChange={(checked) => updateContent({ displayPreview: checked })}
+            />
+          </div>
 
-      <div>
-        <Label htmlFor="file-size">File Size (optional)</Label>
-        <Input
-          id="file-size"
-          value={(block.content as any)?.fileSize || ''}
-          onChange={(e) => updateContent({ fileSize: e.target.value })}
-          placeholder="2.5 MB"
-        />
-      </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="file-show-download" className="text-sm font-medium text-gray-700">Show download button</Label>
+            <Switch
+              id="file-show-download"
+              checked={(block.content as any)?.showDownloadButton !== false}
+              onCheckedChange={(checked) => updateContent({ showDownloadButton: checked })}
+            />
+          </div>
 
-      <div className="flex items-center justify-between">
-        <Label htmlFor="file-show-preview">Show file preview</Label>
-        <Switch
-          id="file-show-preview"
-          checked={(block.content as any)?.displayPreview !== false}
-          onCheckedChange={(checked) => updateContent({ displayPreview: checked })}
-        />
-      </div>
+          {(block.content as any)?.showDownloadButton !== false && (
+            <div>
+              <Label htmlFor="file-button-text" className="text-sm font-medium text-gray-700">Download Button Text</Label>
+              <Input
+                id="file-button-text"
+                value={(block.content as any)?.downloadButtonText || 'Download'}
+                onChange={(e) => updateContent({ downloadButtonText: e.target.value })}
+                placeholder="Download"
+                className="mt-1 h-9"
+              />
+            </div>
+          )}
 
-      <div className="flex items-center justify-between">
-        <Label htmlFor="file-show-download">Show download button</Label>
-        <Switch
-          id="file-show-download"
-          checked={(block.content as any)?.showDownloadButton !== false}
-          onCheckedChange={(checked) => updateContent({ showDownloadButton: checked })}
-        />
-      </div>
-
-      {(block.content as any)?.showDownloadButton !== false && (
-        <div>
-          <Label htmlFor="file-button-text">Download Button Text</Label>
-          <Input
-            id="file-button-text"
-            value={(block.content as any)?.downloadButtonText || 'Download'}
-            onChange={(e) => updateContent({ downloadButtonText: e.target.value })}
-            placeholder="Download"
-          />
+          <div>
+            <Label htmlFor="file-link-target" className="text-sm font-medium text-gray-700">Link Target</Label>
+            <Select
+              value={(block.content as any)?.textLinkTarget || '_self'}
+              onValueChange={(value) => updateContent({ textLinkTarget: value })}
+            >
+              <SelectTrigger id="file-link-target" className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_self">Same Window</SelectItem>
+                <SelectItem value="_blank">New Window</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      )}
+      </CollapsibleCard>
 
-      <div>
-        <Label htmlFor="file-link-target">Link Target</Label>
-        <select
-          id="file-link-target"
-          value={(block.content as any)?.textLinkTarget || '_self'}
-          onChange={(e) => updateContent({ textLinkTarget: e.target.value })}
-          className="w-full p-2 border border-gray-300 rounded"
-        >
-          <option value="_self">Same Window</option>
-          <option value="_blank">New Window</option>
-        </select>
-      </div>
-
-      <div>
-        <Label htmlFor="file-class">Additional CSS Class(es)</Label>
-        <Input
-          id="file-class"
-          value={block.content?.className || ''}
-          onChange={(e) => updateContent({ className: e.target.value })}
-          placeholder="e.g. is-style-outline"
-        />
-      </div>
+      {/* Advanced Card */}
+      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="file-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
+            <Input
+              id="file-class"
+              value={block.content?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="e.g. is-style-outline"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

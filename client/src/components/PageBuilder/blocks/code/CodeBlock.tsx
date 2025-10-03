@@ -4,8 +4,8 @@ import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Code as CodeIcon } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Code as CodeIcon, Settings, Wrench } from "lucide-react";
 
 function CodeRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const content = (block.content as any)?.content || '';
@@ -36,49 +36,72 @@ function CodeRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function CodeSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function CodeSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
   
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="code-content">Code</Label>
-        <Textarea
-          id="code-content"
-          value={(block.content as any)?.content || ''}
-          onChange={(e) => updateContent({ content: e.target.value })}
-          placeholder="Enter your code here..."
-          rows={8}
-          style={{
-            fontFamily: 'Monaco, Consolas, "Andale Mono", "DejaVu Sans Mono", monospace',
-            fontSize: '14px',
-          }}
-        />
-      </div>
+      {/* Content Card */}
+      <CollapsibleCard title="Content" icon={CodeIcon} defaultOpen={true}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="code-content" className="text-sm font-medium text-gray-700">Code</Label>
+            <Textarea
+              id="code-content"
+              value={(block.content as any)?.content || ''}
+              onChange={(e) => updateContent({ content: e.target.value })}
+              placeholder="Enter your code here..."
+              rows={8}
+              className="mt-1"
+              style={{
+                fontFamily: 'Monaco, Consolas, "Andale Mono", "DejaVu Sans Mono", monospace',
+                fontSize: '14px',
+              }}
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
 
-      <div>
-        <Label htmlFor="code-language">Language (optional)</Label>
-        <Input
-          id="code-language"
-          value={(block.content as any)?.language || ''}
-          onChange={(e) => updateContent({ language: e.target.value })}
-          placeholder="e.g. javascript, python, html"
-        />
-      </div>
+      {/* Settings Card */}
+      <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="code-language" className="text-sm font-medium text-gray-700">Language (optional)</Label>
+            <Input
+              id="code-language"
+              value={(block.content as any)?.language || ''}
+              onChange={(e) => updateContent({ language: e.target.value })}
+              placeholder="e.g. javascript, python, html"
+              className="mt-1 h-9"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
 
-      <div>
-        <Label htmlFor="code-class">Additional CSS Class(es)</Label>
-        <Input
-          id="code-class"
-          value={block.content?.className || ''}
-          onChange={(e) => updateContent({ className: e.target.value })}
-          placeholder="e.g. line-numbers"
-        />
-      </div>
+      {/* Advanced Card */}
+      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="code-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
+            <Input
+              id="code-class"
+              value={block.content?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="e.g. line-numbers"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

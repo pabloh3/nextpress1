@@ -4,8 +4,8 @@ import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Code2 as HtmlIcon } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Code2 as HtmlIcon, Wrench } from "lucide-react";
 
 function HtmlRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
   const content = (block.content as any)?.content || '';
@@ -46,42 +46,59 @@ function HtmlRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boo
   );
 }
 
-function HtmlSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function HtmlSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
   
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="html-content">Custom HTML</Label>
-        <Textarea
-          id="html-content"
-          value={(block.content as any)?.content || ''}
-          onChange={(e) => updateContent({ content: e.target.value })}
-          placeholder="<p>Enter your custom HTML here...</p>"
-          rows={10}
-          style={{
-            fontFamily: 'Monaco, Consolas, "Andale Mono", "DejaVu Sans Mono", monospace',
-            fontSize: '14px',
-          }}
-        />
-        <p className="text-sm text-gray-600 mt-2">
-          Be careful when adding custom HTML. Make sure it's from a trusted source and won't break your site.
-        </p>
-      </div>
+      {/* Content Card */}
+      <CollapsibleCard title="Content" icon={HtmlIcon} defaultOpen={true}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="html-content" className="text-sm font-medium text-gray-700">Custom HTML</Label>
+            <Textarea
+              id="html-content"
+              value={(block.content as any)?.content || ''}
+              onChange={(e) => updateContent({ content: e.target.value })}
+              placeholder="<p>Enter your custom HTML here...</p>"
+              rows={10}
+              className="mt-1"
+              style={{
+                fontFamily: 'Monaco, Consolas, "Andale Mono", "DejaVu Sans Mono", monospace',
+                fontSize: '14px',
+              }}
+            />
+            <p className="text-sm text-gray-600 mt-2">
+              Be careful when adding custom HTML. Make sure it's from a trusted source and won't break your site.
+            </p>
+          </div>
+        </div>
+      </CollapsibleCard>
 
-      <div>
-        <Label htmlFor="html-class">Additional CSS Class(es)</Label>
-        <Input
-          id="html-class"
-          value={block.content?.className || ''}
-          onChange={(e) => updateContent({ className: e.target.value })}
-          placeholder="e.g. custom-widget"
-        />
-      </div>
+      {/* Advanced Card */}
+      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="html-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
+            <Input
+              id="html-class"
+              value={block.content?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="e.g. custom-widget"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

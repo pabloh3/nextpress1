@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Quote as QuoteIcon } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function QuoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const valueHtmlRaw: string | undefined = block.content?.value;
@@ -59,11 +58,16 @@ function QuoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Settings, Wrench } from "lucide-react";
 
-function QuoteSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   return (
@@ -114,14 +118,14 @@ function QuoteSettings({ block }: { block: BlockConfig }) {
 
       {/* Settings Card */}
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div>
             <Label htmlFor="quote-text-align" className="text-sm font-medium text-gray-700">Text Align</Label>
             <Select
               value={block.content?.textAlign ?? 'default'}
               onValueChange={(value) => updateContent({ textAlign: value === 'default' ? undefined : (value as 'left' | 'center' | 'right') })}
             >
-              <SelectTrigger id="quote-text-align" className="h-9">
+              <SelectTrigger id="quote-text-align" className="h-9 mt-1">
                 <SelectValue placeholder="Default" />
               </SelectTrigger>
               <SelectContent>

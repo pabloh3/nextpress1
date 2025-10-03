@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Type, Settings, AlignLeft } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 import React from "react";
 
 interface HeadingBlockContent {
@@ -46,11 +45,14 @@ function HeadingRenderer({ block }: { block: HeadingBlockConfig; isPreview: bool
   );
 }
 
-function HeadingSettings({ block }: { block: HeadingBlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
-
+function HeadingSettings({ block, onUpdate }: { block: HeadingBlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   return (

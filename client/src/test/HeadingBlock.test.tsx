@@ -140,46 +140,59 @@ describe('HeadingBlock', () => {
     it('should render all setting controls', () => {
       const block = createHeadingBlock({ content: 'Test', level: 2 })
       const Settings = HeadingBlock.settings!
+      const mockOnUpdate = vi.fn()
       
-      render(<Settings block={block} />)
+      render(<Settings block={block} onUpdate={mockOnUpdate} />)
       
       // Check for elements that are visible by default (in open collapsible cards)
       expect(screen.getByLabelText(/heading text/i)).toBeInTheDocument()
       expect(screen.getByText(/heading level/i)).toBeInTheDocument() // Label text, not form control
       
       // Check for heading level buttons
-      expect(screen.getByRole('button', { name: /h1/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /h2/i })).toBeInTheDocument()
+      expect(screen.getByLabelText('Heading level 1')).toBeInTheDocument()
+      expect(screen.getByLabelText('Heading level 2')).toBeInTheDocument()
       
       // Content section and Settings section should be visible (defaultOpen=true)
       expect(screen.getByText('Content')).toBeInTheDocument()
       expect(screen.getByText('Settings')).toBeInTheDocument()
     })
 
-    it('should call updateBlockContent when text changes', () => {
+    it('should call onUpdate when text changes', () => {
       const block = createHeadingBlock({ content: 'Test', level: 2 })
       const Settings = HeadingBlock.settings!
+      const mockOnUpdate = vi.fn()
       
-      render(<Settings block={block} />)
+      render(<Settings block={block} onUpdate={mockOnUpdate} />)
       
       const textInput = screen.getByLabelText(/heading text/i)
       fireEvent.change(textInput, { target: { value: 'New Text' } })
       
-      expect(mockUpdateBlockContent).toHaveBeenCalledWith('test-heading', {
-        content: 'New Text',
-        text: undefined
+      expect(mockOnUpdate).toHaveBeenCalledWith({
+        content: {
+          content: 'New Text',
+          level: 2,
+          text: undefined
+        }
       })
     })
 
-    it('should call updateBlockContent when level changes', () => {
+    it('should call onUpdate when level changes', () => {
       const block = createHeadingBlock({ content: 'Test', level: 2 })
       const Settings = HeadingBlock.settings!
+      const mockOnUpdate = vi.fn()
       
-      render(<Settings block={block} />)
+      render(<Settings block={block} onUpdate={mockOnUpdate} />)
       
-      // Note: This would need to trigger the level button change
-      // For simplicity, we're testing that the mock is available
-      expect(mockUpdateBlockContent).not.toHaveBeenCalled()
+      // Click H3 button
+      const h3Button = screen.getByLabelText('Heading level 3')
+      fireEvent.click(h3Button)
+      
+      expect(mockOnUpdate).toHaveBeenCalledWith({
+        content: {
+          content: 'Test',
+          level: 3
+        }
+      })
     })
 
     it('should display current values in form fields', () => {
@@ -191,15 +204,16 @@ describe('HeadingBlock', () => {
         className: 'test-class'
       })
       const Settings = HeadingBlock.settings!
+      const mockOnUpdate = vi.fn()
       
-      render(<Settings block={block} />)
+      render(<Settings block={block} onUpdate={mockOnUpdate} />)
       
       // Check visible fields (in always-open sections)
       const textInput = screen.getByDisplayValue('Current Text')
       expect(textInput).toBeInTheDocument()
       
       // Check that H3 button is selected (has different styling)
-      const h3Button = screen.getByRole('button', { name: /h3/i })
+      const h3Button = screen.getByLabelText('Heading level 3')
       expect(h3Button).toHaveClass('bg-gray-200') // Selected state class
       
       // Note: Advanced section (anchor, className) is collapsed by default (defaultOpen=false)

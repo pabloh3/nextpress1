@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Settings, Wrench, List as ListIcon } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function ListRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const isOrdered = !!block.content?.ordered;
@@ -57,11 +56,16 @@ function ListRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   return <ListTag {...commonProps} />;
 }
 
-function ListSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const isOrdered = !!block.content?.ordered;

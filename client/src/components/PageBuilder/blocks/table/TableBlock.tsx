@@ -5,8 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Table as TableIcon } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Plus, Trash2, Table as TableIcon, Settings, Wrench } from "lucide-react";
 
 interface TableCell {
   content: string;
@@ -116,14 +116,19 @@ function TableRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function TableSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
+function TableSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  
   const body: TableRow[] = (block.content as any)?.body || [];
   const head: TableRow[] = (block.content as any)?.head || [];
   const foot: TableRow[] = (block.content as any)?.foot || [];
 
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, contentUpdates);
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
+    });
   };
 
   const updateTableData = (section: 'body' | 'head' | 'foot', newData: TableRow[]) => {
@@ -206,150 +211,169 @@ function TableSettings({ block }: { block: BlockConfig }) {
   if (body.length === 0) {
     return (
       <div className="space-y-4">
-        <div>
-          <Label>Create Table</Label>
-          <div className="flex gap-2 items-center mt-2">
-            <Button onClick={() => createTable(3, 3)} variant="outline">3x3</Button>
-            <Button onClick={() => createTable(4, 4)} variant="outline">4x4</Button>
-            <Button onClick={() => createTable(5, 3)} variant="outline">5x3</Button>
+        <CollapsibleCard title="Content" icon={TableIcon} defaultOpen={true}>
+          <div>
+            <Label className="text-sm font-medium text-gray-700">Create Table</Label>
+            <div className="flex gap-2 items-center mt-2">
+              <Button onClick={() => createTable(3, 3)} variant="outline" size="sm">3x3</Button>
+              <Button onClick={() => createTable(4, 4)} variant="outline" size="sm">4x4</Button>
+              <Button onClick={() => createTable(5, 3)} variant="outline" size="sm">5x3</Button>
+            </div>
           </div>
-        </div>
+        </CollapsibleCard>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        <Button onClick={addColumn} variant="outline" size="sm">
-          <Plus className="w-4 h-4 mr-1" />
-          Add Column
-        </Button>
-        <Button onClick={() => addRow('body')} variant="outline" size="sm">
-          <Plus className="w-4 h-4 mr-1" />
-          Add Row
-        </Button>
-      </div>
+      {/* Content Card */}
+      <CollapsibleCard title="Content" icon={TableIcon} defaultOpen={true}>
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Button onClick={addColumn} variant="outline" size="sm">
+              <Plus className="w-4 h-4 mr-1" />
+              Add Column
+            </Button>
+            <Button onClick={() => addRow('body')} variant="outline" size="sm">
+              <Plus className="w-4 h-4 mr-1" />
+              Add Row
+            </Button>
+          </div>
 
-      {/* Table Body Editor */}
-      <div>
-        <Label>Table Body</Label>
-        <div className="border rounded p-2 space-y-2 max-h-64 overflow-y-auto">
-          {body.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex items-center gap-1">
-              <div className="flex-1 grid gap-1" style={{ gridTemplateColumns: `repeat(${row.cells.length}, 1fr)` }}>
-                {row.cells.map((cell, cellIndex) => (
-                  <Input
-                    key={cellIndex}
-                    value={cell.content}
-                    onChange={(e) => updateCell('body', rowIndex, cellIndex, e.target.value)}
-                    placeholder={`R${rowIndex + 1}C${cellIndex + 1}`}
-                    className="text-xs"
-                  />
-                ))}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeRow('body', rowIndex)}
-                className="text-red-600 p-1"
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <Label htmlFor="table-header">Header section</Label>
-        <Switch
-          id="table-header"
-          checked={head.length > 0}
-          onCheckedChange={(checked) => {
-            if (checked) {
-              const columnCount = body[0]?.cells.length || 2;
-              const newHead: TableRow[] = [{
-                cells: Array(columnCount).fill(null).map(() => ({ content: '', tag: 'th' as const }))
-              }];
-              updateContent({ head: newHead });
-            } else {
-              updateContent({ head: [] });
-            }
-          }}
-        />
-      </div>
-
-      {head.length > 0 && (
-        <div>
-          <Label>Table Header</Label>
-          <div className="border rounded p-2 space-y-2">
-            {head.map((row, rowIndex) => (
-              <div key={rowIndex} className="flex items-center gap-1">
-                <div className="flex-1 grid gap-1" style={{ gridTemplateColumns: `repeat(${row.cells.length}, 1fr)` }}>
-                  {row.cells.map((cell, cellIndex) => (
-                    <Input
-                      key={cellIndex}
-                      value={cell.content}
-                      onChange={(e) => updateCell('head', rowIndex, cellIndex, e.target.value)}
-                      placeholder={`Header ${cellIndex + 1}`}
-                      className="text-xs font-medium"
-                    />
-                  ))}
+          {/* Table Body Editor */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700">Table Body</Label>
+            <div className="border rounded p-2 space-y-2 max-h-64 overflow-y-auto">
+              {body.map((row, rowIndex) => (
+                <div key={rowIndex} className="flex items-center gap-1">
+                  <div className="flex-1 grid gap-1" style={{ gridTemplateColumns: `repeat(${row.cells.length}, 1fr)` }}>
+                    {row.cells.map((cell, cellIndex) => (
+                      <Input
+                        key={cellIndex}
+                        value={cell.content}
+                        onChange={(e) => updateCell('body', rowIndex, cellIndex, e.target.value)}
+                        placeholder={`R${rowIndex + 1}C${cellIndex + 1}`}
+                        className="text-xs h-9"
+                      />
+                    ))}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeRow('body', rowIndex)}
+                    className="text-red-600 p-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="table-caption" className="text-sm font-medium text-gray-700">Table Caption</Label>
+            <Input
+              id="table-caption"
+              value={(block.content as any)?.caption || ''}
+              onChange={(e) => updateContent({ caption: e.target.value })}
+              placeholder="Describe your table"
+              className="mt-1 h-9"
+            />
           </div>
         </div>
-      )}
+      </CollapsibleCard>
 
-      <div className="flex items-center justify-between">
-        <Label htmlFor="table-footer">Footer section</Label>
-        <Switch
-          id="table-footer"
-          checked={foot.length > 0}
-          onCheckedChange={(checked) => {
-            if (checked) {
-              const columnCount = body[0]?.cells.length || 2;
-              const newFoot: TableRow[] = [{
-                cells: Array(columnCount).fill(null).map(() => ({ content: '', tag: 'td' as const }))
-              }];
-              updateContent({ foot: newFoot });
-            } else {
-              updateContent({ foot: [] });
-            }
-          }}
-        />
-      </div>
+      {/* Settings Card */}
+      <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="table-header" className="text-sm font-medium text-gray-700">Header section</Label>
+            <Switch
+              id="table-header"
+              checked={head.length > 0}
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  const columnCount = body[0]?.cells.length || 2;
+                  const newHead: TableRow[] = [{
+                    cells: Array(columnCount).fill(null).map(() => ({ content: '', tag: 'th' as const }))
+                  }];
+                  updateContent({ head: newHead });
+                } else {
+                  updateContent({ head: [] });
+                }
+              }}
+            />
+          </div>
 
-      <div className="flex items-center justify-between">
-        <Label htmlFor="table-fixed">Fixed width table cells</Label>
-        <Switch
-          id="table-fixed"
-          checked={(block.content as any)?.hasFixedLayout || false}
-          onCheckedChange={(checked) => updateContent({ hasFixedLayout: checked })}
-        />
-      </div>
+          {head.length > 0 && (
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Table Header</Label>
+              <div className="border rounded p-2 space-y-2 mt-1">
+                {head.map((row, rowIndex) => (
+                  <div key={rowIndex} className="flex items-center gap-1">
+                    <div className="flex-1 grid gap-1" style={{ gridTemplateColumns: `repeat(${row.cells.length}, 1fr)` }}>
+                      {row.cells.map((cell, cellIndex) => (
+                        <Input
+                          key={cellIndex}
+                          value={cell.content}
+                          onChange={(e) => updateCell('head', rowIndex, cellIndex, e.target.value)}
+                          placeholder={`Header ${cellIndex + 1}`}
+                          className="text-xs font-medium h-9"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-      <div>
-        <Label htmlFor="table-caption">Table Caption</Label>
-        <Input
-          id="table-caption"
-          value={(block.content as any)?.caption || ''}
-          onChange={(e) => updateContent({ caption: e.target.value })}
-          placeholder="Describe your table"
-        />
-      </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="table-footer" className="text-sm font-medium text-gray-700">Footer section</Label>
+            <Switch
+              id="table-footer"
+              checked={foot.length > 0}
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  const columnCount = body[0]?.cells.length || 2;
+                  const newFoot: TableRow[] = [{
+                    cells: Array(columnCount).fill(null).map(() => ({ content: '', tag: 'td' as const }))
+                  }];
+                  updateContent({ foot: newFoot });
+                } else {
+                  updateContent({ foot: [] });
+                }
+              }}
+            />
+          </div>
 
-      <div>
-        <Label htmlFor="table-class">Additional CSS Class(es)</Label>
-        <Input
-          id="table-class"
-          value={block.content?.className || ''}
-          onChange={(e) => updateContent({ className: e.target.value })}
-          placeholder="e.g. is-style-stripes"
-        />
-      </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="table-fixed" className="text-sm font-medium text-gray-700">Fixed width table cells</Label>
+            <Switch
+              id="table-fixed"
+              checked={(block.content as any)?.hasFixedLayout || false}
+              onCheckedChange={(checked) => updateContent({ hasFixedLayout: checked })}
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
+
+      {/* Advanced Card */}
+      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="table-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
+            <Input
+              id="table-class"
+              value={block.content?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="e.g. is-style-stripes"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { MousePointer, ExternalLink, Type, Settings, Link } from "lucide-react";
-import { useBlockManager } from "@/hooks/useBlockManager";
 
 function ButtonRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
   const url = block.content?.url as string | undefined;
@@ -33,13 +32,13 @@ function ButtonRenderer({ block, isPreview }: { block: BlockConfig; isPreview: b
   );
 }
 
-function ButtonSettings({ block }: { block: BlockConfig }) {
-  const { updateBlockContent } = useBlockManager();
-  
+function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const updateContent = (contentUpdates: any) => {
-    updateBlockContent(block.id, {
-      ...block.content,
-      ...contentUpdates,
+    onUpdate({
+      content: {
+        ...block.content,
+        ...contentUpdates,
+      },
     });
   };
 

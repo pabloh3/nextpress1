@@ -249,19 +249,27 @@ export function Droppable({ droppableId, isDropDisabled = false, direction = 've
     } as React.HTMLAttributes<HTMLElement>,
     placeholder: (indicatorTop != null && !isDropDisabled && currentDrag.draggingId)
       ? (
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            height: 2,
-            background: '#3b82f6',
-            opacity: 0.9,
-            transform: `translateY(${indicatorTop}px)`,
-            pointerEvents: 'none',
-          }}
-        />
+        (() => {
+          const slot = 12; // visual drop slot height
+          const translateY = (indicatorTop as number) - slot / 2; // center around boundary
+          return (
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                height: slot,
+                background: 'rgba(59,130,246,0.12)',
+                border: '2px solid #3b82f6',
+                boxShadow: '0 0 0 2px rgba(59,130,246,0.15) inset',
+                borderRadius: 6,
+                transform: `translateY(${translateY}px)`,
+                pointerEvents: 'none',
+              }}
+            />
+          );
+        })()
       ) : null,
   };
 

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { DropResult } from '@hello-pangea/dnd';
+import type { DropResult } from '@/lib/dnd';
 import type { BlockConfig } from '@shared/schema';
 import { insertNewBlock, moveExistingBlock } from '@/lib/handlers/treeUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,7 @@ export function useDragAndDropHandler(
 
   const handleDragEnd = useCallback(
     (result: DropResult) => {
+      console.log('[DnD] handleDragEnd (hook)', result);
       if (!result.destination) return;
       const { source, destination, draggableId } = result;
 
@@ -54,8 +55,9 @@ export function useDragAndDropHandler(
 
         // Early no-op guard: same parent + same index or immediate next index
         const sameParent = sourceParentId === destParentId;
+        console.log('[DnD] parsed parents', { sourceParentId, destParentId, sameParent });
         if (sameParent && (destination.index === source.index || destination.index === source.index + 1)) {
-          console.debug('[DnD] No-op drop (same parent + same/next index)', {
+          console.log('[DnD] No-op drop (same parent + same/next index)', {
             parentId: destParentId,
             sourceIndex: source.index,
             destIndex: destination.index,
@@ -65,6 +67,7 @@ export function useDragAndDropHandler(
 
         // Reorder or move existing
         const result = moveExistingBlock(blocks, sourceParentId, source.index, destParentId, destination.index);
+        console.log('[DnD] moveExistingBlock result sameRef?', result === blocks);
         // Check if move failed (returned original blocks without changes)
         if (result === blocks) {
           toast({

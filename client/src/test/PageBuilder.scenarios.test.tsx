@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { DragDropContext } from '@hello-pangea/dnd';
+import { DragDropContext } from '@/lib/dnd';
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 
 import { useBlockManager } from '@/hooks/useBlockManager';

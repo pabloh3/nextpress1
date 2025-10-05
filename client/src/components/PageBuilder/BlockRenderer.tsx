@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Trash2, Move } from "lucide-react";
 import type { BlockConfig } from "@shared/schema";
 import { blockRegistry } from "./blocks";
-import { Droppable, Draggable } from "@hello-pangea/dnd";
+import { Droppable, Draggable } from "@/lib/dnd";
 import { useBlockActions } from "./BlockActionsContext";
 
 export function ContainerChildren({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {

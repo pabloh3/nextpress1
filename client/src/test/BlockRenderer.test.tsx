@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
-import { DragDropContext } from '@hello-pangea/dnd'
+import { DragDropContext } from '@/lib/dnd'
 import BlockRenderer, { ContainerChildren } from '../components/PageBuilder/BlockRenderer'
 import { BlockActionsProvider } from '../components/PageBuilder/BlockActionsContext'
 import type { BlockConfig } from '@shared/schema'

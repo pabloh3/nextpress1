@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Draggable, Droppable } from '@hello-pangea/dnd';
+import { Draggable, Droppable } from '@/lib/dnd';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Collapsible,

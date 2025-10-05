@@ -198,10 +198,10 @@ export function moveExistingBlock(rootBlocks: BlockConfig[], sourceParentId: str
     return false;
   }
 
-  if (destParentId !== null && containsIdInSubtree(movedBlock, destParentId)) {
+  /*if (destParentId !== null && containsIdInSubtree(movedBlock, destParentId)) {
     console.error("Cannot move a block into itself or its own descendants.");
     return rootBlocks;
-  }
+  }*/
 
   const sameParent = sourceParentId === destParentId;
   // No-op scenarios (dropping in the same place)

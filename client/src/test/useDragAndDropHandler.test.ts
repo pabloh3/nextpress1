@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useDragAndDropHandler } from '../hooks/useDragAndDropHandler'
 import type { BlockConfig } from '@shared/schema'
-import type { DropResult } from '@hello-pangea/dnd'
+import type { DropResult } from '@/lib/dnd'
 import * as toastModule from '@/hooks/use-toast'
 
 // Mock the block registry

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Droppable, Draggable } from '@hello-pangea/dnd';
+import { Droppable, Draggable } from '@/lib/dnd';
 import DevicePreview from './DevicePreview';
 import BlockRenderer from './BlockRenderer';
 import { Layers } from 'lucide-react';

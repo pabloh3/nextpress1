@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Post, Template, BlockConfig } from '@shared/schema';
-import { DragDropContext } from '@hello-pangea/dnd';
+import { DragDropContext } from '@/lib/dnd';
+import type { DropResult as DndDropResult } from '@/lib/dnd';
 import { generateBlockId } from './utils';
 import { useBlockManager } from '../../hooks/useBlockManager';
 import { useDragAndDropHandler } from '../../hooks/useDragAndDropHandler';
@@ -28,7 +29,7 @@ export default function PageBuilder({
   onPreview,
 }: PageBuilderProps) {
   const data = template || post;
-  const isTemplate = !!template;
+  const isTemplate = !!template; 
 
   const {
     blocks,
@@ -118,7 +119,10 @@ export default function PageBuilder({
           hoverHighlight,
         }}>
         <DragDropContext
-          onDragEnd={handleDragEnd}
+          onDragEnd={(result: DndDropResult) => {
+            console.log('[DND] PageBuilder onDragEnd (received)', result)
+            return handleDragEnd(result as any)
+          }}
           onDragStart={() => console.log('Drag started, id:', selectedBlockId)}>
           {sidebarVisible && (
             <BuilderSidebar

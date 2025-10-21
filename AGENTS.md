@@ -6,6 +6,8 @@
 - ✅ ES6+, max 400 LOC/file, functional composition
 - ✅ Group by domain, use barrel files where needed (`index.ts`)
 - ✅ Names: `verbNoun`, `isActive`, `CONSTANTS`, `kebab-case.ts`
+- All re-usable functions should have js docs and also useful comments should be provided in cases where intent of code block may not obvious to reviewer.
+- Any errors that are due to missing dependencies or because developer made an error or something critical to system should be thrown right away and fast but errors usually anticipated by guard clauses and runtime or due to user input should be handled gracefully following codebase erorr handling patterns, mostly not thrown but returned gracefully.
 
 ## Key Patterns
 
@@ -75,7 +77,7 @@ Always examine existing codebase patterns before implementing new solutions - us
 
 ## General Approach And Methodology
 
-• Reflection - Always critique yourself after task in terms of how did you approach the problem, what worked well, and what could be improved and how much did you follow my instructions and what did you learn moving forward.
+• Reflection - Always critique yourself after task in terms of how did you approach the problem, what worked well, and what could be improved and how much did you follow my instructions and what did you learn moving forward you can even play Senior QA engineer role to get this well.
 • Tool use - know your tools and use any mcps available where needed
 • Planning - always plan first, create taskName-plan.md files if needed, break down complex tasks into small manageable tasks and phases.
 • Multi-agent collaboration - collaborate, and deligate tasks to other agents if possible where needed.
@@ -89,5 +91,7 @@ Always examine existing codebase patterns before implementing new solutions - us
 - Always list all modified files after a given task and confirm that you had backend them up.
 - Touching /backend and /nile code, or anything in frontend/api directory requires special attention and approval. Don't ever touch those files without consulting me first.
 - Reading docs and getting context saves mistakes, so read any relevant docs in /docs always on start to understand what is going on, sometimes  other files are on project root (.md files), or you can always ask me for clarification on which of the found documents are relevant if not sure, don't just read everything as well.
+- it's always the test to match the implementation not other way round, and tests should not cheat edge cases and testing requirements just to pass.
+- Always prefer concise and contextual clarity than verbosity of explanation, be brief as needed.
 
 Always remember these rules before working on any new tasks.

@@ -142,7 +142,6 @@ export const plugins = pgTable("plugins", {
 	isPaid: boolean("is_paid").default(false),
 	price: bigint("price", { mode: "number" }).default(0),
 	currency: varchar("currency").default("USD"),
-	hooks: jsonb("hooks").default([]),
 	settings: jsonb("settings").default({}),
 	createdAt: timestamp("created_at").defaultNow(),
 	updatedAt: timestamp("updated_at").defaultNow(),
@@ -205,6 +204,8 @@ export const blocks = pgTable("blocks", {
 	name: varchar("name").default("text"), // heading, button, etc
 	type: varchar("type").default("block"), // block or container
 	category: varchar("category").default("basic"),
+	version: varchar("version").notNull(),
+	requires: varchar("requires").notNull(),
 	authorId: uuid("author_id")
 		.references(() => users.id)
 		.notNull(),

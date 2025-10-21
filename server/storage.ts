@@ -1,614 +1,414 @@
-import {
-  users,
-  posts,
-  comments,
-  themes,
-  plugins,
-  options,
-  media,
-  templates,
-  blocks,
-  type User,
-  type UpsertUser,
-  type Post,
-  type InsertPost,
-  type Comment,
-  type InsertComment,
-  type Theme,
-  type InsertTheme,
-  type Plugin,
-  type InsertPlugin,
-  type Option,
-  type InsertOption,
-  type Media,
-  type InsertMedia,
-  type Template,
-  type InsertTemplate,
-  type Block,
-  type InsertBlock,
-} from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, ilike, count } from "drizzle-orm";
+import { createModel, type DatabaseInstance } from "@shared/create-models";
+import {
+	sites,
+	roles,
+	userRoles,
+	users,
+	pages,
+	templates,
+	themes,
+	plugins,
+	options,
+	blogs,
+	posts,
+	blocks,
+	comments,
+	media,
+} from "@shared/schema";
 
-export interface IStorage {
-  // User operations (required for Replit Auth)
-  getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  getUsers(options?: { limit?: number; offset?: number; role?: string }): Promise<User[]>;
-  getUsersCount(role?: string): Promise<number>;
-  createUser(user: Omit<UpsertUser, 'id'>): Promise<User>;
-  updateUser(id: string, user: Partial<UpsertUser>): Promise<User>;
-  deleteUser(id: string): Promise<void>;
-  
-  // Post operations
-  getPosts(options?: { status?: string; type?: string; limit?: number; offset?: number }): Promise<Post[]>;
-  getPost(id: number): Promise<Post | undefined>;
-  getPostBySlug(slug: string): Promise<Post | undefined>;
-  createPost(post: InsertPost): Promise<Post>;
-  updatePost(id: number, post: Partial<InsertPost>): Promise<Post>;
-  deletePost(id: number): Promise<void>;
-  getPostsCount(options?: { status?: string; type?: string }): Promise<number>;
-  
-  // Comment operations
-  getComments(postId?: number, options?: { status?: string; limit?: number; offset?: number }): Promise<Comment[]>;
-  getComment(id: number): Promise<Comment | undefined>;
-  createComment(comment: InsertComment): Promise<Comment>;
-  updateComment(id: number, comment: Partial<InsertComment>): Promise<Comment>;
-  deleteComment(id: number): Promise<void>;
-  getCommentsCount(postId?: number, status?: string): Promise<number>;
-  approveComment(id: number): Promise<Comment>;
-  spamComment(id: number): Promise<Comment>;
-  
-  // Theme operations
-  getThemes(): Promise<Theme[]>;
-  getTheme(id: number): Promise<Theme | undefined>;
-  getActiveTheme(): Promise<Theme | undefined>;
-  createTheme(theme: InsertTheme): Promise<Theme>;
-  updateTheme(id: number, theme: Partial<InsertTheme>): Promise<Theme>;
-  deleteTheme(id: number): Promise<void>;
-  activateTheme(id: number): Promise<void>;
-  
-  // Plugin operations
-  getPlugins(): Promise<Plugin[]>;
-  getPlugin(id: number): Promise<Plugin | undefined>;
-  createPlugin(plugin: InsertPlugin): Promise<Plugin>;
-  updatePlugin(id: number, plugin: Partial<InsertPlugin>): Promise<Plugin>;
-  deletePlugin(id: number): Promise<void>;
-  activatePlugin(id: number): Promise<void>;
-  deactivatePlugin(id: number): Promise<void>;
-  
-  // Options operations
-  getOption(name: string): Promise<Option | undefined>;
-  setOption(option: InsertOption): Promise<Option>;
-  deleteOption(name: string): Promise<void>;
-  
-  // Media operations
-  getMedia(options?: { limit?: number; offset?: number; mimeType?: string }): Promise<Media[]>;
-  getMediaItem(id: number): Promise<Media | undefined>;
-  createMedia(mediaItem: InsertMedia): Promise<Media>;
-  updateMedia(id: number, mediaItem: Partial<InsertMedia>): Promise<Media>;
-  deleteMedia(id: number): Promise<void>;
-  getMediaCount(mimeType?: string): Promise<number>;
-  
-  // Template operations
-  getTemplates(options?: { type?: string; isGlobal?: boolean; limit?: number; offset?: number }): Promise<Template[]>;
-  getTemplate(id: number): Promise<Template | undefined>;
-  createTemplate(template: InsertTemplate): Promise<Template>;
-  updateTemplate(id: number, template: Partial<InsertTemplate>): Promise<Template>;
-  deleteTemplate(id: number): Promise<void>;
-  getTemplatesCount(type?: string): Promise<number>;
-  
-  // Block operations
-  getBlocks(options?: { type?: string; isReusable?: boolean; limit?: number; offset?: number }): Promise<Block[]>;
-  getBlock(id: number): Promise<Block | undefined>;
-  createBlock(block: InsertBlock): Promise<Block>;
-  updateBlock(id: number, block: Partial<InsertBlock>): Promise<Block>;
-  deleteBlock(id: number): Promise<void>;
-  getBlocksCount(type?: string): Promise<number>;
+// Specialized model factories for complex operations
+export function createUserModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(users, dbInstance);
+
+	return {
+		...baseModel,
+
+		/**
+		 * Find a user by their username
+		 * @param username - The username to search for
+		 * @returns The user or undefined if not found
+		 * @example
+		 * const user = await userModel.findByUsername('kizz');
+		 */
+		async findByUsername(username: string) {
+			return baseModel.findFirst([{ where: "username", equals: username }]);
+		},
+
+		/**
+		 * Find a user by their email address
+		 * @param email - The email address to search for
+		 * @returns The user or undefined if not found
+		 * @example
+		 * const user = await userModel.findByEmail('user@example.com');
+		 */
+		async findByEmail(email: string) {
+			return baseModel.findFirst([{ where: "email", equals: email }]);
+		},
+
+		/**
+		 * Find users by their status
+		 * @param status - The status to filter by (active, inactive, pending)
+		 * @returns Array of users with the specified status
+		 * @example
+		 * const activeUsers = await userModel.findByStatus('active');
+		 */
+		async findByStatus(status: string) {
+			return baseModel.findManyWhere([{ where: "status", equals: status }]);
+		},
+	};
 }
 
-export class DatabaseStorage implements IStorage {
-  // User operations
-  async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
-  }
+export function createPostModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(posts, dbInstance);
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
-  }
+	return {
+		...baseModel,
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
-  }
+		/**
+		 * Find a post by its slug
+		 * @param slug - The slug to search for
+		 * @returns The post or undefined if not found
+		 * @example
+		 * const post = await postModel.findBySlug('my-awesome-post');
+		 */
+		async findBySlug(slug: string) {
+			return baseModel.findFirst([{ where: "slug", equals: slug }]);
+		},
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
-  }
+		/**
+		 * Find posts by their status
+		 * @param status - The status to filter by (published, draft, etc.)
+		 * @returns Array of posts with the specified status
+		 * @example
+		 * const publishedPosts = await postModel.findByStatus('published');
+		 */
+		async findByStatus(status: string) {
+			return baseModel.findManyWhere([{ where: "status", equals: status }]);
+		},
 
-  async getUsers(options: { limit?: number; offset?: number; role?: string } = {}): Promise<User[]> {
-    const { limit = 20, offset = 0, role } = options;
-    let query = db.select().from(users) as any;
-    
-    if (role) {
-      query = query.where(eq(users.role, role));
-    }
-    
-    return await query.orderBy(desc(users.createdAt)).limit(limit).offset(offset);
-  }
+		/**
+		 * Find posts by their author
+		 * @param authorId - The UUID of the author
+		 * @returns Array of posts by the specified author
+		 * @example
+		 * const userPosts = await postModel.findByAuthor('author-uuid');
+		 */
+		async findByAuthor(authorId: string) {
+			return baseModel.findManyWhere([{ where: "authorId", equals: authorId }]);
+		},
 
-  async getUsersCount(role?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(users) as any;
-    
-    if (role) {
-      query = query.where(eq(users.role, role));
-    }
-    
-    const [result] = await query;
-    return result.count;
-  }
+		/**
+		 * Find posts by their blog
+		 * @param blogId - The UUID of the blog
+		 * @returns Array of posts in the specified blog
+		 * @example
+		 * const blogPosts = await postModel.findByBlog('blog-uuid');
+		 */
+		async findByBlog(blogId: string) {
+			return baseModel.findManyWhere([{ where: "blogId", equals: blogId }]);
+		},
 
-  async createUser(userData: Omit<UpsertUser, 'id'>): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values({
-        ...userData,
-        id: undefined, // Let database generate ID
-      })
-      .returning();
-    return user;
-  }
-
-  async updateUser(id: string, userData: Partial<UpsertUser>): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({
-        ...userData,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, id))
-      .returning();
-    return user;
-  }
-
-  async deleteUser(id: string): Promise<void> {
-    await db.delete(users).where(eq(users.id, id));
-  }
-
-  // Post operations
-  async getPosts(options: { status?: string; type?: string; limit?: number; offset?: number } = {}): Promise<Post[]> {
-    const { status, type, limit = 10, offset = 0 } = options;
-    let query = db.select().from(posts) as any;
-    
-    const conditions = [];
-    if (status) conditions.push(eq(posts.status, status));
-    if (type) conditions.push(eq(posts.type, type));
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    return await query.orderBy(desc(posts.createdAt)).limit(limit).offset(offset);
-  }
-
-  async getPost(id: number): Promise<Post | undefined> {
-    const [post] = await db.select().from(posts).where(eq(posts.id, id));
-    return post;
-  }
-
-  async getPostBySlug(slug: string): Promise<Post | undefined> {
-    const [post] = await db.select().from(posts).where(eq(posts.slug, slug));
-    return post;
-  }
-
-  async createPost(post: InsertPost): Promise<Post> {
-    const [newPost] = await db.insert(posts).values(post).returning();
-    return newPost;
-  }
-
-  async updatePost(id: number, post: Partial<InsertPost>): Promise<Post> {
-    const [updatedPost] = await db
-      .update(posts)
-      .set({ ...post, updatedAt: new Date() })
-      .where(eq(posts.id, id))
-      .returning();
-    return updatedPost;
-  }
-
-  async deletePost(id: number): Promise<void> {
-    await db.delete(posts).where(eq(posts.id, id));
-  }
-
-  async getPostsCount(options: { status?: string; type?: string } = {}): Promise<number> {
-    const { status, type } = options;
-    let query = db.select({ count: count() }).from(posts) as any;
-    
-    const conditions = [];
-    if (status && status !== 'any') conditions.push(eq(posts.status, status));
-    if (type) conditions.push(eq(posts.type, type));
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    const [result] = await query;
-    return result.count;
-  }
-
-  // Comment operations
-  async getComments(postId?: number, options: { status?: string; limit?: number; offset?: number } = {}): Promise<Comment[]> {
-    const { status, limit = 10, offset = 0 } = options;
-    let query = db.select().from(comments) as any;
-    
-    const conditions = [];
-    if (postId) conditions.push(eq(comments.postId, postId));
-    if (status) conditions.push(eq(comments.status, status));
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    return await query.orderBy(desc(comments.createdAt)).limit(limit).offset(offset);
-  }
-
-  async getComment(id: number): Promise<Comment | undefined> {
-    const [comment] = await db.select().from(comments).where(eq(comments.id, id));
-    return comment;
-  }
-
-  async createComment(comment: InsertComment): Promise<Comment> {
-    const [newComment] = await db.insert(comments).values(comment).returning();
-    return newComment;
-  }
-
-  async updateComment(id: number, comment: Partial<InsertComment>): Promise<Comment> {
-    const [updatedComment] = await db
-      .update(comments)
-      .set({ ...comment, updatedAt: new Date() })
-      .where(eq(comments.id, id))
-      .returning();
-    return updatedComment;
-  }
-
-  async deleteComment(id: number): Promise<void> {
-    await db.delete(comments).where(eq(comments.id, id));
-  }
-
-  async getCommentsCount(postId?: number, status?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(comments) as any;
-    
-    const conditions = [];
-    if (postId) conditions.push(eq(comments.postId, postId));
-    if (status) conditions.push(eq(comments.status, status));
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    const [result] = await query;
-    return result.count;
-  }
-
-  async approveComment(id: number): Promise<Comment> {
-    const [approvedComment] = await db
-      .update(comments)
-      .set({ status: 'approved', updatedAt: new Date() })
-      .where(eq(comments.id, id))
-      .returning();
-    return approvedComment;
-  }
-
-  async spamComment(id: number): Promise<Comment> {
-    const [spamComment] = await db
-      .update(comments)
-      .set({ status: 'spam', updatedAt: new Date() })
-      .where(eq(comments.id, id))
-      .returning();
-    return spamComment;
-  }
-
-  // Theme operations
-  async getThemes(): Promise<Theme[]> {
-    return await db.select().from(themes).orderBy(themes.name);
-  }
-
-  async getTheme(id: number): Promise<Theme | undefined> {
-    const [theme] = await db.select().from(themes).where(eq(themes.id, id));
-    return theme;
-  }
-
-  async getActiveTheme(): Promise<Theme | undefined> {
-    const [theme] = await db.select().from(themes).where(eq(themes.isActive, true));
-    return theme;
-  }
-
-  async createTheme(theme: InsertTheme): Promise<Theme> {
-    const [newTheme] = await db.insert(themes).values(theme).returning();
-    return newTheme;
-  }
-
-  async updateTheme(id: number, theme: Partial<InsertTheme>): Promise<Theme> {
-    const [updatedTheme] = await db
-      .update(themes)
-      .set({ ...theme, updatedAt: new Date() })
-      .where(eq(themes.id, id))
-      .returning();
-    return updatedTheme;
-  }
-
-  async deleteTheme(id: number): Promise<void> {
-    await db.delete(themes).where(eq(themes.id, id));
-  }
-
-  async activateTheme(id: number): Promise<void> {
-    // Deactivate all themes first
-    await db.update(themes).set({ isActive: false });
-    // Activate the selected theme
-    await db.update(themes).set({ isActive: true }).where(eq(themes.id, id));
-  }
-
-  // Plugin operations
-  async getPlugins(): Promise<Plugin[]> {
-    return await db.select().from(plugins).orderBy(plugins.name);
-  }
-
-  async getPlugin(id: number): Promise<Plugin | undefined> {
-    const [plugin] = await db.select().from(plugins).where(eq(plugins.id, id));
-    return plugin;
-  }
-
-  async createPlugin(plugin: InsertPlugin): Promise<Plugin> {
-    const [newPlugin] = await db.insert(plugins).values(plugin).returning();
-    return newPlugin;
-  }
-
-  async updatePlugin(id: number, plugin: Partial<InsertPlugin>): Promise<Plugin> {
-    const [updatedPlugin] = await db
-      .update(plugins)
-      .set({ ...plugin, updatedAt: new Date() })
-      .where(eq(plugins.id, id))
-      .returning();
-    return updatedPlugin;
-  }
-
-  async deletePlugin(id: number): Promise<void> {
-    await db.delete(plugins).where(eq(plugins.id, id));
-  }
-
-  async activatePlugin(id: number): Promise<void> {
-    await db.update(plugins).set({ isActive: true }).where(eq(plugins.id, id));
-  }
-
-  async deactivatePlugin(id: number): Promise<void> {
-    await db.update(plugins).set({ isActive: false }).where(eq(plugins.id, id));
-  }
-
-  // Options operations
-  async getOption(name: string): Promise<Option | undefined> {
-    const [option] = await db.select().from(options).where(eq(options.name, name));
-    return option;
-  }
-
-  async setOption(option: InsertOption): Promise<Option> {
-    const [newOption] = await db
-      .insert(options)
-      .values(option)
-      .onConflictDoUpdate({
-        target: options.name,
-        set: { value: option.value },
-      })
-      .returning();
-    return newOption;
-  }
-
-  async deleteOption(name: string): Promise<void> {
-    await db.delete(options).where(eq(options.name, name));
-  }
-
-  // Media operations
-  async getMedia(options?: { limit?: number; offset?: number; mimeType?: string }): Promise<Media[]> {
-    const { limit = 50, offset = 0, mimeType } = options || {};
-    
-    let query = db.select().from(media).orderBy(desc(media.createdAt)) as any;
-    
-    if (mimeType) {
-      query = query.where(eq(media.mimeType, mimeType));
-    }
-    
-    return await query.limit(limit).offset(offset);
-  }
-
-  async getMediaItem(id: number): Promise<Media | undefined> {
-    const [mediaItem] = await db.select().from(media).where(eq(media.id, id));
-    return mediaItem;
-  }
-
-  async createMedia(mediaItem: InsertMedia): Promise<Media> {
-    const [newMedia] = await db.insert(media).values(mediaItem).returning();
-    return newMedia;
-  }
-
-  async updateMedia(id: number, mediaItem: Partial<InsertMedia>): Promise<Media> {
-    const [updatedMedia] = await db
-      .update(media)
-      .set({ ...mediaItem, updatedAt: new Date() })
-      .where(eq(media.id, id))
-      .returning();
-    return updatedMedia;
-  }
-
-  async deleteMedia(id: number): Promise<void> {
-    await db.delete(media).where(eq(media.id, id));
-  }
-
-  async getMediaCount(mimeType?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(media) as any;
-    
-    if (mimeType) {
-      query = query.where(eq(media.mimeType, mimeType));
-    }
-    
-    const [result] = await query;
-    return result.count;
-  }
-
-
-
-
-  // Template operations
-  async getTemplates(options?: { type?: string; isGlobal?: boolean; isActive?: boolean; limit?: number; offset?: number }): Promise<Template[]> {
-    const { type, isGlobal, isActive, limit = 50, offset = 0 } = options || {};
-    
-    let query = db.select().from(templates).orderBy(desc(templates.createdAt)) as any;
-    
-    const conditions = [];
-    if (type) {
-      conditions.push(eq(templates.type, type));
-    }
-    if (isGlobal !== undefined) {
-      conditions.push(eq(templates.isGlobal, isGlobal));
-    }
-    if (isActive !== undefined) {
-      conditions.push(eq(templates.isActive, isActive));
-    }
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    return await query.limit(limit).offset(offset);
-  }
-
-  async getActiveTemplatesByType(type: string): Promise<Template[]> {
-    return await db.select()
-      .from(templates)
-      .where(and(eq(templates.type, type), eq(templates.isActive, true)))
-      .orderBy(desc(templates.priority || 0));
-  }
-
-  async duplicateTemplate(id: number, newName: string): Promise<Template> {
-    const original = await this.getTemplate(id);
-    if (!original) {
-      throw new Error('Template not found');
-    }
-    
-    const { id: _, createdAt, updatedAt, ...templateData } = original;
-    
-    const duplicated = await this.createTemplate({
-      ...templateData,
-      name: newName,
-      isActive: false, // Duplicated templates start as inactive
-      blocks: templateData.blocks as any,
-      settings: templateData.settings as any,
-      conditions: templateData.conditions as any,
-    });
-    
-    return duplicated;
-  }
-
-  async getTemplate(id: number): Promise<Template | undefined> {
-    const [template] = await db.select().from(templates).where(eq(templates.id, id));
-    return template;
-  }
-
-  async createTemplate(template: InsertTemplate): Promise<Template> {
-    const [newTemplate] = await db.insert(templates).values(template).returning();
-    return newTemplate;
-  }
-
-  async updateTemplate(id: number, template: Partial<InsertTemplate>): Promise<Template> {
-    const [updatedTemplate] = await db
-      .update(templates)
-      .set({ ...template, updatedAt: new Date() })
-      .where(eq(templates.id, id))
-      .returning();
-    return updatedTemplate;
-  }
-
-  async deleteTemplate(id: number): Promise<void> {
-    await db.delete(templates).where(eq(templates.id, id));
-  }
-
-  async getTemplatesCount(type?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(templates) as any;
-    
-    if (type) {
-      query = query.where(eq(templates.type, type));
-    }
-    
-    const [result] = await query;
-    return result.count;
-  }
-
-  // Block operations
-  async getBlocks(options?: { type?: string; isReusable?: boolean; limit?: number; offset?: number }): Promise<Block[]> {
-    const { type, isReusable, limit = 50, offset = 0 } = options || {};
-    
-    let query = db.select().from(blocks).orderBy(desc(blocks.createdAt)) as any;
-    
-    const conditions = [];
-    if (type) {
-      conditions.push(eq(blocks.type, type));
-    }
-    if (isReusable !== undefined) {
-      conditions.push(eq(blocks.isReusable, isReusable));
-    }
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    return await query.limit(limit).offset(offset);
-  }
-
-  async getBlock(id: number): Promise<Block | undefined> {
-    const [block] = await db.select().from(blocks).where(eq(blocks.id, id));
-    return block;
-  }
-
-  async createBlock(block: InsertBlock): Promise<Block> {
-    const [newBlock] = await db.insert(blocks).values(block).returning();
-    return newBlock;
-  }
-
-  async updateBlock(id: number, block: Partial<InsertBlock>): Promise<Block> {
-    const [updatedBlock] = await db
-      .update(blocks)
-      .set({ ...block, updatedAt: new Date() })
-      .where(eq(blocks.id, id))
-      .returning();
-    return updatedBlock;
-  }
-
-  async deleteBlock(id: number): Promise<void> {
-    await db.delete(blocks).where(eq(blocks.id, id));
-  }
-
-  async getBlocksCount(type?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(blocks) as any;
-    
-    if (type) {
-      query = query.where(eq(blocks.type, type));
-    }
-    
-    const [result] = await query;
-    return result.count;
-  }
+		/**
+		 * Publish a post by setting its status to 'publish' and setting publishedAt
+		 * @param id - The UUID of the post to publish
+		 * @returns The updated post
+		 * @example
+		 * const publishedPost = await postModel.publish('post-uuid');
+		 */
+		async publish(id: string) {
+			return baseModel.update(id, {
+				status: "publish",
+				publishedAt: new Date(),
+			});
+		},
+	};
 }
 
-export const storage = new DatabaseStorage();
+export function createCommentModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(comments, dbInstance);
+
+	return {
+		...baseModel,
+
+		/**
+		 * Find comments by their post
+		 * @param postId - The UUID of the post
+		 * @returns Array of comments for the specified post
+		 * @example
+		 * const postComments = await commentModel.findByPost('post-uuid');
+		 */
+		async findByPost(postId: string) {
+			return baseModel.findManyWhere([{ where: "postId", equals: postId }]);
+		},
+
+		/**
+		 * Find comments by their status
+		 * @param status - The status to filter by (approved, pending, spam, trash)
+		 * @returns Array of comments with the specified status
+		 * @example
+		 * const approvedComments = await commentModel.findByStatus('approved');
+		 */
+		async findByStatus(status: string) {
+			return baseModel.findManyWhere([{ where: "status", equals: status }]);
+		},
+
+		/**
+		 * Approve a comment by setting its status to 'approved'
+		 * @param id - The UUID of the comment to approve
+		 * @returns The updated comment
+		 * @example
+		 * const approvedComment = await commentModel.approve('comment-uuid');
+		 */
+		async approve(id: string) {
+			return baseModel.update(id, { status: "approved" });
+		},
+
+		/**
+		 * Mark a comment as spam by setting its status to 'spam'
+		 * @param id - The UUID of the comment to mark as spam
+		 * @returns The updated comment
+		 * @example
+		 * const spamComment = await commentModel.spam('comment-uuid');
+		 */
+		async spam(id: string) {
+			return baseModel.update(id, { status: "spam" });
+		},
+	};
+}
+
+export function createPageModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(pages, dbInstance);
+
+	return {
+		...baseModel,
+
+		/**
+		 * Find a page by its slug
+		 * @param slug - The slug to search for
+		 * @returns The page or undefined if not found
+		 * @example
+		 * const page = await pageModel.findBySlug('about-us');
+		 */
+		async findBySlug(slug: string) {
+			return baseModel.findFirst([{ where: "slug", equals: slug }]);
+		},
+
+		/**
+		 * Find pages by their status
+		 * @param status - The status to filter by (publish, draft, private, trash)
+		 * @returns Array of pages with the specified status
+		 * @example
+		 * const publishedPages = await pageModel.findByStatus('publish');
+		 */
+		async findByStatus(status: string) {
+			return baseModel.findManyWhere([{ where: "status", equals: status }]);
+		},
+
+		/**
+		 * Find pages by their author
+		 * @param authorId - The UUID of the author
+		 * @returns Array of pages by the specified author
+		 * @example
+		 * const userPages = await pageModel.findByAuthor('author-uuid');
+		 */
+		async findByAuthor(authorId: string) {
+			return baseModel.findManyWhere([{ where: "authorId", equals: authorId }]);
+		},
+
+		/**
+		 * Publish a page by setting its status to 'publish' and setting publishedAt
+		 * @param id - The UUID of the page to publish
+		 * @returns The updated page
+		 * @example
+		 * const publishedPage = await pageModel.publish('page-uuid');
+		 */
+		async publish(id: string) {
+			return baseModel.update(id, {
+				status: "publish",
+				publishedAt: new Date(),
+			});
+		},
+	};
+}
+
+export function createMediaModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(media, dbInstance);
+
+	return {
+		...baseModel,
+
+		/**
+		 * Find media by their author
+		 * @param authorId - The UUID of the author
+		 * @returns Array of media items by the specified author
+		 * @example
+		 * const userMedia = await mediaModel.findByAuthor('author-uuid');
+		 */
+		async findByAuthor(authorId: string) {
+			return baseModel.findManyWhere([{ where: "authorId", equals: authorId }]);
+		},
+
+		/**
+		 * Find media by their MIME type
+		 * @param mimeType - The MIME type to filter by (e.g., 'image/jpeg', 'video/mp4')
+		 * @returns Array of media items with the specified MIME type
+		 * @example
+		 * const images = await mediaModel.findByMimeType('image/jpeg');
+		 */
+		async findByMimeType(mimeType: string) {
+			return baseModel.findManyWhere([{ where: "mimeType", equals: mimeType }]);
+		},
+	};
+}
+
+export function createThemeModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(themes, dbInstance);
+	return {
+		...baseModel,
+		async findActiveTheme() {
+			return baseModel.findFirst([{ where: "status", equals: "active" }]);
+		},
+		async setActiveTheme(id: string) {
+			// Deactivate all themes first
+			const allThemes = await baseModel.findMany().execute();
+			for (const theme of allThemes) {
+				await baseModel.update(theme.id, {
+					status: "inactive",
+				});
+			}
+			return baseModel.update(id, { status: "active" });
+		},
+		async findByName(name: string) {
+			return baseModel.findFirst([{ where: "name", equals: name }]);
+		},
+	};
+}
+
+export function createPluginModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(plugins, dbInstance);
+	return {
+		...baseModel,
+		async findActivePlugins() {
+			return baseModel.findManyWhere([{ where: "status", equals: "active" }]);
+		},
+		async findByName(name: string) {
+			return baseModel.findFirst([{ where: "name", equals: name }]);
+		},
+		async activate(id: string) {
+			return baseModel.update(id, { status: "active" });
+		},
+		async deactivate(id: string) {
+			return baseModel.update(id, { status: "inactive" });
+		},
+	};
+}
+
+export function createOptionModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(options, dbInstance);
+	return {
+		...baseModel,
+		async getOption(name: string) {
+			return baseModel.findFirst([{ where: "name", equals: name }]);
+		},
+		async setOption(data: { name: string; value: string }) {
+			const existing = await this.getOption(data.name);
+			if (existing) {
+				return baseModel.update(existing.id, {
+					value: data.value,
+				});
+			}
+			return baseModel.create(data as any);
+		},
+	};
+}
+
+export function createTemplateModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(templates, dbInstance);
+	return {
+		...baseModel,
+		async findByType(type: string) {
+			return baseModel.findManyWhere([{ where: "type", equals: type }]);
+		},
+		async findGlobalTemplates() {
+			// Templates don't have isGlobal property, return all templates for now
+			return baseModel.findMany();
+		},
+		async findActiveTemplates() {
+			// Templates don't have isActive property, return all templates for now
+			return baseModel.findMany();
+		},
+		async findByPriority(_priority: number) {
+			// Templates don't have priority property, return empty array for now
+			return [];
+		},
+		async duplicate(id: string, newName: string) {
+			const original = await baseModel.findById(id);
+			if (!original) {
+				throw new Error("Template not found");
+			}
+			const {
+				id: _oldId,
+				createdAt: _createdAt,
+				updatedAt: _updatedAt,
+				...rest
+			} = original;
+			return baseModel.create({ ...rest, name: newName } as any);
+		},
+	};
+}
+
+export function createBlockModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(blocks, dbInstance);
+	return {
+		...baseModel,
+		async findByType(type: string) {
+			return baseModel.findManyWhere([{ where: "type", equals: type }]);
+		},
+		async findReusableBlocks() {
+			// Blocks don't have isReusable property, return all blocks for now
+			return baseModel.findMany();
+		},
+	};
+}
+
+// Export all models as a simple object (no OOP!)
+export const models = {
+	// Basic models
+	sites: createModel(sites, db),
+	roles: createModel(roles, db),
+	userRoles: createModel(userRoles, db),
+	blogs: createModel(blogs, db),
+
+	// Specialized models
+	users: createUserModel(),
+	posts: createPostModel(),
+	comments: createCommentModel(),
+	pages: createPageModel(),
+	media: createMediaModel(),
+	themes: createThemeModel(),
+	plugins: createPluginModel(),
+	options: createOptionModel(),
+	templates: createTemplateModel(),
+	blocks: createBlockModel(),
+} as const;
+
+// Export individual model factories for transaction usage
+export const modelFactories = {
+	sites: (dbInstance: DatabaseInstance) => createModel(sites, dbInstance),
+	roles: (dbInstance: DatabaseInstance) => createModel(roles, dbInstance),
+	userRoles: (dbInstance: DatabaseInstance) =>
+		createModel(userRoles, dbInstance),
+	blogs: (dbInstance: DatabaseInstance) => createModel(blogs, dbInstance),
+
+	users: createUserModel,
+	posts: createPostModel,
+	comments: createCommentModel,
+	pages: createPageModel,
+	media: createMediaModel,
+	themes: createThemeModel,
+	plugins: createPluginModel,
+	options: createOptionModel,
+	templates: createTemplateModel,
+	blocks: createBlockModel,
+} as const;

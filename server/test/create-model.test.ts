@@ -224,13 +224,10 @@ describe("createModel - Generic CRUD Operations", () => {
 			}
 
 			const firstPage = await userModel.findMany({ limit: 2, offset: 0 });
-			expect(firstPage.execute).toBeDefined();
-			const firstPageResults = await firstPage.execute();
-			expect(firstPageResults).toHaveLength(2);
+			expect(firstPage).toHaveLength(2);
 
 			const secondPage = await userModel.findMany({ limit: 2, offset: 2 });
-			const secondPageResults = await secondPage.execute();
-			expect(secondPageResults).toHaveLength(2);
+			expect(secondPage).toHaveLength(2);
 		});
 
 		it("should find many with ordering", async () => {
@@ -250,20 +247,18 @@ describe("createModel - Generic CRUD Operations", () => {
 			});
 
 			const ascending = await userModel.findMany({
-				orderBy: { property: "username", direction: "asc" },
+				orderBy: { property: "username", order: "ascending" },
 			});
-			const ascendingResults = await ascending.execute();
-			expect(ascendingResults[0].username).toBe("auser");
-			expect(ascendingResults[1].username).toBe("testuser");
-			expect(ascendingResults[2].username).toBe("zuser");
+			expect(ascending[0].username).toBe("auser");
+			expect(ascending[1].username).toBe("testuser");
+			expect(ascending[2].username).toBe("zuser");
 
 			const descending = await userModel.findMany({
-				orderBy: { property: "username", direction: "desc" },
+				orderBy: { property: "username", order: "descending" },
 			});
-			const descendingResults = await descending.execute();
-			expect(descendingResults[0].username).toBe("zuser");
-			expect(descendingResults[1].username).toBe("testuser");
-			expect(descendingResults[2].username).toBe("auser");
+			expect(descending[0].username).toBe("zuser");
+			expect(descending[1].username).toBe("testuser");
+			expect(descending[2].username).toBe("auser");
 		});
 
 		it("should find many with shorthand filters", async () => {
@@ -279,16 +274,14 @@ describe("createModel - Generic CRUD Operations", () => {
 				where: "status",
 				equals: "active",
 			});
-			const activeResults = await activeUsers.execute();
-			expect(activeResults).toHaveLength(2);
+			expect(activeUsers).toHaveLength(2);
 
 			const specificUser = await userModel.findMany({
 				where: "username",
 				equals: "testuser",
 			});
-			const specificResults = await specificUser.execute();
-			expect(specificResults).toHaveLength(1);
-			expect(specificResults[0].username).toBe("testuser");
+			expect(specificUser).toHaveLength(1);
+			expect(specificUser[0].username).toBe("testuser");
 		});
 
 		it("should find many with complex filters", async () => {
@@ -577,11 +570,11 @@ describe("createModel - Generic CRUD Operations", () => {
 		});
 
 		it("should throw error for invalid column in orderBy", async () => {
-			expect(() => {
+			await expect(
 				userModel.findMany({
 					orderBy: { property: "invalidColumn", direction: "asc" },
-				});
-			}).toThrow("Column 'invalidColumn' does not exist on table");
+				}),
+			).rejects.toThrow("Column 'invalidColumn' does not exist on table");
 		});
 
 		it("should throw error for filter without operator", async () => {
@@ -621,9 +614,8 @@ describe("createModel - Generic CRUD Operations", () => {
 			const results = await userModel.findMany({
 				orderBy: { sql: sql`username ASC` },
 			});
-			const resultsData = await results.execute();
-			expect(resultsData[0].username).toBe("auser");
-			expect(resultsData[1].username).toBe("testuser");
+			expect(results[0].username).toBe("auser");
+			expect(results[1].username).toBe("testuser");
 		});
 	});
 });

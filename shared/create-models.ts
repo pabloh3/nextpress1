@@ -44,29 +44,22 @@ export interface SQLFilter {
 export type Filter = PropertyFilter | SQLFilter;
 
 // Order types
-export interface PropertyOrder {
+export interface OrderBy {
 	property: string;
-	direction?: "asc" | "desc";
+	order: "ascending" | "descending";
 }
 
 export interface SQLOrder {
 	sql: SQL;
 }
 
-export type OrderBy =
-	| PropertyOrder
-	| SQLOrder
-	| "createdAt"
-	| "updatedAt"
-	| "name"
-	| "title";
+export type OrderByOption = OrderBy | SQLOrder;
 
 // Options interfaces
 export interface FindManyOptions {
 	limit?: number;
 	offset?: number;
-	orderBy?: OrderBy | OrderBy[];
-	orderDirection?: "asc" | "desc";
+	orderBy?: OrderByOption;
 	where?: string;
 	equals?: unknown;
 	notEquals?: unknown;
@@ -89,17 +82,13 @@ export interface WithRelations {
 	[key: string]: boolean | WithRelations;
 }
 
-// Query builder interface for chaining
-export interface QueryBuilder<TSelect> {
-	orderBy(order: PropertyOrder | SQLOrder): QueryBuilder<TSelect>;
-	execute(): Promise<TSelect[]>;
-}
+// Removed QueryBuilder interface - all methods execute immediately
 
 // Generic model interface with user-friendly types
 export interface ModelOperations<TSelect, TInsert> {
 	// Basic CRUD
 	findById(id: string): Promise<TSelect | undefined>;
-	findMany(options?: FindManyOptions): QueryBuilder<TSelect>;
+	findMany(options?: FindManyOptions): Promise<TSelect[]>;
 	findManyWith(
 		options: FindManyOptions,
 		relations: WithRelations,
@@ -193,64 +182,31 @@ function buildWhereClause<TTable extends Table>(
 // Helper function to build order clause
 function buildOrderClause<TTable extends Table>(
 	table: TTable,
-	orderBy: OrderBy | OrderBy[] | undefined,
-	defaultDirection: "asc" | "desc" = "desc",
+	orderBy: OrderByOption | undefined,
 ): SQL[] {
 	if (!orderBy) {
-		// Default ordering
+		// Default ordering by createdAt if available
 		if ("createdAt" in table) {
 			return [desc((table as any).createdAt)];
 		}
 		return [];
 	}
 
-	const orders = Array.isArray(orderBy) ? orderBy : [orderBy];
+	// Guard clause for SQL orders
+	if ("sql" in orderBy) {
+		return [orderBy.sql];
+	}
 
-	return orders.map((order) => {
-		// Guard clause for SQL orders
-		if (typeof order === "object" && "sql" in order) {
-			return order.sql;
-		}
+	// Handle property-based ordering
+	const { property, order } = orderBy;
+	const column = table[property as keyof typeof table] as any;
 
-		// Guard clause for string orders - use object lookup instead of switch
-		if (typeof order === "string") {
-			const predefinedOrders = {
-				createdAt: () =>
-					defaultDirection === "desc"
-						? desc((table as any).createdAt)
-						: asc((table as any).createdAt),
-				updatedAt: () =>
-					defaultDirection === "desc"
-						? desc((table as any).updatedAt)
-						: asc((table as any).updatedAt),
-				name: () =>
-					defaultDirection === "desc"
-						? desc((table as any).name)
-						: asc((table as any).name),
-				title: () =>
-					defaultDirection === "desc"
-						? desc((table as any).title)
-						: asc((table as any).title),
-			};
+	// Guard clause for invalid columns
+	if (!column) {
+		throw new Error(`Column '${property}' does not exist on table`);
+	}
 
-			const handler = predefinedOrders[order as keyof typeof predefinedOrders];
-			if (!handler) {
-				throw new Error(`Unknown predefined order: ${order}`);
-			}
-			return handler();
-		}
-
-		// Handle property-based ordering
-		const { property, direction = defaultDirection } = order;
-		const column = table[property as keyof typeof table] as any;
-
-		// Guard clause for invalid columns
-		if (!column) {
-			throw new Error(`Column '${property}' does not exist on table`);
-		}
-
-		return direction === "desc" ? desc(column) : asc(column);
-	});
+	return order === "descending" ? [desc(column)] : [asc(column)];
 }
 
 // Generic model factory with transaction support
@@ -283,18 +239,17 @@ export function createModel<TTable extends Table>(
 
 		/**
 		 * Find multiple records with optional filtering and ordering
-		 * Returns a chainable query builder for additional operations
-		 * @param options - Filtering and pagination options
-		 * @returns Chainable query builder
+		 * Executes immediately and returns actual data
+		 * @param options - Filtering, pagination, and ordering options
+		 * @returns Array of matching records
 		 * @example
-		 * const posts = await postModel.findMany({ where: 'status', equals: 'published' }).orderBy({ property: 'createdAt', direction: 'desc' }).execute();
+		 * const posts = await postModel.findMany({ where: 'status', equals: 'published', orderBy: { property: 'createdAt', order: 'descending' } });
 		 */
-		findMany(options: FindManyOptions = {}): QueryBuilder<TSelect> {
+		async findMany(options: FindManyOptions = {}): Promise<TSelect[]> {
 			const {
 				limit = 50,
 				offset = 0,
 				orderBy,
-				orderDirection = "desc",
 				where,
 				equals,
 				notEquals,
@@ -352,32 +307,15 @@ export function createModel<TTable extends Table>(
 			}
 
 			// Apply ordering
-			const orderClauses = buildOrderClause(table, orderBy, orderDirection);
+			const orderClauses = buildOrderClause(table, orderBy);
 			if (orderClauses.length > 0) {
 				query = query.orderBy(...orderClauses);
 			}
 
 			query = query.limit(limit).offset(offset);
 
-			return {
-				orderBy(order: PropertyOrder | SQLOrder): QueryBuilder<TSelect> {
-					const { property, direction = "desc" } = order as PropertyOrder;
-					const column = tableAny[property];
-
-					if (!column) {
-						throw new Error(`Column '${property}' does not exist on table`);
-					}
-
-					const orderClause = direction === "desc" ? desc(column) : asc(column);
-					query = query.orderBy(orderClause);
-
-					return this;
-				},
-
-				async execute(): Promise<TSelect[]> {
-					return (await query) as TSelect[];
-				},
-			};
+			// Execute immediately and return actual data
+			return (await query) as TSelect[];
 		},
 
 		/**
@@ -596,12 +534,7 @@ export function createModel<TTable extends Table>(
 			where: Filter[] | SQL,
 			options: FindManyOptions = {},
 		): Promise<TSelect[]> {
-			const {
-				limit = 50,
-				offset = 0,
-				orderBy,
-				orderDirection = "desc",
-			} = options;
+			const { limit = 50, offset = 0, orderBy } = options;
 
 			const whereClause = buildWhereClause(table, where);
 
@@ -612,7 +545,7 @@ export function createModel<TTable extends Table>(
 			}
 
 			// Apply ordering
-			const orderClauses = buildOrderClause(table, orderBy, orderDirection);
+			const orderClauses = buildOrderClause(table, orderBy);
 			if (orderClauses.length > 0) {
 				query = query.orderBy(...orderClauses);
 			}

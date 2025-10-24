@@ -2,6 +2,14 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { models } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { authService, requireAuth, getCurrentUser } from "./auth";
+import {
+	CONFIG,
+	getSiteSettings,
+	parsePaginationParams,
+	parseStatusParam,
+} from "./config";
+import { safeTry, safeTryAsync, handleSafeTryResult } from "./utils";
 import {
 	insertPostSchema,
 	insertCommentSchema,
@@ -144,46 +152,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	// Auth routes (combined local and Replit auth)
 	app.get("/api/auth/user", async (req: any, res) => {
-		try {
-			// Check for local session first
-			if (req.session?.localUser) {
-				const user = await models.users.findById(req.session.localUser.id);
-				if (user) {
-					const { password: _password, ...userResponse } = user;
-					return res.json(userResponse);
-				}
-			}
+		const { err, result } = await safeTryAsync(async () => {
+			return await authService.getCurrentUser(req);
+		});
 
-			// Check for Replit auth
-			if (
-				req.isAuthenticated &&
-				req.isAuthenticated() &&
-				req.user?.claims?.sub
-			) {
-				console.log(
-					"Auth route - User object:",
-					JSON.stringify(req.user, null, 2),
-				);
-				const userId = req.user.claims.sub;
-				const user = await models.users.findById(userId);
-				if (user) {
-					return res.json(user);
-				}
-			}
-
-			res.status(401).json({ message: "Unauthorized" });
-		} catch (error) {
-			console.error("Error fetching user:", error);
-			res.status(500).json({ message: "Failed to fetch user" });
+		if (err) {
+			console.error("Error fetching user:", err);
+			return res.status(500).json({ message: "Failed to fetch user" });
 		}
+
+		if (!result) {
+			return res.status(401).json({ message: "Unauthorized" });
+		}
+
+		res.json(result);
 	});
 
 	// User management routes (WordPress compatible)
 	app.get("/api/users", isAuthenticated, async (req, res) => {
-		try {
-			const { page = 1, per_page = 20, role } = req.query;
-			const limit = parseInt(per_page as string);
-			const offset = (parseInt(page as string) - 1) * limit;
+		const { err, result } = await safeTryAsync(async () => {
+			const { page, per_page, limit, offset } = parsePaginationParams(
+				req.query,
+				CONFIG.PAGINATION.DEFAULT_PAGE_SIZE,
+			);
+			const { role } = req.query;
 
 			const users = await models.users.findMany({
 				limit,
@@ -196,17 +188,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 				where: [{ where: "role", equals: role as string }],
 			});
 
-			res.json({
+			return {
 				users,
 				total,
-				page: parseInt(page as string),
+				page,
 				per_page: limit,
 				total_pages: Math.ceil(total / limit),
-			});
-		} catch (error) {
-			console.error("Error fetching users:", error);
-			res.status(500).json({ message: "Failed to fetch users" });
+			};
+		});
+
+		if (err) {
+			console.error("Error fetching users:", err);
+			return res.status(500).json({ message: "Failed to fetch users" });
 		}
+
+		res.json(result);
 	});
 
 	app.get("/api/users/:id", isAuthenticated, async (req, res) => {
@@ -333,13 +329,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	// Posts API (WordPress compatible)
 	app.get("/api/posts", async (req, res) => {
-		try {
-			const { status = "publish", page = 1, per_page = 10 } = req.query;
-			const limit = parseInt(per_page as string);
-			const offset = (parseInt(page as string) - 1) * limit;
+		const { err, result } = await safeTryAsync(async () => {
+			const { page, per_page, limit, offset } = parsePaginationParams(
+				req.query,
+				CONFIG.PAGINATION.DEFAULT_POSTS_PER_PAGE,
+			);
+			const { status = CONFIG.STATUS.PUBLISH } = req.query;
 
 			// Handle 'any' status to show all posts (for admin interface)
-			const actualStatus = status === "any" ? undefined : (status as string);
+			const actualStatus = parseStatusParam(status as string);
 
 			const posts = await models.posts.findMany({
 				where: "status",
@@ -354,17 +352,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 					: undefined,
 			});
 
-			res.json({
+			return {
 				posts,
 				total,
-				page: parseInt(page as string),
+				page,
 				per_page: limit,
 				total_pages: Math.ceil(total / limit),
-			});
-		} catch (error) {
-			console.error("Error fetching posts:", error);
-			res.status(500).json({ message: "Failed to fetch posts" });
+			};
+		});
+
+		if (err) {
+			console.error("Error fetching posts:", err);
+			return res.status(500).json({ message: "Failed to fetch posts" });
 		}
+
+		res.json(result);
 	});
 
 	app.get("/api/posts/:id", async (req, res) => {
@@ -381,12 +383,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 	});
 
 	app.post("/api/posts", isAuthenticated, async (req: any, res) => {
-		try {
-			const userId = req.user.claims.sub;
+		const { err, result } = await safeTryAsync(async () => {
+			const userId = authService.getCurrentUserId(req);
+			if (!userId) {
+				throw new Error("User not authenticated");
+			}
 
-			// Add authorId to request body before parsing
-			const requestData = { ...req.body, authorId: userId };
-			const postData = insertPostSchema.parse(requestData);
+			// Include authorId in the data before validation
+			const postData = insertPostSchema.parse({
+				...req.body,
+				authorId: userId,
+			});
 
 			// Generate slug if not provided
 			if (!postData.slug) {
@@ -399,15 +406,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			const post = await models.posts.create(postData);
 			hooks.doAction("save_post", post);
 
-			if (post.status === "publish") {
+			if (post.status === CONFIG.STATUS.PUBLISH) {
 				hooks.doAction("publish_post", post);
 			}
 
-			res.status(201).json(post);
-		} catch (error) {
-			console.error("Error creating post:", error);
-			res.status(500).json({ message: "Failed to create post" });
+			return post;
+		});
+
+		if (err) {
+			console.error("Error creating post:", err);
+			return res.status(500).json({ message: "Failed to create post" });
 		}
+
+		res.status(201).json(result);
 	});
 
 	app.put("/api/posts/:id", isAuthenticated, async (req, res) => {
@@ -457,13 +468,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	// Pages API (WordPress compatible)
 	app.get("/api/pages", async (req, res) => {
-		try {
-			const { status = "publish", page = 1, per_page = 10 } = req.query;
-			const limit = parseInt(per_page as string);
-			const offset = (parseInt(page as string) - 1) * limit;
+		const { err, result } = await safeTryAsync(async () => {
+			const { page, per_page, limit, offset } = parsePaginationParams(
+				req.query,
+				CONFIG.PAGINATION.DEFAULT_POSTS_PER_PAGE,
+			);
+			const { status = CONFIG.STATUS.PUBLISH } = req.query;
 
 			// Handle 'any' status to show all pages (for admin interface)
-			const actualStatus = status === "any" ? undefined : (status as string);
+			const actualStatus = parseStatusParam(status as string);
 
 			const pages = await models.pages.findMany({
 				where: "status",
@@ -478,22 +491,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 					: undefined,
 			});
 
-			res.json({
+			return {
 				pages,
 				total,
-				page: parseInt(page as string),
+				page,
 				per_page: limit,
 				total_pages: Math.ceil(total / limit),
-			});
-		} catch (error) {
-			console.error("Error fetching pages:", error);
-			res.status(500).json({ message: "Failed to fetch pages" });
+			};
+		});
+
+		if (err) {
+			console.error("Error fetching pages:", err);
+			return res.status(500).json({ message: "Failed to fetch pages" });
 		}
+
+		res.json(result);
 	});
 
 	app.get("/api/pages/:id", async (req, res) => {
 		try {
-			const page = await models.posts.findById(req.params.id);
+			const page = await models.pages.findById(req.params.id);
 			if (!page) {
 				return res.status(404).json({ message: "Page not found" });
 			}
@@ -505,12 +522,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 	});
 
 	app.post("/api/pages", isAuthenticated, async (req: any, res) => {
-		try {
-			const userId = req.user.claims.sub;
+		const { err, result } = await safeTryAsync(async () => {
+			const userId = authService.getCurrentUserId(req);
+			if (!userId) {
+				throw new Error("User not authenticated");
+			}
 
-			// Add authorId and type to request body before parsing
-			const requestData = { ...req.body, authorId: userId, type: "page" };
-			const pageData = insertPostSchema.parse(requestData);
+			// Include authorId and type in the data before validation
+			const pageData = insertPostSchema.parse({
+				...req.body,
+				authorId: userId,
+				type: "page",
+			});
 
 			// Generate slug if not provided
 			if (!pageData.slug) {
@@ -523,15 +546,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			const page = await models.posts.create(pageData);
 			hooks.doAction("save_post", page);
 
-			if (page.status === "publish") {
+			if (page.status === CONFIG.STATUS.PUBLISH) {
 				hooks.doAction("publish_post", page);
 			}
 
-			res.status(201).json(page);
-		} catch (error) {
-			console.error("Error creating page:", error);
-			res.status(500).json({ message: "Failed to create page" });
+			return page;
+		});
+
+		if (err) {
+			console.error("Error creating page:", err);
+			return res.status(500).json({ message: "Failed to create page" });
 		}
+
+		res.status(201).json(result);
 	});
 
 	app.put("/api/pages/:id", isAuthenticated, async (req, res) => {
@@ -563,13 +590,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 	app.delete("/api/pages/:id", isAuthenticated, async (req, res) => {
 		try {
 			const id = req.params.id;
-			const page = await models.posts.findById(id);
+			const page = await models.pages.findById(id);
 
 			if (!page) {
 				return res.status(404).json({ message: "Page not found" });
 			}
 
-			await models.posts.delete(id);
+			await models.pages.delete(id);
 			hooks.doAction("delete_post", id);
 
 			res.json({ message: "Page deleted successfully" });
@@ -818,24 +845,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			},
 		}),
 		limits: {
-			fileSize: 10 * 1024 * 1024, // 10MB limit
+			fileSize: CONFIG.UPLOAD.LIMIT,
 		},
 		fileFilter: (req, file, cb) => {
-			const allowedTypes = [
-				"image/jpeg",
-				"image/jpg",
-				"image/png",
-				"image/gif",
-				"image/webp",
-				"video/mp4",
-				"video/webm",
-				"audio/mp3",
-				"audio/wav",
-				"application/pdf",
-				"text/plain",
-			];
-
-			if (allowedTypes.includes(file.mimetype)) {
+			if (CONFIG.UPLOAD.ALLOWED_MIME_TYPES.includes(file.mimetype as any)) {
 				cb(null, true);
 			} else {
 				cb(new Error("File type not allowed"));
@@ -845,10 +858,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	// Media API (WordPress compatible)
 	app.get("/api/media", async (req, res) => {
-		try {
-			const { page = 1, per_page = 20, mime_type } = req.query;
-			const limit = parseInt(per_page as string);
-			const offset = (parseInt(page as string) - 1) * limit;
+		const { err, result } = await safeTryAsync(async () => {
+			const { page, per_page, limit, offset } = parsePaginationParams(
+				req.query,
+				CONFIG.PAGINATION.DEFAULT_MEDIA_PER_PAGE,
+			);
+			const { mime_type } = req.query;
 
 			const mediaItems = await models.media.findMany({
 				limit,
@@ -861,17 +876,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 				where: [{ where: "mimeType", equals: mime_type as string }],
 			});
 
-			res.json({
+			return {
 				media: mediaItems,
 				total,
-				page: parseInt(page as string),
+				page,
 				per_page: limit,
 				total_pages: Math.ceil(total / limit),
-			});
-		} catch (error) {
-			console.error("Error fetching media:", error);
-			res.status(500).json({ message: "Failed to fetch media" });
+			};
+		});
+
+		if (err) {
+			console.error("Error fetching media:", err);
+			return res.status(500).json({ message: "Failed to fetch media" });
 		}
+
+		res.json(result);
 	});
 
 	app.get("/api/media/:id", async (req, res) => {
@@ -892,12 +911,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 		isAuthenticated,
 		upload.single("file"),
 		async (req: any, res) => {
-			try {
-				const userId = req.user.claims.sub;
-				const file = req.file;
+			const { err, result } = await safeTryAsync(async () => {
+				const userId = authService.getCurrentUserId(req);
+				if (!userId) {
+					throw new Error("User not authenticated");
+				}
 
+				const file = req.file;
 				if (!file) {
-					return res.status(400).json({ message: "No file uploaded" });
+					throw new Error("No file uploaded");
 				}
 
 				const { alt, caption, description } = req.body;
@@ -920,11 +942,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 				const mediaItem = await models.media.create(mediaData);
 				hooks.doAction("wp_handle_upload", mediaItem);
 
-				res.status(201).json(mediaItem);
-			} catch (error) {
-				console.error("Error uploading media:", error);
-				res.status(500).json({ message: "Failed to upload media" });
+				return mediaItem;
+			});
+
+			if (err) {
+				console.error("Error uploading media:", err);
+				return res.status(500).json({ message: "Failed to upload media" });
 			}
+
+			res.status(201).json(result);
 		},
 	);
 
@@ -984,11 +1010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			}
 
 			// Get site settings for theme context
-			const siteSettings = {
-				name: "NextPress",
-				description: "A modern WordPress alternative",
-				url: `${req.protocol}://${req.get("host")}`,
-			};
+			const siteSettings = getSiteSettings(req);
 
 			const html = await themeManager.renderContent("single-post", {
 				post,
@@ -1014,11 +1036,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 				return res.status(404).send(html);
 			}
 
-			const siteSettings = {
-				name: "NextPress",
-				description: "A modern WordPress alternative",
-				url: `${req.protocol}://${req.get("host")}`,
-			};
+			const siteSettings = getSiteSettings(req);
 
 			const html = await themeManager.renderContent("page", {
 				page,
@@ -1042,11 +1060,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 				limit: 10,
 			});
 
-			const siteSettings = {
-				name: "NextPress",
-				description: "A modern WordPress alternative",
-				url: `${req.protocol}://${req.get("host")}`,
-			};
+			const siteSettings = getSiteSettings(req);
 
 			const html = await themeManager.renderContent("home", {
 				posts: posts,
@@ -1107,8 +1121,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 	});
 
 	app.post("/api/templates", isAuthenticated, async (req: any, res) => {
-		try {
-			const userId = req.user.claims.sub;
+		const { err, result } = await safeTryAsync(async () => {
+			const userId = authService.getCurrentUserId(req);
+			if (!userId) {
+				throw new Error("User not authenticated");
+			}
+
 			const { insertTemplateSchema } = await import("@shared/zod-schema");
 			const templateData = insertTemplateSchema.parse({
 				...req.body,
@@ -1116,11 +1134,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			});
 
 			const template = await models.templates.create(templateData);
-			res.status(201).json(template);
-		} catch (error) {
-			console.error("Error creating template:", error);
-			res.status(500).json({ message: "Failed to create template" });
+			return template;
+		});
+
+		if (err) {
+			console.error("Error creating template:", err);
+			return res.status(500).json({ message: "Failed to create template" });
 		}
+
+		res.status(201).json(result);
 	});
 
 	app.post(
@@ -1212,19 +1234,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 	});
 
 	app.post("/api/blocks", isAuthenticated, async (req: any, res) => {
-		try {
-			const userId = req.user.claims.sub;
+		const { err, result } = await safeTryAsync(async () => {
+			const userId = authService.getCurrentUserId(req);
+			if (!userId) {
+				throw new Error("User not authenticated");
+			}
+
 			const blockData = insertBlockSchema.parse({
 				...req.body,
 				authorId: userId,
 			});
 
 			const block = await models.blocks.create(blockData);
-			res.status(201).json(block);
-		} catch (error) {
-			console.error("Error creating block:", error);
-			res.status(500).json({ message: "Failed to create block" });
+			return block;
+		});
+
+		if (err) {
+			console.error("Error creating block:", err);
+			return res.status(500).json({ message: "Failed to create block" });
 		}
+
+		res.status(201).json(result);
 	});
 
 	app.put("/api/blocks/:id", isAuthenticated, async (req, res) => {

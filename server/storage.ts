@@ -271,7 +271,7 @@ export function createThemeModel(dbInstance: DatabaseInstance = db) {
 		},
 		async setActiveTheme(id: string) {
 			// Deactivate all themes first
-			const allThemes = await baseModel.findMany().execute();
+			const allThemes = await baseModel.findMany();
 			for (const theme of allThemes) {
 				await baseModel.update(theme.id, {
 					status: "inactive",
@@ -332,11 +332,11 @@ export function createTemplateModel(dbInstance: DatabaseInstance = db) {
 		},
 		async findGlobalTemplates() {
 			// Templates don't have isGlobal property, return all templates for now
-			return baseModel.findMany();
+			return await baseModel.findManyWith({}, {});
 		},
 		async findActiveTemplates() {
 			// Templates don't have isActive property, return all templates for now
-			return baseModel.findMany();
+			return await baseModel.findManyWith({}, {});
 		},
 		async findByPriority(_priority: number) {
 			// Templates don't have priority property, return empty array for now
@@ -367,7 +367,7 @@ export function createBlockModel(dbInstance: DatabaseInstance = db) {
 		},
 		async findReusableBlocks() {
 			// Blocks don't have isReusable property, return all blocks for now
-			return baseModel.findMany();
+			return await baseModel.findManyWith({}, {});
 		},
 	};
 }

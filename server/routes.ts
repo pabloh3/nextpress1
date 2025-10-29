@@ -300,13 +300,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 					models.posts.count({
 						where: [
 							{ where: "status", equals: "publish" },
-							{ where: "type", equals: "post" },
+							// Removed type filter; update this if new schema provides a way to distinguish posts
 						],
 					}),
 					models.posts.count({
 						where: [
 							{ where: "status", equals: "publish" },
-							{ where: "type", equals: "page" },
+							// Removed type filter; update this if new schema provides a way to distinguish pages
 						],
 					}),
 					models.comments.count({

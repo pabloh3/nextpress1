@@ -489,7 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 	// Posts API (WordPress compatible)
 	app.get("/api/posts", async (req, res) => {
 		const { err, result } = await safeTryAsync(async () => {
-			const { page, per_page, limit, offset } = parsePaginationParams(
+			const { page, limit, offset } = parsePaginationParams(
 				req.query,
 				CONFIG.PAGINATION.DEFAULT_POSTS_PER_PAGE,
 			);

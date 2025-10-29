@@ -77,29 +77,16 @@ async function upsertUser(claims: any) {
 		username = `${username}_${claims["sub"]}`;
 	}
 
-	// Check if user already exists
-	const user = await models.users.findById(claims["sub"]);
-	if (user) {
-		// Update existing user
-		await models.users.update(claims["sub"], {
-			email: claims["email"],
-			firstName: claims["first_name"],
-			lastName: claims["last_name"],
-			profileImageUrl: claims["profile_image_url"],
-			username: username,
-		});
-	} else {
-		// Create new user
-		await models.users.create({
-			id: claims["sub"],
-			email: claims["email"],
-			firstName: claims["first_name"],
-			lastName: claims["last_name"],
-			profileImageUrl: claims["profile_image_url"],
-			username: username,
-			status: "active",
-		});
-	}
+	// Upsert user atomically
+	await models.users.upsert({
+		id: claims["sub"],
+		email: claims["email"],
+		firstName: claims["first_name"],
+		lastName: claims["last_name"],
+		profileImageUrl: claims["profile_image_url"],
+		username: username,
+		status: "active",
+	});
 }
 
 export async function setupAuth(app: Express) {

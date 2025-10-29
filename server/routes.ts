@@ -171,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 	// User management routes (WordPress compatible)
 	app.get("/api/users", isAuthenticated, async (req, res) => {
 		const { err, result } = await safeTryAsync(async () => {
-			const { page, per_page, limit, offset } = parsePaginationParams(
+			const { page, limit, offset } = parsePaginationParams(
 				req.query,
 				CONFIG.PAGINATION.DEFAULT_PAGE_SIZE,
 			);

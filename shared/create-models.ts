@@ -18,9 +18,9 @@ import {
 import type { Table, InferSelectModel, InferInsertModel } from "drizzle-orm";
 import { db } from "../server/db";
 
-// Transaction-aware database type - using any for compatibility
+// Transaction-aware database type - using the type of the imported db instance for type safety
 // The union type approach causes method signature conflicts between PostgreSQL drivers
-export type DatabaseInstance = any;
+export type DatabaseInstance = typeof db;
 
 // Filter types
 export interface PropertyFilter {

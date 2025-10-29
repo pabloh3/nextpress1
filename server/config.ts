@@ -74,7 +74,7 @@ export const CONFIG = {
 
 	// File upload
 	FILE_UPLOAD: {
-		UNIQUE_SUFFIX_LENGTH: 9, // Math.round(Math.random() * 1e9)
+		// (removed UNIQUE_SUFFIX_LENGTH: 9, as it was unused and misleading)
 	},
 } as const;
 

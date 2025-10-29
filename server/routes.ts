@@ -30,7 +30,141 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Initialize default roles and site
+async function initializeDefaultRolesAndSite() {
+	try {
+		// Check if roles exist
+		const existingRoles = await models.roles.findDefaultRoles();
+
+		if (existingRoles.length === 0) {
+			console.log("Creating default roles...");
+
+			// Create default roles
+			const adminRole = await models.roles.create({
+				name: "admin",
+				description: "Full system access with all permissions",
+				capabilities: [
+					{
+						name: "manage_users",
+						description: "Create, edit, and delete users",
+					},
+					{
+						name: "manage_roles",
+						description: "Create, edit, and delete roles",
+					},
+					{
+						name: "manage_sites",
+						description: "Create, edit, and delete sites",
+					},
+					{
+						name: "manage_themes",
+						description: "Install, activate, and customize themes",
+					},
+					{
+						name: "manage_plugins",
+						description: "Install, activate, and configure plugins",
+					},
+					{
+						name: "manage_settings",
+						description: "Access and modify system settings",
+					},
+					{ name: "publish_posts", description: "Publish posts and pages" },
+					{ name: "edit_posts", description: "Edit all posts and pages" },
+					{ name: "delete_posts", description: "Delete posts and pages" },
+					{
+						name: "manage_media",
+						description: "Upload and manage media files",
+					},
+					{
+						name: "moderate_comments",
+						description: "Approve, edit, and delete comments",
+					},
+				],
+			});
+
+			const editorRole = await models.roles.create({
+				name: "editor",
+				description: "Content management with publishing permissions",
+				capabilities: [
+					{ name: "publish_posts", description: "Publish posts and pages" },
+					{ name: "edit_posts", description: "Edit all posts and pages" },
+					{ name: "delete_posts", description: "Delete posts and pages" },
+					{
+						name: "manage_media",
+						description: "Upload and manage media files",
+					},
+					{
+						name: "moderate_comments",
+						description: "Approve, edit, and delete comments",
+					},
+				],
+			});
+
+			const subscriberRole = await models.roles.create({
+				name: "subscriber",
+				description: "Basic user with limited content access",
+				capabilities: [
+					{ name: "read_posts", description: "Read published posts and pages" },
+					{ name: "comment_posts", description: "Comment on posts" },
+				],
+			});
+
+			console.log("Default roles created:", {
+				adminRole: adminRole.name,
+				editorRole: editorRole.name,
+				subscriberRole: subscriberRole.name,
+			});
+		}
+
+		// Check if default site exists
+		const defaultSite = await models.sites.findDefaultSite();
+
+		if (!defaultSite) {
+			console.log("Creating default site...");
+
+			// Get the first user to be the site owner, or create a system user
+			let ownerId: string;
+			const users = await models.users.findMany();
+
+			if (users.length === 0) {
+				// Create a system user for the site
+				const systemUser = await models.users.create({
+					username: "system",
+					email: "system@nextpress.local",
+					firstName: "System",
+					lastName: "User",
+					status: "active",
+				});
+				ownerId = systemUser.id;
+			} else {
+				ownerId = users[0].id;
+			}
+
+			const site = await models.sites.create({
+				name: "Default Site",
+				description: "The default site for NextPress",
+				siteUrl: "http://localhost:3000",
+				ownerId: ownerId,
+				settings: {
+					title: "NextPress Site",
+					tagline: "A modern content management system",
+					timezone: "UTC",
+					dateFormat: "Y-m-d",
+					timeFormat: "H:i",
+				},
+			});
+
+			console.log("Default site created:", site.name);
+		}
+	} catch (error) {
+		console.error("Error initializing default roles and site:", error);
+	}
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+	// Initialize default roles and site
+	await initializeDefaultRolesAndSite();
+
 	// Auth middleware
 	await setupAuth(app);
 
@@ -120,6 +254,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			console.log("Password hashed for new user:", userData.username);
 
 			const user = await models.users.create(userData);
+
+			// Assign default role to new user
+			try {
+				// Get the default site
+				const defaultSite = await models.sites.findDefaultSite();
+				if (!defaultSite) {
+					console.error("No default site found for role assignment");
+				} else {
+					// Get subscriber role
+					const subscriberRole = await models.roles.findByName("subscriber");
+					if (subscriberRole) {
+						await models.userRoles.assignRole(
+							user.id,
+							subscriberRole.id,
+							defaultSite.id,
+						);
+						console.log(`Assigned subscriber role to user: ${user.username}`);
+					} else {
+						console.error("Subscriber role not found");
+					}
+				}
+			} catch (roleError) {
+				console.error("Error assigning role to new user:", roleError);
+				// Don't fail registration if role assignment fails
+			}
 
 			// Create session for new user
 			(req as any).session.localUser = {

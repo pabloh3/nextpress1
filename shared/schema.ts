@@ -284,6 +284,21 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
 	children: many(comments, { relationName: "parentComment" }),
 }));
 
+export const sessions = pgTable("sessions", {
+	id: varchar("id").primaryKey(),
+	userId: uuid("user_id")
+		.references(() => users.id)
+		.notNull(),
+	sessionData: jsonb("session_data").notNull(),
+	expiresAt: timestamp("expires_at").notNull(),
+	createdAt: timestamp("created_at").defaultNow(),
+	updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const mediaRelations = relations(media, ({ one }) => ({
 	author: one(users, { fields: [media.authorId], references: [users.id] }),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+	user: one(users, { fields: [sessions.userId], references: [users.id] }),
 }));

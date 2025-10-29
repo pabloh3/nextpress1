@@ -15,6 +15,7 @@ import {
 	blocks,
 	comments,
 	media,
+	sessions,
 } from "@shared/schema";
 
 // Specialized model factories for complex operations
@@ -372,13 +373,78 @@ export function createBlockModel(dbInstance: DatabaseInstance = db) {
 	};
 }
 
+export function createRoleModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(roles, dbInstance);
+	return {
+		...baseModel,
+		async findByName(name: string) {
+			return baseModel.findFirst([{ where: "name", equals: name }]);
+		},
+		async findDefaultRoles() {
+			return baseModel.findManyWhere([
+				{ where: "name", in: ["admin", "editor", "subscriber"] },
+			]);
+		},
+	};
+}
+
+export function createUserRoleModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(userRoles, dbInstance);
+	return {
+		...baseModel,
+		async findByUser(userId: string) {
+			return baseModel.findManyWhere([{ where: "userId", equals: userId }]);
+		},
+		async findBySite(siteId: string) {
+			return baseModel.findManyWhere([{ where: "siteId", equals: siteId }]);
+		},
+		async assignRole(userId: string, roleId: string, siteId: string) {
+			// Check if role already assigned
+			const existing = await baseModel.findFirst([
+				{ where: "userId", equals: userId },
+				{ where: "roleId", equals: roleId },
+				{ where: "siteId", equals: siteId },
+			]);
+
+			if (existing) {
+				return existing;
+			}
+
+			return baseModel.create({ userId, roleId, siteId });
+		},
+		async removeRole(userId: string, roleId: string, siteId: string) {
+			const existing = await baseModel.findFirst([
+				{ where: "userId", equals: userId },
+				{ where: "roleId", equals: roleId },
+				{ where: "siteId", equals: siteId },
+			]);
+
+			if (existing) {
+				return baseModel.delete(existing.id);
+			}
+			return null;
+		},
+	};
+}
+
+export function createSiteModel(dbInstance: DatabaseInstance = db) {
+	const baseModel = createModel(sites, dbInstance);
+	return {
+		...baseModel,
+		async findDefaultSite() {
+			return baseModel.findFirst([{ where: "name", equals: "Default Site" }]);
+		},
+		async findByOwner(ownerId: string) {
+			return baseModel.findManyWhere([{ where: "ownerId", equals: ownerId }]);
+		},
+	};
+}
+
 // Export all models as a simple object (no OOP!)
 export const models = {
 	// Basic models
-	sites: createModel(sites, db),
-	roles: createModel(roles, db),
-	userRoles: createModel(userRoles, db),
 	blogs: createModel(blogs, db),
+	sessions: createModel(sessions, db),
 
 	// Specialized models
 	users: createUserModel(),
@@ -391,15 +457,15 @@ export const models = {
 	options: createOptionModel(),
 	templates: createTemplateModel(),
 	blocks: createBlockModel(),
+	roles: createRoleModel(),
+	userRoles: createUserRoleModel(),
+	sites: createSiteModel(),
 } as const;
 
 // Export individual model factories for transaction usage
 export const modelFactories = {
-	sites: (dbInstance: DatabaseInstance) => createModel(sites, dbInstance),
-	roles: (dbInstance: DatabaseInstance) => createModel(roles, dbInstance),
-	userRoles: (dbInstance: DatabaseInstance) =>
-		createModel(userRoles, dbInstance),
 	blogs: (dbInstance: DatabaseInstance) => createModel(blogs, dbInstance),
+	sessions: (dbInstance: DatabaseInstance) => createModel(sessions, dbInstance),
 
 	users: createUserModel,
 	posts: createPostModel,
@@ -411,4 +477,7 @@ export const modelFactories = {
 	options: createOptionModel,
 	templates: createTemplateModel,
 	blocks: createBlockModel,
+	roles: createRoleModel,
+	userRoles: createUserRoleModel,
+	sites: createSiteModel,
 } as const;

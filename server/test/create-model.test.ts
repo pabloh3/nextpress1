@@ -572,7 +572,7 @@ describe("createModel - Generic CRUD Operations", () => {
 		it("should throw error for invalid column in orderBy", async () => {
 			await expect(
 				userModel.findMany({
-					orderBy: { property: "invalidColumn", direction: "asc" },
+					orderBy: { property: "invalidColumn", order: "ascending" },
 				}),
 			).rejects.toThrow("Column 'invalidColumn' does not exist on table");
 		});

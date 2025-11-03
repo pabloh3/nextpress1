@@ -18,6 +18,7 @@
     "verify:users": "tsx scripts/verify-users.ts"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.3.11",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
@@ -62,7 +63,7 @@
     "csv-parse": "^6.1.0",
     "date-fns": "^3.6.0",
     "dotenv": "^17.2.1",
-    "drizzle-orm": "^0.39.1",
+    "drizzle-orm": "^0.29.7",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
     "express": "^4.21.2",
@@ -97,6 +98,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
+    "@libsql/client": "^0.15.15",
     "@replit/vite-plugin-cartographer": "^0.2.7",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/typography": "^0.5.15",
@@ -119,6 +121,7 @@
     "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.30.4",
+    "drizzle-orm": "^0.39.1",
     "esbuild": "^0.25.0",
     "jsdom": "^26.1.0",
     "postcss": "^8.4.47",

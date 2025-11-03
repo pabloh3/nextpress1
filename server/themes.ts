@@ -1,111 +1,112 @@
-import { storage } from "./storage.js";
+import { models } from "./storage.js";
 import hooks from "./hooks.js";
 
 class ThemeManager {
-  private renderers: Map<string, any>;
+	private renderers: Map<string, any>;
 
-  constructor() {
-    this.renderers = new Map();
-    this.registerDefaultRenderers();
-  }
+	constructor() {
+		this.renderers = new Map();
+		this.registerDefaultRenderers();
+	}
 
-  // Register default theme renderers
-  registerDefaultRenderers() {
-    // React renderer
-    this.renderers.set('react', {
-      name: 'React Renderer',
-      render: async (template: string, data: any) => {
-        // React server-side rendering would go here
-        return `<!-- React rendered content for ${template} -->`;
-      }
-    });
+	// Register default theme renderers
+	registerDefaultRenderers() {
+		// React renderer
+		this.renderers.set("react", {
+			name: "React Renderer",
+			render: async (template: string, data: any) => {
+				// React server-side rendering would go here
+				return `<!-- React rendered content for ${template} -->`;
+			},
+		});
 
-    // Next.js renderer
-    this.renderers.set('nextjs', {
-      name: 'Next.js Renderer',
-      render: async (template: string, data: any) => {
-        return this.renderNextJsTemplate(template, data);
-      }
-    });
+		// Next.js renderer
+		this.renderers.set("nextjs", {
+			name: "Next.js Renderer",
+			render: async (template: string, data: any) => {
+				return this.renderNextJsTemplate(template, data);
+			},
+		});
 
-    // Custom SSR renderer - uses the built-in template methods
-    this.renderers.set('custom-ssr', {
-      name: 'Custom SSR Renderer',
-      render: async (template: string, data: any) => {
-        return this.renderNextJsTemplate(template, data);
-      }
-    });
+		// Custom SSR renderer - uses the built-in template methods
+		this.renderers.set("custom-ssr", {
+			name: "Custom SSR Renderer",
+			render: async (template: string, data: any) => {
+				return this.renderNextJsTemplate(template, data);
+			},
+		});
 
-    // Custom renderer
-    this.renderers.set('custom', {
-      name: 'Custom Renderer',
-      render: async (template: string, data: any) => {
-        // Custom rendering logic
-        return `<!-- Custom rendered content for ${template} -->`;
-      }
-    });
-  }
+		// Custom renderer
+		this.renderers.set("custom", {
+			name: "Custom Renderer",
+			render: async (template: string, data: any) => {
+				// Custom rendering logic
+				return `<!-- Custom rendered content for ${template} -->`;
+			},
+		});
+	}
 
-  // Register a new theme renderer
-  registerRenderer(name: string, renderer: any) {
-    this.renderers.set(name, renderer);
-  }
+	// Register a new theme renderer
+	registerRenderer(name: string, renderer: any) {
+		this.renderers.set(name, renderer);
+	}
 
-  // Get available renderers
-  getRenderers() {
-    return Array.from(this.renderers.keys());
-  }
+	// Get available renderers
+	getRenderers() {
+		return Array.from(this.renderers.keys());
+	}
 
-  // Install a new theme
-  async installTheme(themeData: any) {
-    const theme = await storage.createTheme(themeData);
-    hooks.doAction('theme_installed', theme);
-    return theme;
-  }
+	// Install a new theme
+	async installTheme(themeData: any) {
+		const theme = await models.themes.create(themeData);
+		hooks.doAction("theme_installed", theme);
+		return theme;
+	}
 
-  // Activate a theme
-  async activateTheme(themeId: number) {
-    const oldTheme = await storage.getActiveTheme();
-    await storage.activateTheme(themeId);
-    const newTheme = await storage.getTheme(themeId);
-    
-    hooks.doAction('switch_theme', newTheme, oldTheme);
-    return newTheme;
-  }
+	// Activate a theme
+	async activateTheme(themeId: string) {
+		const oldTheme = await models.themes.findActiveTheme();
+		await models.themes.setActiveTheme(themeId);
+		const newTheme = await models.themes.findById(themeId);
 
-  // Get active theme
-  async getActiveTheme() {
-    return await storage.getActiveTheme();
-  }
+		hooks.doAction("switch_theme", newTheme, oldTheme);
+		return newTheme;
+	}
 
-  // Next.js specific rendering method
-  renderNextJsTemplate(template: string, data: any): string {
-    const { post, page, site } = data;
-    const content = post || page;
-    
-    if (!content) {
-      return this.render404();
-    }
+	// Get active theme
+	async getActiveTheme() {
+		return await models.themes.findActiveTheme();
+	}
 
-    switch (template) {
-      case 'single-post':
-      case 'post':
-        return this.renderSinglePost(content, site);
-      case 'page':
-        return this.renderSinglePage(content, site);
-      case 'home':
-      case 'index':
-        return this.renderHomePage(data.posts || [], site);
-      default:
-        return this.renderSinglePost(content, site);
-    }
-  }
+	// Next.js specific rendering method
+	renderNextJsTemplate(template: string, data: any): string {
+		const { post, page, site } = data;
+		const content = post || page;
 
-  renderSinglePost(post: any, site: any): string {
-    const siteTitle = site?.name || 'NextPress';
-    const siteDescription = site?.description || 'A modern WordPress alternative';
-    
-    return `<!DOCTYPE html>
+		if (!content) {
+			return this.render404();
+		}
+
+		switch (template) {
+			case "single-post":
+			case "post":
+				return this.renderSinglePost(content, site);
+			case "page":
+				return this.renderSinglePage(content, site);
+			case "home":
+			case "index":
+				return this.renderHomePage(data.posts || [], site);
+			default:
+				return this.renderSinglePost(content, site);
+		}
+	}
+
+	renderSinglePost(post: any, site: any): string {
+		const siteTitle = site?.name || "NextPress";
+		const siteDescription =
+			site?.description || "A modern WordPress alternative";
+
+		return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -117,7 +118,7 @@ class ThemeManager {
     <meta property="og:type" content="article">
     <meta property="og:title" content="${post.title}">
     <meta property="og:description" content="${post.excerpt || post.title}">
-    <meta property="og:url" content="${site?.url || ''}/posts/${post.id}">
+    <meta property="og:url" content="${site?.url || ""}/posts/${post.id}">
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
@@ -308,11 +309,14 @@ class ThemeManager {
                     <h1 class="post-title">${post.title}</h1>
                     <div class="post-meta">
                         <time datetime="${post.createdAt}">
-                            ${new Date(post.createdAt).toLocaleDateString('en-US', { 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
-                            })}
+                            ${new Date(post.createdAt).toLocaleDateString(
+															"en-US",
+															{
+																year: "numeric",
+																month: "long",
+																day: "numeric",
+															},
+														)}
                         </time>
                         <span class="post-status status-${post.status}">${post.status}</span>
                     </div>
@@ -330,18 +334,19 @@ class ThemeManager {
     </div>
 </body>
 </html>`;
-  }
+	}
 
-  renderSinglePage(page: any, site: any): string {
-    // Similar to post but with different structure
-    return this.renderSinglePost(page, site);
-  }
+	renderSinglePage(page: any, site: any): string {
+		// Similar to post but with different structure
+		return this.renderSinglePost(page, site);
+	}
 
-  renderHomePage(posts: any[], site: any): string {
-    const siteTitle = site?.name || 'NextPress';
-    const siteDescription = site?.description || 'A modern WordPress alternative';
-    
-    return `<!DOCTYPE html>
+	renderHomePage(posts: any[], site: any): string {
+		const siteTitle = site?.name || "NextPress";
+		const siteDescription =
+			site?.description || "A modern WordPress alternative";
+
+		return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -446,37 +451,48 @@ class ThemeManager {
         </header>
         
         <main>
-            ${posts.length > 0 ? `
+            ${
+							posts.length > 0
+								? `
                 <div class="posts-grid">
-                    ${posts.map(post => `
+                    ${posts
+											.map(
+												(post) => `
                         <article class="post-card">
                             <h2 class="post-card-title">
                                 <a href="/posts/${post.id}">${post.title}</a>
                             </h2>
                             <div class="post-card-meta">
-                                ${new Date(post.createdAt).toLocaleDateString('en-US', { 
-                                    year: 'numeric', 
-                                    month: 'long', 
-                                    day: 'numeric' 
-                                })}
+                                ${new Date(post.createdAt).toLocaleDateString(
+																	"en-US",
+																	{
+																		year: "numeric",
+																		month: "long",
+																		day: "numeric",
+																	},
+																)}
                             </div>
-                            ${post.excerpt ? `<p class="post-card-excerpt">${post.excerpt}</p>` : ''}
+                            ${post.excerpt ? `<p class="post-card-excerpt">${post.excerpt}</p>` : ""}
                         </article>
-                    `).join('')}
+                    `,
+											)
+											.join("")}
                 </div>
-            ` : `
+            `
+								: `
                 <div class="no-posts">
                     <p>No posts published yet.</p>
                 </div>
-            `}
+            `
+						}
         </main>
     </div>
 </body>
 </html>`;
-  }
+	}
 
-  render404(): string {
-    return `<!DOCTYPE html>
+	render404(): string {
+		return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -527,130 +543,135 @@ class ThemeManager {
     </div>
 </body>
 </html>`;
-  }
+	}
 
-  parseContent(content: string): string {
-    // Basic content parsing - convert markdown-like syntax to HTML
-    if (!content) return '';
-    
-    return content
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/\n/g, '<br>')
-      .replace(/^/, '<p>')
-      .replace(/$/, '</p>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code>$1</code>');
-  }
+	parseContent(content: string): string {
+		// Basic content parsing - convert markdown-like syntax to HTML
+		if (!content) return "";
 
-  // Render content using active theme
-  async renderContent(template: string, data: any): Promise<string> {
-    const activeTheme = await this.getActiveTheme();
-    
-    if (!activeTheme) {
-      throw new Error('No active theme found');
-    }
+		return content
+			.replace(/\n\n/g, "</p><p>")
+			.replace(/\n/g, "<br>")
+			.replace(/^/, "<p>")
+			.replace(/$/, "</p>")
+			.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+			.replace(/\*(.*?)\*/g, "<em>$1</em>")
+			.replace(/`(.*?)`/g, "<code>$1</code>");
+	}
 
-    if (!activeTheme.renderer) {
-      throw new Error('Active theme has no renderer specified');
-    }
+	// Render content using active theme
+	async renderContent(template: string, data: any): Promise<string> {
+		const activeTheme = await this.getActiveTheme();
 
-    const renderer = this.renderers.get(activeTheme.renderer);
-    if (!renderer) {
-      throw new Error(`Renderer '${activeTheme.renderer}' not found`);
-    }
+		if (!activeTheme) {
+			throw new Error("No active theme found");
+		}
 
-    // Apply theme filters
-    const filteredData = hooks.applyFilters('theme_data', data, activeTheme);
-    const filteredTemplate = hooks.applyFilters('theme_template', template, activeTheme);
+		if (!activeTheme.renderer) {
+			throw new Error("Active theme has no renderer specified");
+		}
 
-    // Render content
-    const content = await renderer.render(filteredTemplate, filteredData);
-    
-    // Apply content filters
-    return hooks.applyFilters('theme_content', content, activeTheme);
-  }
+		const renderer = this.renderers.get(activeTheme.renderer);
+		if (!renderer) {
+			throw new Error(`Renderer '${activeTheme.renderer}' not found`);
+		}
 
-  // Get theme templates
-  getTemplateHierarchy(type: string, slug: string | null = null): string[] {
-    const templates = [];
-    
-    switch (type) {
-      case 'single':
-        if (slug) templates.push(`single-${slug}.js`);
-        templates.push('single.js', 'index.js');
-        break;
-      case 'page':
-        if (slug) templates.push(`page-${slug}.js`);
-        templates.push('page.js', 'index.js');
-        break;
-      case 'archive':
-        templates.push('archive.js', 'index.js');
-        break;
-      case 'home':
-        templates.push('home.js', 'index.js');
-        break;
-      default:
-        templates.push('index.js');
-    }
-    
-    return templates;
-  }
+		// Apply theme filters
+		const filteredData = hooks.applyFilters("theme_data", data, activeTheme);
+		const filteredTemplate = hooks.applyFilters(
+			"theme_template",
+			template,
+			activeTheme,
+		);
 
-  // WordPress-compatible theme functions
-  async getCurrentTheme() {
-    return await this.getActiveTheme();
-  }
+		// Render content
+		const content = await renderer.render(filteredTemplate, filteredData);
 
-  async switchTheme(themeName: string) {
-    const themes = await storage.getThemes();
-    const theme = themes.find(t => t.name === themeName);
-    
-    if (!theme) {
-      throw new Error(`Theme '${themeName}' not found`);
-    }
-    
-    return await this.activateTheme(theme.id);
-  }
+		// Apply content filters
+		return hooks.applyFilters("theme_content", content, activeTheme);
+	}
+
+	// Get theme templates
+	getTemplateHierarchy(type: string, slug: string | null = null): string[] {
+		const templates = [];
+
+		switch (type) {
+			case "single":
+				if (slug) templates.push(`single-${slug}.js`);
+				templates.push("single.js", "index.js");
+				break;
+			case "page":
+				if (slug) templates.push(`page-${slug}.js`);
+				templates.push("page.js", "index.js");
+				break;
+			case "archive":
+				templates.push("archive.js", "index.js");
+				break;
+			case "home":
+				templates.push("home.js", "index.js");
+				break;
+			default:
+				templates.push("index.js");
+		}
+
+		return templates;
+	}
+
+	// WordPress-compatible theme functions
+	async getCurrentTheme() {
+		return await this.getActiveTheme();
+	}
+
+	async switchTheme(themeName: string) {
+		const themes = await models.themes.findMany();
+		const theme = themes.find((t) => t.name === themeName);
+
+		if (!theme) {
+			throw new Error(`Theme '${themeName}' not found`);
+		}
+
+		return await this.activateTheme(theme.id);
+	}
 }
 
 // Initialize default themes
 async function initializeDefaultThemes() {
-  const themes = await storage.getThemes();
-  
-  if (themes.length === 0) {
-    // Create default Custom SSR theme
-    const customSSRTheme = await storage.createTheme({
-      name: 'Custom SSR',
-      description: 'A custom server-side rendered theme with modern styling and responsive design. Built specifically for NextPress with optimized HTML output.',
-      version: '1.0.0',
-      author: 'NextPress Team',
-      renderer: 'custom-ssr',
-      isActive: true,
-      config: {
-        colors: {
-          primary: '#0073aa',
-          secondary: '#005177',
-          background: '#ffffff',
-          text: '#23282d',
-          accent: '#00a0d2'
-        },
-        layout: {
-          maxWidth: '800px',
-          sidebar: 'none',
-          navigation: 'top'
-        },
-        features: {
-          serverSideRendering: true,
-          responsiveDesign: true,
-          darkMode: false,
-          customHTML: true
-        }
-      }
-    });
+	const themes = await models.themes.findMany();
 
-    console.log('Default theme initialized:', customSSRTheme.name);
-  }
+	if (themes.length === 0) {
+		// Create default Custom SSR theme
+		const customSSRTheme = await models.themes.create({
+			name: "Custom SSR",
+			description:
+				"A custom server-side rendered theme with modern styling and responsive design. Built specifically for NextPress with optimized HTML output.",
+			version: "1.0.0",
+			author: "NextPress Team",
+			renderer: "custom-ssr",
+			isActive: true,
+			config: {
+				colors: {
+					primary: "#0073aa",
+					secondary: "#005177",
+					background: "#ffffff",
+					text: "#23282d",
+					accent: "#00a0d2",
+				},
+				layout: {
+					maxWidth: "800px",
+					sidebar: "none",
+					navigation: "top",
+				},
+				features: {
+					serverSideRendering: true,
+					responsiveDesign: true,
+					darkMode: false,
+					customHTML: true,
+				},
+			},
+		});
+
+		console.log("Default theme initialized:", customSSRTheme.name);
+	}
 }
 
 const themeManager = new ThemeManager();

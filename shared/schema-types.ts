@@ -1,6 +1,6 @@
 import type {
-	comments,
 	users,
+	comments,
 	sites,
 	roles,
 	userRoles,
@@ -13,114 +13,65 @@ import type {
 	posts,
 	blocks,
 	media,
+	sessions,
 } from "./schema";
-import type {
-	createUserSchema,
-	insertCommentSchema,
-	insertUserSchema,
-	updateUserSchema,
-	insertSiteSchema,
-	updateSiteSchema,
-	insertRoleSchema,
-	updateRoleSchema,
-	insertUserRoleSchema,
-	insertPageSchema,
-	updatePageSchema,
-	insertPostSchema,
-	updatePostSchema,
-	insertBlogSchema,
-	updateBlogSchema,
-	insertTemplateSchema,
-	updateTemplateSchema,
-	insertThemeSchema,
-	updateThemeSchema,
-	insertPluginSchema,
-	updatePluginSchema,
-	insertOptionSchema,
-	insertBlockSchema,
-	updateBlockSchema,
-	insertMediaSchema,
-	updateMediaSchema,
-} from "./zod-schema";
-import type { z } from "zod";
 
 // User types
 export type User = typeof users.$inferSelect;
-export type UpsertUser = typeof users.$inferInsert;
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type CreateUser = z.infer<typeof createUserSchema>;
-export type UpdateUser = z.infer<typeof updateUserSchema>;
+export type NewUser = typeof users.$inferInsert;
 
 // Comment types
 export type Comment = typeof comments.$inferSelect;
-export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type NewComment = typeof comments.$inferInsert;
 
 // Site types
 export type Site = typeof sites.$inferSelect;
-export type UpsertSite = typeof sites.$inferInsert;
-export type InsertSite = z.infer<typeof insertSiteSchema>;
-export type UpdateSite = z.infer<typeof updateSiteSchema>;
+export type NewSite = typeof sites.$inferInsert;
 
 // Role types
 export type Role = typeof roles.$inferSelect;
-export type UpsertRole = typeof roles.$inferInsert;
-export type InsertRole = z.infer<typeof insertRoleSchema>;
-export type UpdateRole = z.infer<typeof updateRoleSchema>;
+export type NewRole = typeof roles.$inferInsert;
 
 // UserRole types
 export type UserRole = typeof userRoles.$inferSelect;
-export type UpsertUserRole = typeof userRoles.$inferInsert;
-export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
+export type NewUserRole = typeof userRoles.$inferInsert;
 
 // Page types
 export type Page = typeof pages.$inferSelect;
-export type UpsertPage = typeof pages.$inferInsert;
-export type InsertPage = z.infer<typeof insertPageSchema>;
-export type UpdatePage = z.infer<typeof updatePageSchema>;
+export type NewPage = typeof pages.$inferInsert;
 
 // Template types
 export type Template = typeof templates.$inferSelect;
-export type UpsertTemplate = typeof templates.$inferInsert;
-export type InsertTemplate = z.infer<typeof insertTemplateSchema>;
-export type UpdateTemplate = z.infer<typeof updateTemplateSchema>;
+export type NewTemplate = typeof templates.$inferInsert;
 
 // Theme types
 export type Theme = typeof themes.$inferSelect;
-export type UpsertTheme = typeof themes.$inferInsert;
-export type InsertTheme = z.infer<typeof insertThemeSchema>;
-export type UpdateTheme = z.infer<typeof updateThemeSchema>;
+export type NewTheme = typeof themes.$inferInsert;
 
 // Plugin types
 export type Plugin = typeof plugins.$inferSelect;
-export type UpsertPlugin = typeof plugins.$inferInsert;
-export type InsertPlugin = z.infer<typeof insertPluginSchema>;
-export type UpdatePlugin = z.infer<typeof updatePluginSchema>;
+export type NewPlugin = typeof plugins.$inferInsert;
 
 // Option types
 export type Option = typeof options.$inferSelect;
-export type UpsertOption = typeof options.$inferInsert;
-export type InsertOption = z.infer<typeof insertOptionSchema>;
+export type NewOption = typeof options.$inferInsert;
 
 // Blog types
 export type Blog = typeof blogs.$inferSelect;
-export type UpsertBlog = typeof blogs.$inferInsert;
-export type InsertBlog = z.infer<typeof insertBlogSchema>;
-export type UpdateBlog = z.infer<typeof updateBlogSchema>;
+export type NewBlog = typeof blogs.$inferInsert;
 
 // Post types
 export type Post = typeof posts.$inferSelect;
-export type UpsertPost = typeof posts.$inferInsert;
-export type InsertPost = z.infer<typeof insertPostSchema>;
-export type UpdatePost = z.infer<typeof updatePostSchema>;
+export type NewPost = typeof posts.$inferInsert;
 
 // Block types
 export type Block = typeof blocks.$inferSelect;
-export type UpsertBlock = typeof blocks.$inferInsert;
-export type InsertBlock = z.infer<typeof insertBlockSchema>;
-export type UpdateBlock = z.infer<typeof updateBlockSchema>;
+export type NewBlock = typeof blocks.$inferInsert;
 
 // Media types
 export type Media = typeof media.$inferSelect;
-export type UpsertMedia = typeof media.$inferInsert;
-export type InsertMedia = z.infer<typeof insertMediaSchema>;
-export type UpdateMedia = z.infer<typeof updateMediaSchema>;
+export type NewMedia = typeof media.$inferInsert;
+
+// Session types
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;

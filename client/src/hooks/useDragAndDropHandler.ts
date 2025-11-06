@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { DropResult } from '@/lib/dnd';
-import type { BlockConfig } from '@shared/schema';
+import type { BlockConfig } from '@shared/schema-types';
 import { insertNewBlock, moveExistingBlock } from '@/lib/handlers/treeUtils';
 import { useToast } from '@/hooks/use-toast';
 

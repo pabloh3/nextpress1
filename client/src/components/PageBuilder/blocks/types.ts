@@ -1,5 +1,5 @@
 // client/src/components/PageBuilder/blocks/types.ts
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 
 export type BlockCategory = 'basic' | 'media' | 'layout' | 'advanced';
 

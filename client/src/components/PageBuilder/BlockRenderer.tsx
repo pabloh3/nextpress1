@@ -1,7 +1,7 @@
 import React, { useState, isValidElement, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, Trash2, Move } from "lucide-react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import { blockRegistry } from "./blocks";
 import { Droppable, Draggable } from "@/lib/dnd";
 import { useBlockActions } from "./BlockActionsContext";

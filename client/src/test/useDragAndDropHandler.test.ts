@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useDragAndDropHandler } from '../hooks/useDragAndDropHandler'
-import type { BlockConfig } from '@shared/schema'
+import type { BlockConfig } from '@shared/schema-types'
 import type { DropResult } from '@/lib/dnd'
 import * as toastModule from '@/hooks/use-toast'
 
@@ -11,18 +11,55 @@ vi.mock('../components/PageBuilder/blocks', () => ({
     'core/paragraph': {
       id: 'core/paragraph',
       name: 'Paragraph',
-      isContainer: false
+      isContainer: false,
+      defaultContent: {},
+      defaultStyles: {},
+      category: 'basic'
     },
     'core/group': {
       id: 'core/group',
       name: 'Group',
-      isContainer: true
+      isContainer: true,
+      defaultContent: {},
+      defaultStyles: {},
+      category: 'layout'
     },
     'core/columns': {
       id: 'core/columns',
       name: 'Columns',
-      isContainer: true
+      isContainer: true,
+      defaultContent: {},
+      defaultStyles: {},
+      category: 'layout'
     }
+  },
+  getDefaultBlock: (type: string, id: string) => {
+    const registry: any = {
+      'core/paragraph': {
+        id,
+        name: 'paragraph',
+        type: 'block',
+        parentId: null,
+        displayName: 'Paragraph',
+        category: 'basic',
+        content: {},
+        styles: {},
+        settings: {}
+      },
+      'core/group': {
+        id,
+        name: 'group',
+        type: 'container',
+        parentId: null,
+        displayName: 'Group',
+        category: 'layout',
+        content: {},
+        styles: {},
+        settings: {},
+        children: []
+      }
+    };
+    return registry[type] || null;
   }
 }))
 

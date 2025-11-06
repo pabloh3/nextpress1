@@ -1,7 +1,7 @@
 // blocks/heading/HeadingBlock.tsx
 import { Heading1 } from "lucide-react";
 import type { BlockDefinition } from "../types.ts";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

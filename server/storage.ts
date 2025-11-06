@@ -12,7 +12,6 @@ import {
 	options,
 	blogs,
 	posts,
-	blocks,
 	comments,
 	media,
 	sessions,
@@ -359,20 +358,6 @@ export function createTemplateModel(dbInstance: DatabaseInstance = db) {
 	};
 }
 
-export function createBlockModel(dbInstance: DatabaseInstance = db) {
-	const baseModel = createModel(blocks, dbInstance);
-	return {
-		...baseModel,
-		async findByType(type: string) {
-			return baseModel.findManyWhere([{ where: "type", equals: type }]);
-		},
-		async findReusableBlocks() {
-			// Blocks don't have isReusable property, return all blocks for now
-			return await baseModel.findManyWith({}, {});
-		},
-	};
-}
-
 export function createRoleModel(dbInstance: DatabaseInstance = db) {
 	const baseModel = createModel(roles, dbInstance);
 	return {
@@ -456,7 +441,6 @@ export const models = {
 	plugins: createPluginModel(),
 	options: createOptionModel(),
 	templates: createTemplateModel(),
-	blocks: createBlockModel(),
 	roles: createRoleModel(),
 	userRoles: createUserRoleModel(),
 	sites: createSiteModel(),
@@ -476,7 +460,6 @@ export const modelFactories = {
 	plugins: createPluginModel,
 	options: createOptionModel,
 	templates: createTemplateModel,
-	blocks: createBlockModel,
 	roles: createRoleModel,
 	userRoles: createUserRoleModel,
 	sites: createSiteModel,

@@ -11,7 +11,7 @@ import PageBuilder from '@/components/PageBuilder/PageBuilder';
 import PostEditor from '@/components/PostEditor';
 import PublishDialog from '@/components/PageBuilder/PublishDialog';
 import { useToast } from '@/hooks/use-toast';
-import type { Post, Template, BlockConfig } from '@shared/schema';
+import type { Post, Template, BlockConfig } from '@shared/schema-types';
 
 interface PageBuilderEditorProps {
   postId?: string;

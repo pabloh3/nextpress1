@@ -6,7 +6,7 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useBlockManager } from '@/hooks/useBlockManager';
 import { useDragAndDropHandler } from '@/hooks/useDragAndDropHandler';
 import { insertNewBlock, moveExistingBlock } from '@/lib/handlers/treeUtils';
-import type { BlockConfig } from '@shared/schema';
+import type { BlockConfig } from '@shared/schema-types';
 
 // Mock the block registry
 vi.mock('@/components/PageBuilder/blocks', () => ({

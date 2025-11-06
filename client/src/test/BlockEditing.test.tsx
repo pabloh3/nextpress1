@@ -4,7 +4,7 @@ import HeadingBlock from '../components/PageBuilder/blocks/heading/HeadingBlock'
 import TextBlock from '../components/PageBuilder/blocks/text/TextBlock';
 import ButtonBlock from '../components/PageBuilder/blocks/button/ButtonBlock';
 import SpacerBlock from '../components/PageBuilder/blocks/spacer/SpacerBlock';
-import type { BlockConfig } from '@shared/schema';
+import type { BlockConfig } from '@shared/schema-types';
 
 describe('Block Editing', () => {
   let mockOnUpdate: ReturnType<typeof vi.fn>;

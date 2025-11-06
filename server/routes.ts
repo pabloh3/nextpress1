@@ -10,16 +10,15 @@ import {
 	parseStatusParam,
 } from "./config";
 import { safeTry, safeTryAsync, handleSafeTryResult } from "./utils";
-import {
-	insertPostSchema,
-	insertCommentSchema,
-	insertMediaSchema,
-	insertTemplateSchema,
-	insertBlockSchema,
-	createUserSchema,
-	updateUserSchema,
-} from "@shared/zod-schema";
+import { getZodSchema } from "@shared/zod-schema";
 import hooks from "./hooks";
+
+// Get Zod schemas for validation
+const postSchemas = getZodSchema("posts");
+const commentSchemas = getZodSchema("comments");
+const mediaSchemas = getZodSchema("media");
+const templateSchemas = getZodSchema("templates");
+const userSchemas = getZodSchema("users");
 import themeManager from "./themes";
 import multer from "multer";
 import path from "path";
@@ -233,8 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	app.post("/api/auth/register", async (req, res) => {
 		try {
-			const { createUserSchema } = await import("@shared/zod-schema");
-			const userData = createUserSchema.parse(req.body);
+			const userData = userSchemas.insert.parse(req.body);
 
 			// Check if username or email already exists
 			const existingUser = await models.users.findByUsername(userData.username);
@@ -379,8 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	app.post("/api/users", isAuthenticated, async (req, res) => {
 		try {
-			const { createUserSchema } = await import("@shared/zod-schema");
-			const userData = createUserSchema.parse(req.body);
+			const userData = userSchemas.insert.parse(req.body);
 
 			// Hash password if provided
 			if (userData.password) {
@@ -406,8 +403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	app.put("/api/users/:id", isAuthenticated, async (req, res) => {
 		try {
-			const { updateUserSchema } = await import("@shared/zod-schema");
-			const userData = updateUserSchema.parse(req.body);
+			const userData = userSchemas.update.parse(req.body);
 
 			// Hash password if provided
 			if (userData.password) {
@@ -548,11 +544,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 				throw new Error("User not authenticated");
 			}
 
-			// Include authorId in the data before validation
-			const postData = insertPostSchema.parse({
-				...req.body,
-				authorId: userId,
-			});
+		// Include authorId in the data before validation
+		const postData = postSchemas.insert.parse({
+			...req.body,
+			authorId: userId,
+		});
 
 			// Generate slug if not provided
 			if (!postData.slug) {
@@ -582,8 +578,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	app.put("/api/posts/:id", isAuthenticated, async (req, res) => {
 		try {
-			const id = req.params.id;
-			const postData = insertPostSchema.partial().parse(req.body);
+		const id = req.params.id;
+		const postData = postSchemas.insert.partial().parse(req.body);
 
 			const existingPost = await models.posts.findById(id);
 			if (!existingPost) {
@@ -687,12 +683,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 				throw new Error("User not authenticated");
 			}
 
-			// Include authorId and type in the data before validation
-			const pageData = insertPostSchema.parse({
-				...req.body,
-				authorId: userId,
-				type: "page",
-			});
+		// Include authorId and type in the data before validation
+		const pageData = postSchemas.insert.parse({
+			...req.body,
+			authorId: userId,
+			type: "page",
+		});
 
 			// Generate slug if not provided
 			if (!pageData.slug) {
@@ -722,8 +718,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	app.put("/api/pages/:id", isAuthenticated, async (req, res) => {
 		try {
-			const id = req.params.id;
-			const pageData = insertPostSchema.partial().parse(req.body);
+		const id = req.params.id;
+		const pageData = postSchemas.insert.partial().parse(req.body);
 
 			const existingPage = await models.pages.findById(id);
 			if (!existingPage) {
@@ -806,7 +802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	app.post("/api/comments", async (req, res) => {
 		try {
-			const commentData = insertCommentSchema.parse(req.body);
+		const commentData = commentSchemas.insert.parse(req.body);
 			const comment = await models.comments.create(commentData);
 			hooks.doAction("new_comment", comment);
 			res.status(201).json(comment);
@@ -1084,12 +1080,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 				const { alt, caption, description } = req.body;
 
 				// Create URL for the uploaded file
-				const fileUrl = `/uploads/${file.filename}`;
+			const fileUrl = `/uploads/${file.filename}`;
 
-				const mediaData = insertMediaSchema.parse({
-					filename: file.filename,
-					originalName: file.originalname,
-					mimeType: file.mimetype,
+			const mediaData = mediaSchemas.insert.parse({
+				filename: file.filename,
+				originalName: file.originalname,
+				mimeType: file.mimetype,
 					size: file.size,
 					url: fileUrl,
 					alt: alt || "",
@@ -1281,16 +1277,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	app.post("/api/templates", isAuthenticated, async (req: any, res) => {
 		const { err, result } = await safeTryAsync(async () => {
-			const userId = authService.getCurrentUserId(req);
-			if (!userId) {
-				throw new Error("User not authenticated");
-			}
+		const userId = authService.getCurrentUserId(req);
+		if (!userId) {
+			throw new Error("User not authenticated");
+		}
 
-			const { insertTemplateSchema } = await import("@shared/zod-schema");
-			const templateData = insertTemplateSchema.parse({
-				...req.body,
-				authorId: userId,
-			});
+		const templateData = templateSchemas.insert.parse({
+			...req.body,
+			authorId: userId,
+		});
 
 			const template = await models.templates.create(templateData);
 			return template;
@@ -1348,97 +1343,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 		}
 	});
 
-	// Blocks API
-	app.get("/api/blocks", isAuthenticated, async (req, res) => {
-		try {
-			const { type, page = 1, per_page = 10 } = req.query;
-			const limit = parseInt(per_page as string);
-			const offset = (parseInt(page as string) - 1) * limit;
-
-			const blocks = await models.blocks.findMany({
-				limit,
-				offset,
-				where: "type",
-				equals: type as string,
-			});
-
-			const total = await models.blocks.count({
-				where: [{ where: "type", equals: type as string }],
-			});
-
-			res.json({
-				blocks,
-				total,
-				page: parseInt(page as string),
-				per_page: limit,
-				total_pages: Math.ceil(total / limit),
-			});
-		} catch (error) {
-			console.error("Error fetching blocks:", error);
-			res.status(500).json({ message: "Failed to fetch blocks" });
-		}
-	});
-
-	app.get("/api/blocks/:id", isAuthenticated, async (req, res) => {
-		try {
-			const block = await models.blocks.findById(req.params.id);
-			if (!block) {
-				return res.status(404).json({ message: "Block not found" });
-			}
-			res.json(block);
-		} catch (error) {
-			console.error("Error fetching block:", error);
-			res.status(500).json({ message: "Failed to fetch block" });
-		}
-	});
-
-	app.post("/api/blocks", isAuthenticated, async (req: any, res) => {
-		const { err, result } = await safeTryAsync(async () => {
-			const userId = authService.getCurrentUserId(req);
-			if (!userId) {
-				throw new Error("User not authenticated");
-			}
-
-			const blockData = insertBlockSchema.parse({
-				...req.body,
-				authorId: userId,
-			});
-
-			const block = await models.blocks.create(blockData);
-			return block;
-		});
-
-		if (err) {
-			console.error("Error creating block:", err);
-			return res.status(500).json({ message: "Failed to create block" });
-		}
-
-		res.status(201).json(result);
-	});
-
-	app.put("/api/blocks/:id", isAuthenticated, async (req, res) => {
-		try {
-			const id = req.params.id;
-			const blockData = insertBlockSchema.partial().parse(req.body);
-
-			const block = await models.blocks.update(id, blockData);
-			res.json(block);
-		} catch (error) {
-			console.error("Error updating block:", error);
-			res.status(500).json({ message: "Failed to update block" });
-		}
-	});
-
-	app.delete("/api/blocks/:id", isAuthenticated, async (req, res) => {
-		try {
-			const id = req.params.id;
-			await models.blocks.delete(id);
-			res.json({ message: "Block deleted successfully" });
-		} catch (error) {
-			console.error("Error deleting block:", error);
-			res.status(500).json({ message: "Failed to delete block" });
-		}
-	});
+	// NOTE: Blocks API endpoints removed - blocks table was removed as part of BlockConfig migration
+	// Blocks are now stored as JSONB within pages/posts/templates, not as separate table
+	// If you need block management, use pages/posts/templates endpoints with blocks field
 
 	// Preview endpoints - public access for sharing
 	app.get("/api/preview/post/:id", async (req, res) => {

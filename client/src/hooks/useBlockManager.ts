@@ -1,9 +1,18 @@
-import { useState, useCallback } from 'react';
-import type { BlockConfig } from '@shared/schema';
-import { findBlock, updateBlockDeep as updateBlockDeepTree, deleteBlockDeep as deleteBlockDeepTree, duplicateBlockDeep as duplicateBlockDeepTree } from '@/lib/handlers/treeUtils';
+import { useState, useCallback, useEffect } from 'react';
+import type { BlockConfig } from '@shared/schema-types';
+import { 
+  findBlock, 
+  updateBlockDeep as updateBlockDeepTree, 
+  deleteBlockDeep as deleteBlockDeepTree, 
+  duplicateBlockDeep as duplicateBlockDeepTree,
+  setParentIds 
+} from '@/lib/handlers/treeUtils';
 
 export function useBlockManager(initialBlocks: BlockConfig[] = []) {
-  const [blocks, setBlocks] = useState<BlockConfig[]>(initialBlocks);
+  const [blocks, setBlocks] = useState<BlockConfig[]>(() => {
+    // Initialize parentIds when loading blocks
+    return setParentIds(initialBlocks, null);
+  });
 
   const findBlockById = useCallback((blockId: string) => {
     return findBlock(blocks, blockId);

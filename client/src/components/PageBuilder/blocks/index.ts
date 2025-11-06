@@ -1,5 +1,5 @@
 import type { BlockDefinition } from "./types";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import HeadingBlock from "./heading/HeadingBlock";
 import TextBlock from "./text/TextBlock";
 import ButtonBlock from "./button/ButtonBlock";
@@ -71,30 +71,29 @@ export function getDefaultBlock(type: string, id: string): BlockConfig | null {
 
   // Deep clone default content to avoid shared references across instances
   const content = structuredClone(def.defaultContent ?? {});
-
-  // Ensure unique column IDs for Columns block instances to prevent droppable collisions
-  if (type === 'core/columns' && content && Array.isArray(content.columns)) {
-    content.columns = content.columns.map((col: any, i: number) => ({
-      ...col,
-      id: `${id}-col-${i + 1}`,
-      children: Array.isArray(col?.children) ? col.children : [],
-    }));
-  }
-
-  return {
+  
+  const block: BlockConfig = {
     id,
-    type,
+    name: type.split('/')[1], // "core/heading" -> "heading"
+    type: def.isContainer ? "container" : "block",
+    parentId: null,
+    displayName: def.name,
+    category: def.category,
     content,
     styles: {
       padding: '20px',
       margin: '0px',
-      contentAlignHorizontal: 'left',
-      contentAlignVertical: 'top',
       ...def.defaultStyles,
     },
     settings: {},
-    children: def.isContainer ? [] : undefined,
   };
+  
+  // Only add children array for containers
+  if (def.isContainer) {
+    block.children = [];
+  }
+  
+  return block;
 }
 
 export type { BlockDefinition } from './types';

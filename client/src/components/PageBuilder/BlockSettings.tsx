@@ -36,7 +36,7 @@ import {
   Minus,
   Settings
 } from "lucide-react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import { blockRegistry } from "./blocks";
 
 interface BlockSettingsProps {

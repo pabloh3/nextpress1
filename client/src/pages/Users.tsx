@@ -43,7 +43,9 @@ import AdminSidebar from "@/components/AdminSidebar";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { User, CreateUser, UpdateUser } from "@shared/schema";
-import { createUserSchema, updateUserSchema } from "@shared/zod-schema";
+import { getZodSchema } from "@shared/zod-schema";
+
+const userSchemas = getZodSchema("users");
 
 export default function Users() {
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -54,7 +56,7 @@ export default function Users() {
 	const queryClient = useQueryClient();
 
 	const form = useForm<CreateUser>({
-		resolver: zodResolver(createUserSchema),
+		resolver: zodResolver(userSchemas.insert),
 		defaultValues: {
 			username: "",
 			email: "",

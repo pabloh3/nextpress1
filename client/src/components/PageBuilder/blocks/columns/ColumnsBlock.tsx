@@ -1,56 +1,88 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types";
-import { Grid3x3 as GridIcon, Plus, Trash2, Settings, Wrench } from "lucide-react";
+import {
+  Grid3x3 as GridIcon,
+  Plus,
+  Trash2,
+  Wrench,
+  Settings,
+} from "lucide-react";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Droppable, Draggable } from "@/lib/dnd";
 import { useBlockActions } from "../../BlockActionsContext";
 import BlockRenderer from "../../BlockRenderer";
 import { generateBlockId } from "../../utils";
 
-interface ColumnItem {
-  id: string;
+interface ColumnLayout {
+  columnId: string;
   width?: string; // CSS width value like '33.33%', '200px', 'auto', '1fr'
-  children: BlockConfig[];
+  blockIds: string[]; // IDs of blocks assigned to this column
 }
 
 export interface ColumnsBlockConfig extends BlockConfig {
-  content: { 
+  content: {
     gap?: string;
-    verticalAlignment?: 'top' | 'center' | 'bottom' | 'stretch';
-    horizontalAlignment?: 'left' | 'center' | 'right' | 'space-between' | 'space-around';
-    direction?: 'row' | 'column';
-    columns: ColumnItem[];
+    verticalAlignment?: "top" | "center" | "bottom" | "stretch";
+    horizontalAlignment?:
+      | "left"
+      | "center"
+      | "right"
+      | "space-between"
+      | "space-around";
+    direction?: "row" | "column";
   };
+  settings?: {
+    columnLayout?: ColumnLayout[];
+  };
+  children?: BlockConfig[];
 }
 
-function ColumnsRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
+function ColumnsRenderer({
+  block,
+  isPreview,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
   const columnsBlock = block as ColumnsBlockConfig;
-  const gap = (columnsBlock.content?.gap || '20px');
-  const verticalAlignment = columnsBlock.content?.verticalAlignment || 'top';
-  const horizontalAlignment = columnsBlock.content?.horizontalAlignment || 'left';
-  const direction = columnsBlock.content?.direction || 'row';
-  const columns = columnsBlock.content?.columns || [];
-  
+  const gap = columnsBlock.content?.gap || "20px";
+  const verticalAlignment = columnsBlock.content?.verticalAlignment || "top";
+  const horizontalAlignment =
+    columnsBlock.content?.horizontalAlignment || "left";
+  const direction = columnsBlock.content?.direction || "row";
+
+  // Get column layout from settings
+  const columnLayout = columnsBlock.settings?.columnLayout || [
+    { columnId: "default-col-1", width: "100%", blockIds: [] },
+  ];
+
+  // Get all children blocks
+  const children = columnsBlock.children || [];
+
   // Convert alignment settings to CSS flexbox properties
   const alignItems = {
-    'top': 'flex-start',
-    'center': 'center', 
-    'bottom': 'flex-end',
-    'stretch': 'stretch'
+    top: "flex-start",
+    center: "center",
+    bottom: "flex-end",
+    stretch: "stretch",
   }[verticalAlignment];
 
   const justifyContent = {
-    'left': 'flex-start',
-    'center': 'center',
-    'right': 'flex-end', 
-    'space-between': 'space-between',
-    'space-around': 'space-around'
+    left: "flex-start",
+    center: "center",
+    right: "flex-end",
+    "space-between": "space-between",
+    "space-around": "space-around",
   }[horizontalAlignment];
 
   const actions = useBlockActions();
@@ -59,99 +91,132 @@ function ColumnsRenderer({ block, isPreview }: { block: BlockConfig; isPreview: 
     <div
       className="wp-block-columns"
       style={{
-        display: 'flex',
+        display: "flex",
         flexDirection: direction,
-        flexWrap: direction === 'row' ? 'wrap' : 'nowrap',
+        flexWrap: direction === "row" ? "wrap" : "nowrap",
         gap,
-        width: '100%',
+        width: "100%",
         alignItems,
         justifyContent,
         ...block.styles,
       }}
     >
-      {columns.map((column, columnIndex) => (
-        <div
-          key={column.id}
-          className="wp-block-column"
-          style={{
-            flex: column.width === 'auto' ? 'none' : '1',
-            width: column.width && column.width !== 'auto' ? column.width : undefined,
-            minWidth: 0, // Prevent flex items from overflowing
-          }}
-        >
-          {isPreview ? (
-            <div className="space-y-2">
-              {column.children.map((childBlock) => (
-                <BlockRenderer
-                  key={childBlock.id}
-                  block={childBlock}
-                  isSelected={false}
-                  isPreview={true}
-                  onDuplicate={() => {}}
-                  onDelete={() => {}}
-                />
-              ))}
-            </div>
-          ) : (
-            <Droppable droppableId={column.id} direction="vertical">
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  style={{
-                    minHeight: '60px', // Always maintain minimum drop zone height
-                    border: snapshot.isDraggingOver ? '2px solid #3b82f6' : '2px dashed #e2e8f0',
-                    borderRadius: '4px',
-                    background: snapshot.isDraggingOver ? 'rgba(59,130,246,0.06)' : undefined,
-                    padding: '8px',
-                    paddingBottom: column.children.length > 0 ? '20px' : '8px', // Add extra bottom padding for drop zone when there are children
-                  }}
-                >
-                   {column.children.length > 0 ? (
-                    column.children.map((childBlock, childIndex) => (
-                      <Draggable key={childBlock.id} draggableId={childBlock.id} index={childIndex}>
-                        {(dragProvided, dragSnapshot) => (
-                          <div
-                            ref={dragProvided.innerRef}
-                            {...dragProvided.draggableProps}
-                            className={`relative group ${dragSnapshot.isDragging ? 'opacity-50' : ''}`}
-                           >
-                             {/* Pass drag handle props to BlockRenderer instead of overlay */}
-                             <BlockRenderer
-                               block={childBlock}
-                               isSelected={actions?.selectedBlockId === childBlock.id}
-                               isPreview={false}
-                               onDuplicate={() => actions?.onDuplicate(childBlock.id)}
-                               onDelete={() => actions?.onDelete(childBlock.id)}
-                               dragHandleProps={dragProvided.dragHandleProps}
-                             />
-                          </div>
-                        )}
-                      </Draggable>
-                    ))
-                  ) : (
-                    <div className="text-center text-gray-400 p-8">
-                      <small>Drop blocks here</small>
-                    </div>
-                  )}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          )}
-        </div>
-      ))}
+      {columnLayout.map((column) => {
+        // Filter children that belong to this column
+        const columnChildren = children.filter((child) =>
+          column.blockIds.includes(child.id)
+        );
+
+        return (
+          <div
+            key={column.columnId}
+            className="wp-block-column"
+            style={{
+              flex: column.width === "auto" ? "none" : "1",
+              width:
+                column.width && column.width !== "auto"
+                  ? column.width
+                  : undefined,
+              minWidth: 0, // Prevent flex items from overflowing
+            }}
+          >
+            {isPreview ? (
+              <div className="space-y-2">
+                {columnChildren.map((childBlock) => (
+                  <BlockRenderer
+                    key={childBlock.id}
+                    block={childBlock}
+                    isSelected={false}
+                    isPreview={true}
+                    onDuplicate={() => {}}
+                    onDelete={() => {}}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Droppable droppableId={column.columnId} direction="vertical">
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    style={{
+                      minHeight: "60px", // Always maintain minimum drop zone height
+                      border: snapshot.isDraggingOver
+                        ? "2px solid #3b82f6"
+                        : "2px dashed #e2e8f0",
+                      borderRadius: "4px",
+                      background: snapshot.isDraggingOver
+                        ? "rgba(59,130,246,0.06)"
+                        : undefined,
+                      padding: "8px",
+                      paddingBottom: columnChildren.length > 0 ? "20px" : "8px",
+                    }}
+                  >
+                    {columnChildren.length > 0 ? (
+                      columnChildren.map((childBlock, childIndex) => (
+                        <Draggable
+                          key={childBlock.id}
+                          draggableId={childBlock.id}
+                          index={childIndex}
+                        >
+                          {(dragProvided, dragSnapshot) => (
+                            <div
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              className={`relative group ${
+                                dragSnapshot.isDragging ? "opacity-50" : ""
+                              }`}
+                            >
+                              <BlockRenderer
+                                block={childBlock}
+                                isSelected={
+                                  actions?.selectedBlockId === childBlock.id
+                                }
+                                isPreview={false}
+                                onDuplicate={() =>
+                                  actions?.onDuplicate(childBlock.id)
+                                }
+                                onDelete={() =>
+                                  actions?.onDelete(childBlock.id)
+                                }
+                                dragHandleProps={dragProvided.dragHandleProps}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))
+                    ) : (
+                      <div className="text-center text-gray-400 p-8">
+                        <small>Drop blocks here</small>
+                      </div>
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  
-  const columns: ColumnItem[] = Array.isArray((block.content as any)?.columns)
-    ? (block.content as any).columns
-    : [];
+function ColumnsSettings({
+  block,
+  onUpdate,
+}: {
+  block: BlockConfig;
+  onUpdate: (updates: Partial<BlockConfig>) => void;
+}) {
+  const columnsBlock = block as ColumnsBlockConfig;
+  const columnLayout = columnsBlock.settings?.columnLayout || [
+    { columnId: "default-col-1", width: "100%", blockIds: [] },
+  ];
 
-  const updateContent = (contentUpdates: any) => {
+  const updateContent = (
+    contentUpdates: Partial<ColumnsBlockConfig["content"]>
+  ) => {
     onUpdate({
       content: {
         ...(block.content || {}),
@@ -160,38 +225,51 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
     });
   };
 
-  const updateColumns = (newColumns: ColumnItem[]) => {
-    updateContent({ columns: newColumns });
+  const updateSettings = (
+    settingsUpdates: Partial<ColumnsBlockConfig["settings"]>
+  ) => {
+    onUpdate({
+      settings: {
+        ...(block.settings || {}),
+        ...settingsUpdates,
+      },
+    });
+  };
+
+  const updateColumnLayout = (newColumnLayout: ColumnLayout[]) => {
+    updateSettings({ columnLayout: newColumnLayout });
   };
 
   const addColumn = () => {
-    const newColumn: ColumnItem = {
-      id: generateBlockId(),
-      width: 'auto',
-      children: [],
+    const newColumn: ColumnLayout = {
+      columnId: generateBlockId(),
+      width: "auto",
+      blockIds: [],
     };
-    updateColumns([...columns, newColumn]);
+    updateColumnLayout([...columnLayout, newColumn]);
   };
 
   const removeColumn = (index: number) => {
-    const newColumns = columns.filter((_, i) => i !== index);
-    updateColumns(newColumns);
+    const newColumnLayout = columnLayout.filter((_, i) => i !== index);
+    updateColumnLayout(newColumnLayout);
   };
 
-  const updateColumn = (index: number, updates: Partial<ColumnItem>) => {
-    const newColumns = columns.map((col, i) => i === index ? { ...col, ...updates } : col);
-    updateColumns(newColumns);
+  const updateColumn = (index: number, updates: Partial<ColumnLayout>) => {
+    const newColumnLayout = columnLayout.map((col, i) =>
+      i === index ? { ...col, ...updates } : col
+    );
+    updateColumnLayout(newColumnLayout);
   };
 
   const addQuickColumns = (count: number) => {
     const width = `${(100 / count).toFixed(2)}%`;
     const ids = Array.from({ length: count }, () => generateBlockId());
-    const newColumns: ColumnItem[] = ids.map(id => ({
-      id,
+    const newColumnLayout: ColumnLayout[] = ids.map((id) => ({
+      columnId: `col-${id}`,
       width,
-      children: [],
+      blockIds: [],
     }));
-    updateColumns(newColumns);
+    updateColumnLayout(newColumnLayout);
   };
 
   return (
@@ -199,7 +277,9 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
       <CollapsibleCard title="Content" icon={GridIcon} defaultOpen={true}>
         <div className="space-y-3">
           <div className="flex justify-between items-center">
-            <Label aria-label="Number of columns">Columns ({columns.length})</Label>
+            <Label aria-label="Number of columns">
+              Columns ({columnLayout.length})
+            </Label>
             <Button
               type="button"
               variant="outline"
@@ -213,16 +293,57 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
           </div>
 
           <div className="grid grid-cols-4 gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => addQuickColumns(2)} className="text-xs" aria-label="2 columns">2 Cols</Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => addQuickColumns(3)} className="text-xs" aria-label="3 columns">3 Cols</Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => addQuickColumns(4)} className="text-xs" aria-label="4 columns">4 Cols</Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => addQuickColumns(6)} className="text-xs" aria-label="6 columns">6 Cols</Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addQuickColumns(2)}
+              className="text-xs"
+              aria-label="2 columns"
+            >
+              2 Cols
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addQuickColumns(3)}
+              className="text-xs"
+              aria-label="3 columns"
+            >
+              3 Cols
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addQuickColumns(4)}
+              className="text-xs"
+              aria-label="4 columns"
+            >
+              4 Cols
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addQuickColumns(6)}
+              className="text-xs"
+              aria-label="6 columns"
+            >
+              6 Cols
+            </Button>
           </div>
 
-          {columns.map((column, index) => (
-            <div key={column.id} className="border rounded p-3 space-y-2">
+          {columnLayout.map((column, index) => (
+            <div key={column.columnId} className="border rounded p-3 space-y-2">
               <div className="flex justify-between items-center">
-                <Label className="font-medium text-sm" aria-label={`Column ${index + 1}`}>Column {index + 1}</Label>
+                <Label
+                  className="font-medium text-sm"
+                  aria-label={`Column ${index + 1}`}
+                >
+                  Column {index + 1}
+                </Label>
                 <Button
                   type="button"
                   variant="ghost"
@@ -235,12 +356,20 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
                 </Button>
               </div>
               <div>
-                <Label htmlFor={`col-width-${index}`} className="text-xs">Width</Label>
+                <Label htmlFor={`col-width-${index}`} className="text-xs">
+                  Width
+                </Label>
                 <Select
-                  value={column.width || 'auto'}
-                  onValueChange={(value) => updateColumn(index, { width: value })}
+                  value={column.width || "auto"}
+                  onValueChange={(value) =>
+                    updateColumn(index, { width: value })
+                  }
                 >
-                  <SelectTrigger className="h-9" id={`col-width-${index}`} aria-label={`Column ${index + 1} width`}>
+                  <SelectTrigger
+                    className="h-9"
+                    id={`col-width-${index}`}
+                    aria-label={`Column ${index + 1} width`}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -271,10 +400,16 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
             </div>
             <div className="col-span-8">
               <Select
-                value={(block.content as any)?.direction || 'row'}
-                onValueChange={(value) => updateContent({ direction: value })}
+                value={columnsBlock.content?.direction || "row"}
+                onValueChange={(value) =>
+                  updateContent({ direction: value as "row" | "column" })
+                }
               >
-                <SelectTrigger className="h-9" id="columns-direction" aria-label="Columns direction">
+                <SelectTrigger
+                  className="h-9"
+                  id="columns-direction"
+                  aria-label="Columns direction"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -293,7 +428,7 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
               <Input
                 id="columns-gap"
                 className="h-9"
-                value={(block.content as any)?.gap || '20px'}
+                value={columnsBlock.content?.gap || "20px"}
                 onChange={(e) => updateContent({ gap: e.target.value })}
                 placeholder="e.g. 10px, 2rem"
                 aria-label="Gap between columns"
@@ -311,10 +446,22 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
             </div>
             <div className="col-span-8">
               <Select
-                value={(block.content as any)?.verticalAlignment || 'top'}
-                onValueChange={(value) => updateContent({ verticalAlignment: value })}
+                value={columnsBlock.content?.verticalAlignment || "top"}
+                onValueChange={(value) =>
+                  updateContent({
+                    verticalAlignment: value as
+                      | "top"
+                      | "center"
+                      | "bottom"
+                      | "stretch",
+                  })
+                }
               >
-                <SelectTrigger className="h-9" id="vertical-align" aria-label="Vertical alignment">
+                <SelectTrigger
+                  className="h-9"
+                  id="vertical-align"
+                  aria-label="Vertical alignment"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -333,10 +480,23 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
             </div>
             <div className="col-span-8">
               <Select
-                value={(block.content as any)?.horizontalAlignment || 'left'}
-                onValueChange={(value) => updateContent({ horizontalAlignment: value })}
+                value={columnsBlock.content?.horizontalAlignment || "left"}
+                onValueChange={(value) =>
+                  updateContent({
+                    horizontalAlignment: value as
+                      | "left"
+                      | "center"
+                      | "right"
+                      | "space-between"
+                      | "space-around",
+                  })
+                }
               >
-                <SelectTrigger className="h-9" id="horizontal-align" aria-label="Horizontal alignment">
+                <SelectTrigger
+                  className="h-9"
+                  id="horizontal-align"
+                  aria-label="Horizontal alignment"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -356,25 +516,18 @@ function ColumnsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 }
 
 const ColumnsBlock: BlockDefinition = {
-  id: 'core/columns',
-  name: 'Columns',
+  id: "core/columns",
+  name: "Columns",
   icon: GridIcon,
-  description: 'Flexible horizontal container for any blocks',
-  category: 'layout',
+  description: "Flexible horizontal container for any blocks",
+  category: "layout",
   isContainer: true,
   handlesOwnChildren: true,
   defaultContent: {
-    gap: '20px',
-    verticalAlignment: 'top',
-    horizontalAlignment: 'left',
-    direction: 'row',
-    columns: [
-      {
-        id: 'default-col-1',
-        width: '100%',
-        children: [],
-      },
-    ],
+    gap: "20px",
+    verticalAlignment: "top",
+    horizontalAlignment: "left",
+    direction: "row",
   },
   defaultStyles: {},
   renderer: ColumnsRenderer,

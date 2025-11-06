@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import HeadingBlock from '../components/PageBuilder/blocks/heading/HeadingBlock'
-import type { BlockConfig } from '@shared/schema'
+import type { BlockConfig } from '@shared/schema-types'
 
 // Mock the useBlockManager hook
 const mockUpdateBlockContent = vi.fn()

@@ -22,9 +22,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
-import { createUserSchema } from "@shared/zod-schema";
+import { getZodSchema } from "@shared/zod-schema";
 import type { CreateUser } from "@shared/schema";
 import { Eye, EyeOff } from "lucide-react";
+
+const userSchemas = getZodSchema("users");
 
 export default function Register() {
 	const [, setLocation] = useLocation();
@@ -33,7 +35,7 @@ export default function Register() {
 	const { toast } = useToast();
 
 	const form = useForm<CreateUser>({
-		resolver: zodResolver(createUserSchema),
+		resolver: zodResolver(userSchemas.insert),
 		defaultValues: {
 			username: "",
 			email: "",

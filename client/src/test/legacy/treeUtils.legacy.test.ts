@@ -9,7 +9,7 @@ import {
   deleteBlockDeep,
   duplicateBlockDeep
 } from '../../lib/handlers/treeUtils'
-import type { BlockConfig } from '@shared/schema'
+import type { BlockConfig } from '@shared/schema-types'
 
 describe('Tree Utilities', () => {
   const mockGenerateId = () => `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`

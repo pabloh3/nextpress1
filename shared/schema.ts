@@ -89,6 +89,7 @@ export const pages = pgTable("pages", {
 	parentId: uuid("parent_id"),
 	menuOrder: integer("menu_order").default(0),
 	templateId: uuid("template_id").references(() => templates.id),
+	blocks: jsonb("blocks").default([]),
 	createdAt: timestamp("created_at").defaultNow(),
 	updatedAt: timestamp("updated_at").defaultNow(),
 	other: jsonb("other").default({}),
@@ -196,31 +197,6 @@ export const posts = pgTable("posts", {
 	other: jsonb("other").default({
 		categories: [],
 		tags: [],
-	}),
-});
-
-export const blocks = pgTable("blocks", {
-	id: uuid("id").primaryKey().defaultRandom(),
-	name: varchar("name").default("text"), // heading, button, etc
-	type: varchar("type").default("block"), // block or container
-	category: varchar("category").default("basic"),
-	version: varchar("version").notNull(),
-	requires: varchar("requires").notNull(),
-	authorId: uuid("author_id")
-		.references(() => users.id)
-		.notNull(),
-	description: text("description"),
-	settings: jsonb("settings").default({}),
-	createdAt: timestamp("created_at").defaultNow(),
-	updatedAt: timestamp("updated_at").defaultNow(),
-	children: jsonb("children").default([]),
-	other: jsonb("other").default({
-		css: "",
-		js: "",
-		html: "",
-		attributes: {},
-		customContent: {},
-		classNames: "",
 	}),
 });
 

@@ -23,6 +23,10 @@ const truncateBlockName = (name: string): string => {
 };
 
 // Dedupe by block definition id to avoid showing aliases (e.g., "heading" vs "core/heading")
+if (import.meta.env.DEBUG_BUILDER) {
+  console.log('blockRegistry:', blockRegistry);
+}
+
 const allBlocks = Object.values(blockRegistry).filter(
   (block, index, arr) => arr.findIndex((b) => b.id === block.id) === index
 );
@@ -124,6 +128,7 @@ export default function BlockLibrary() {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
+                                data-dnd-debug-id={block.id}
                                 title={block.description}
                                 className={`cursor-grab bg-white text-gray-700 border border-gray-200 rounded-none hover:bg-gray-50 hover:border-gray-300 hover:shadow-md hover:scale-[1.02] transition-all duration-200 ease-out ${
                                   snapshot.isDragging
@@ -140,7 +145,7 @@ export default function BlockLibrary() {
                                       )}
                                     </div>
                                     <p className="text-sm font-medium text-gray-800 w-full leading-snug">
-                                      {truncateBlockName(block.name)}
+                                      {truncateBlockName(block.label)}
                                     </p>
                                   </div>
                                 </CardContent>

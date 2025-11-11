@@ -7,7 +7,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
   blockRegistry: {
     'core/text': {
       id: 'core/text',
-      name: 'Text',
+      label: 'Text',
       isContainer: false,
       defaultContent: { text: '' },
       defaultStyles: {},
@@ -15,7 +15,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
     },
     'core/heading': {
       id: 'core/heading',
-      name: 'Heading',
+      label: 'Heading',
       isContainer: false,
       defaultContent: { text: '', level: 1 },
       defaultStyles: {},
@@ -23,7 +23,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
     },
     'core/button': {
       id: 'core/button',
-      name: 'Button',
+      label: 'Button',
       isContainer: false,
       defaultContent: { text: 'Button' },
       defaultStyles: {},
@@ -31,7 +31,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
     },
     'core/group': {
       id: 'core/group',
-      name: 'Group',
+      label: 'Group',
       isContainer: true,
       defaultContent: {},
       defaultStyles: {},
@@ -42,10 +42,10 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
     const registry: any = {
       'core/text': {
         id,
-        name: 'text',
+        name: 'core/text',
         type: 'block',
         parentId: null,
-        displayName: 'Text',
+        label: 'Text',
         category: 'basic',
         content: { text: '' },
         styles: {},
@@ -53,10 +53,10 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
       },
       'core/heading': {
         id,
-        name: 'heading',
+        name: 'core/heading',
         type: 'block',
         parentId: null,
-        displayName: 'Heading',
+        label: 'Heading',
         category: 'basic',
         content: { text: '', level: 1 },
         styles: {},
@@ -64,10 +64,10 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
       },
       'core/button': {
         id,
-        name: 'button',
+        name: 'core/button',
         type: 'block',
         parentId: null,
-        displayName: 'Button',
+        label: 'Button',
         category: 'basic',
         content: { text: 'Button' },
         styles: {},
@@ -75,10 +75,10 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
       },
       'core/group': {
         id,
-        name: 'group',
+        name: 'core/group',
         type: 'container',
         parentId: null,
-        displayName: 'Group',
+        label: 'Group',
         category: 'layout',
         content: {},
         styles: {},
@@ -102,9 +102,10 @@ describe('ColumnsBlock with New Structure', () => {
   beforeEach(() => {
     columnsBlock = {
       id: 'columns-1',
-      name: 'columns',
+      name: 'core/columns',
       type: 'container',
       parentId: null,
+      label: 'Columns',
       content: {
         gap: '20px',
         direction: 'row',
@@ -175,21 +176,21 @@ describe('ColumnsBlock with New Structure', () => {
         children: [
           {
             id: 'text-1',
-            name: 'text',
+            name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
             content: { text: 'Text 1' }
           },
           {
             id: 'text-2',
-            name: 'text',
+            name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
             content: { text: 'Text 2' }
           },
           {
             id: 'text-3',
-            name: 'text',
+            name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
             content: { text: 'Text 3' }
@@ -226,7 +227,7 @@ describe('ColumnsBlock with New Structure', () => {
         children: [
           {
             id: 'text-1',
-            name: 'text',
+            name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
             content: { text: 'Text 1' }
@@ -279,7 +280,7 @@ describe('ColumnsBlock with New Structure', () => {
         children: [
           {
             id: 'text-1',
-            name: 'text',
+            name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
             content: { text: 'Text 1' }
@@ -331,21 +332,21 @@ describe('ColumnsBlock with New Structure', () => {
         children: [
           {
             id: 'text-1',
-            name: 'text',
+            name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
             content: { text: 'Text 1' }
           },
           {
             id: 'text-2',
-            name: 'text',
+            name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
             content: { text: 'Text 2' }
           },
           {
             id: 'text-3',
-            name: 'text',
+            name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
             content: { text: 'Text 3' }

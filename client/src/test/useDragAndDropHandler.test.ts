@@ -10,7 +10,7 @@ vi.mock('../components/PageBuilder/blocks', () => ({
   blockRegistry: {
     'core/paragraph': {
       id: 'core/paragraph',
-      name: 'Paragraph',
+      label: 'Paragraph',
       isContainer: false,
       defaultContent: {},
       defaultStyles: {},
@@ -18,7 +18,7 @@ vi.mock('../components/PageBuilder/blocks', () => ({
     },
     'core/group': {
       id: 'core/group',
-      name: 'Group',
+      label: 'Group',
       isContainer: true,
       defaultContent: {},
       defaultStyles: {},
@@ -26,7 +26,7 @@ vi.mock('../components/PageBuilder/blocks', () => ({
     },
     'core/columns': {
       id: 'core/columns',
-      name: 'Columns',
+      label: 'Columns',
       isContainer: true,
       defaultContent: {},
       defaultStyles: {},
@@ -37,10 +37,10 @@ vi.mock('../components/PageBuilder/blocks', () => ({
     const registry: any = {
       'core/paragraph': {
         id,
-        name: 'paragraph',
+        name: 'core/paragraph',
         type: 'block',
         parentId: null,
-        displayName: 'Paragraph',
+        label: 'Paragraph',
         category: 'basic',
         content: {},
         styles: {},
@@ -48,10 +48,10 @@ vi.mock('../components/PageBuilder/blocks', () => ({
       },
       'core/group': {
         id,
-        name: 'group',
+        name: 'core/group',
         type: 'container',
         parentId: null,
-        displayName: 'Group',
+        label: 'Group',
         category: 'layout',
         content: {},
         styles: {},
@@ -71,7 +71,10 @@ describe('useDragAndDropHandler', () => {
 
   const createMockBlock = (id: string, type: string = 'core/paragraph', children?: BlockConfig[]): BlockConfig => ({
     id,
-    type,
+    name: type,
+    type: type.includes('group') || type.includes('columns') ? 'container' : 'block',
+    parentId: null,
+    label: type.split('/')[1] || 'Block',
     content: { text: `Content for ${id}` },
     styles: {},
     children: children || [],

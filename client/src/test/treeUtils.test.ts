@@ -5,7 +5,7 @@ import type { BlockConfig } from '@shared/schema-types';
 // Helpers
 const makeBlock = (id: string, blockType: string = 'core/paragraph', children?: BlockConfig[]): BlockConfig => ({
   id,
-  name: blockType.split('/')[1] || 'paragraph',
+  name: blockType,
   type: children !== undefined ? 'container' : 'block',
   parentId: null,
   content: blockType === 'core/paragraph' ? { text: id } : {},
@@ -157,7 +157,7 @@ describe('treeUtils', () => {
     it('reorders a columns container at root and preserves structure', () => {
       const columnsBlock: BlockConfig = {
         id: 'cols',
-        type: 'core/columns',
+        name: 'core/columns', type: 'container',
         content: {
           columns: [
             { id: 'col-1', width: 50, children: [makeBlock('c1')] },

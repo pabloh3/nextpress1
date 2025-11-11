@@ -93,5 +93,7 @@ Always examine existing codebase patterns before implementing new solutions - us
 - Reading docs and getting context saves mistakes, so read any relevant docs in /docs always on start to understand what is going on, sometimes  other files are on project root (.md files), or you can always ask me for clarification on which of the found documents are relevant if not sure, don't just read everything as well.
 - it's always the test to match the implementation not other way round, and tests should not cheat edge cases and testing requirements just to pass.
 - Always prefer concise and contextual clarity than verbosity of explanation, be brief as needed.
+- Always avoid hacky ways around problems, avoid shortcuts and stubs and being lazy on tasks and taking just the easy way around, we working on production grade stuff, so we have to do real things as they should be, we don't skip stuff or instead of fundamentally fixing things and we just make shims, resolvers or quick ways that don't fix the root problem, in doubt where you think we may need to take the easy way, first ask.
+- Never rush to implementing or changing things while we still working, I have to approve first.
 
 Always remember these rules before working on any new tasks.

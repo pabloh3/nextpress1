@@ -31,7 +31,11 @@ interface ImageBlockConfig extends Omit<BlockConfig, 'content'> {
 }
 
 function ImageRenderer({ block }: { block: ImageBlockConfig; isPreview: boolean }): JSX.Element | null {
-  const url = (block.content?.url as string) || (block.content?.src as string);
+  // Extract image URL using discriminated union pattern with defensive checks
+  const url = block.content?.kind === 'media' && block.content.mediaType === 'image'
+    ? block.content.url
+    : '';
+    
   const alt = block.content?.alt as string | undefined;
   const caption = block.content?.caption as string | undefined;
   const align = block.content?.align as string | undefined;
@@ -136,7 +140,7 @@ function ImageSettings({ block, onUpdate }: { block: ImageBlockConfig; onUpdate:
             <Label>Preview</Label>
             <div className="mt-2 inline-block border border-dashed border-gray-300 p-2 rounded-lg" style={{ maxWidth: '100%' }}>
               <img
-                src={block.content?.url || block.content?.src || ''}
+                src={block.content?.kind === 'media' ? block.content.url : ''}
                 alt={block.content?.alt || ''}
                 style={{ width: '240px', height: 'auto', display: 'block' }}
               />
@@ -149,8 +153,8 @@ function ImageSettings({ block, onUpdate }: { block: ImageBlockConfig; onUpdate:
             <div className="flex items-center gap-2">
               <Input
                 id="image-src"
-                value={block.content?.url || block.content?.src || ''}
-                onChange={(e) => updateContent({ url: e.target.value, src: undefined })}
+                value={block.content?.kind === 'media' ? block.content.url : ''}
+                onChange={(e) => updateContent({ kind: 'media', mediaType: 'image', url: e.target.value })}
                 placeholder="https://example.com/image.jpg"
               />
               <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>Choose from library</Button>
@@ -161,9 +165,10 @@ function ImageSettings({ block, onUpdate }: { block: ImageBlockConfig; onUpdate:
               kind="image"
               onSelect={(m) => {
                 updateContent({
+                  kind: 'media',
+                  mediaType: 'image',
                   id: m.id,
                   url: m.url,
-                  src: undefined,
                   alt: (block.content as any)?.alt || m.alt || m.originalName || m.filename,
                   caption: (block.content as any)?.caption,
                 });
@@ -426,12 +431,14 @@ function ImageSettings({ block, onUpdate }: { block: ImageBlockConfig; onUpdate:
 
 const ImageBlock: BlockDefinition = {
   id: 'core/image',
-  name: 'Image',
+  label: 'Image',
   icon: ImageIcon,
   description: 'Add an image',
   category: 'media',
   defaultContent: {
+    kind: 'media',
     url: 'https://via.placeholder.com/600x300?text=Add+Your+Image',
+    mediaType: 'image',
     alt: 'Placeholder image',
     caption: '',
     id: undefined,

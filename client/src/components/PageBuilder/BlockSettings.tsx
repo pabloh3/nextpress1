@@ -128,7 +128,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
   };
 
   const renderContentSettings = () => {
-    const def = blockRegistry[block.type];
+    const def = blockRegistry[block.name];
     if (def?.settings) {
       const SettingsComp = def.settings;
       return <SettingsComp block={block} onUpdate={onUpdate} />;
@@ -205,7 +205,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
     return (
       <div className="space-y-6">
         {/* Typography */}
-        {["heading", "core/heading", "text", "core/paragraph", "button", "core/button"].includes(block.type) && (
+        {["heading", "core/heading", "text", "core/paragraph", "button", "core/button"].includes(block.name) && (
           <CollapsibleCard title="Typography" icon={Type} defaultOpen={true}>
             {/* Font Size - Full Width */}
             <div>
@@ -518,7 +518,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
             </div>
             
             {/* Display Type for Container Blocks */}
-            {['container', 'columns', 'core/group'].includes(block.type) && (
+            {['container', 'columns', 'core/group'].includes(block.name) && (
               <>
                   <div>
                     <Label className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
@@ -600,7 +600,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
             )}
 
             {/* Height for specific blocks */}
-            {['image', 'video', 'container', 'core/group'].includes(block.type) && (
+            {['image', 'video', 'container', 'core/group'].includes(block.name) && (
               <div>
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
@@ -662,7 +662,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
     <div className="space-y-4">
       <div className="p-4 bg-gray-50 rounded-none border border-gray-200">
         <h3 className="text-sm font-semibold text-gray-800 mb-1">Block Settings</h3>
-        <p className="text-xs text-gray-600">{block.type}</p>
+        <p className="text-xs text-gray-600">{blockRegistry[block.name]?.label || block.name}</p>
       </div>
 
       <Tabs defaultValue="content" className="w-full">

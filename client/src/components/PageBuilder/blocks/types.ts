@@ -4,8 +4,8 @@ import type { BlockConfig } from "@shared/schema-types";
 export type BlockCategory = 'basic' | 'media' | 'layout' | 'advanced';
 
 export interface BlockDefinition {
-  id: string;
-  name: string;
+  id: string; // Canonical machine key (e.g., 'core/heading', 'core/paragraph')
+  label: string; // User-facing display name (e.g., 'Heading', 'Paragraph')
   icon: any;
   description: string;
   category: BlockCategory;

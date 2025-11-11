@@ -4,7 +4,7 @@ import type { BlockConfig } from '@shared/schema-types';
 
 const makeBlock = (id: string, children?: BlockConfig[]): BlockConfig => ({
   id,
-  name: 'text',
+  name: 'core/text',
   type: children !== undefined ? 'container' : 'block',
   parentId: 'wrong-initial-value', // Intentionally wrong to test correction
   content: {},
@@ -92,12 +92,12 @@ describe('ParentId Management', () => {
       const blocks: BlockConfig[] = [
         {
           id: 'parent',
-          name: 'group',
+          name: 'core/group',
           type: 'container',
           parentId: null,
           content: {},
           children: [
-            { id: 'child', name: 'text', type: 'block', parentId: 'parent', content: {} }
+            { id: 'child', name: 'core/text', type: 'block', parentId: 'parent', content: {} }
           ]
         }
       ];
@@ -111,18 +111,18 @@ describe('ParentId Management', () => {
       const blocks: BlockConfig[] = [
         {
           id: 'grandparent',
-          name: 'group',
+          name: 'core/group',
           type: 'container',
           parentId: null,
           content: {},
           children: [{
             id: 'parent',
-            name: 'group',
+            name: 'core/group',
             type: 'container',
             parentId: 'grandparent',
             content: {},
             children: [
-              { id: 'child', name: 'text', type: 'block', parentId: 'parent', content: {} }
+              { id: 'child', name: 'core/text', type: 'block', parentId: 'parent', content: {} }
             ]
           }]
         }
@@ -135,7 +135,7 @@ describe('ParentId Management', () => {
     
     it('should return null for root block', () => {
       const blocks: BlockConfig[] = [
-        { id: 'root', name: 'text', type: 'block', parentId: null, content: {} }
+        { id: 'root', name: 'core/text', type: 'block', parentId: null, content: {} }
       ];
       
       const parent = findParentBlock(blocks, 'root');
@@ -147,12 +147,12 @@ describe('ParentId Management', () => {
       const blocks: BlockConfig[] = [
         {
           id: 'parent',
-          name: 'group',
+          name: 'core/group',
           type: 'container',
           parentId: null,
           content: {},
           children: [
-            { id: 'child', name: 'text', type: 'block', parentId: 'parent', content: {} }
+            { id: 'child', name: 'core/text', type: 'block', parentId: 'parent', content: {} }
           ]
         }
       ];
@@ -166,22 +166,22 @@ describe('ParentId Management', () => {
       const blocks: BlockConfig[] = [
         {
           id: 'container1',
-          name: 'group',
+          name: 'core/group',
           type: 'container',
           parentId: null,
           content: {},
           children: [
-            { id: 'child1', name: 'text', type: 'block', parentId: 'container1', content: {} }
+            { id: 'child1', name: 'core/text', type: 'block', parentId: 'container1', content: {} }
           ]
         },
         {
           id: 'container2',
-          name: 'group',
+          name: 'core/group',
           type: 'container',
           parentId: null,
           content: {},
           children: [
-            { id: 'child2', name: 'text', type: 'block', parentId: 'container2', content: {} }
+            { id: 'child2', name: 'core/text', type: 'block', parentId: 'container2', content: {} }
           ]
         }
       ];

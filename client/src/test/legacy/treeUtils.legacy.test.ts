@@ -16,7 +16,9 @@ describe('Tree Utilities', () => {
 
   const createMockBlock = (id: string, type: string = 'core/paragraph', children?: BlockConfig[]): BlockConfig => ({
     id,
-    type,
+    name: type,
+    type: children !== undefined && children.length > 0 ? 'container' : 'block',
+    parentId: null,
     content: { text: `Content for ${id}` },
     styles: {},
     children: children || []

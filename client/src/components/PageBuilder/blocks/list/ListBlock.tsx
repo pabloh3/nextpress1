@@ -216,7 +216,7 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
 
 const ListBlock: BlockDefinition = {
   id: 'core/list',
-  name: 'List',
+  label: 'List',
   icon: ListIcon,
   description: 'Add a bulleted or numbered list',
   category: 'advanced',

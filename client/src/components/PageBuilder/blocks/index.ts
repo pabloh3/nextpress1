@@ -24,6 +24,10 @@ import PullquoteBlock from "./pullquote/PullquoteBlock";
 import PreformattedBlock from "./preformatted/PreformattedBlock";
 import TableBlock from "./table/TableBlock";
 
+if (import.meta.env.DEBUG_BUILDER) {
+  console.log('Imported Blocks:', { HeadingBlock, TextBlock, ButtonBlock, ImageBlock, VideoBlock, AudioBlock, SpacerBlock, DividerBlock, ColumnsBlock, QuoteBlock, ListBlock, MediaTextBlock, SeparatorBlock, GroupBlock, ButtonsBlock, GalleryBlock, CoverBlock, FileBlock, CodeBlock, HtmlBlock, PullquoteBlock, PreformattedBlock, TableBlock });
+}
+
 export const blockRegistry: Record<string, BlockDefinition> = {
   // Gutenberg-compatible ids (deprecated aliases removed per new architecture)
   "core/heading": HeadingBlock,
@@ -48,21 +52,6 @@ export const blockRegistry: Record<string, BlockDefinition> = {
   "core/pullquote": PullquoteBlock,
   "core/preformatted": PreformattedBlock,
   "core/table": TableBlock,
-  
-  // Backward compatibility with existing saved data - removed as db will be reset
-
-
-
-
-
-
-
-
-
-
-  
-  // Custom blocks (keep for backward compatibility)
-
 };
 
 export function getDefaultBlock(type: string, id: string): BlockConfig | null {
@@ -74,10 +63,10 @@ export function getDefaultBlock(type: string, id: string): BlockConfig | null {
   
   const block: BlockConfig = {
     id,
-    name: type.split('/')[1], // "core/heading" -> "heading"
+    name: def.id, // Canonical key (e.g., 'core/heading')
+    label: def.label, // User-facing display name (e.g., 'Heading')
     type: def.isContainer ? "container" : "block",
     parentId: null,
-    displayName: def.name,
     category: def.category,
     content,
     styles: {

@@ -101,7 +101,7 @@ function SpacerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
 
 const SpacerBlock: BlockDefinition = {
   id: 'core/spacer',
-  name: 'Spacer',
+  label: 'Spacer',
   icon: SpaceIcon,
   description: 'Add vertical spacing',
   category: 'layout',

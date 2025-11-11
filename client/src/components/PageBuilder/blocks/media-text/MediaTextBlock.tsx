@@ -12,6 +12,11 @@ import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { Image as ImageIcon, Settings, Link, Wrench } from "lucide-react";
 
 function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+  // Extract data from discriminated union structure with defensive check
+  const blockData = block.content?.kind === 'structured' 
+    ? (block.content.data as any) 
+    : {};
+    
   const {
     mediaUrl,
     mediaAlt,
@@ -24,9 +29,10 @@ function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }
     linkTarget,
     rel,
     title,
+    content,
     className,
     anchor,
-  } = (block.content || {}) as any;
+  } = blockData;
 
   const wrapperClasses = [
     'wp-block-media-text',
@@ -63,11 +69,11 @@ function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }
       {mediaPosition === 'left' ? (
         <>
           {mediaContent}
-          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: (block.content as any)?.content || '<p>Add text…</p>' }} />
+          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: content || '<p>Add text…</p>' }} />
         </>
       ) : (
         <>
-          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: (block.content as any)?.content || '<p>Add text…</p>' }} />
+          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: content || '<p>Add text…</p>' }} />
           {mediaContent}
         </>
       )}
@@ -78,15 +84,27 @@ function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }
 function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
   
-  
+  // Helper to update content within discriminated union structure
   const updateContent = (contentUpdates: any) => {
+    const currentData = block.content?.kind === 'structured' 
+      ? (block.content.data as any) 
+      : {};
+      
     onUpdate({
       content: {
-        ...block.content,
-        ...contentUpdates,
+        kind: 'structured',
+        data: {
+          ...currentData,
+          ...contentUpdates,
+        },
       },
     });
   };
+  
+  // Extract current data for display
+  const blockData = block.content?.kind === 'structured' 
+    ? (block.content.data as any) 
+    : {};
 
   return (
     <div className="space-y-4">
@@ -98,7 +116,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <div className="flex items-center gap-2 mt-1">
               <Input
                 id="media-url"
-                value={(block.content as any)?.mediaUrl || ''}
+                value={blockData?.mediaUrl || ''}
                 onChange={(e) => updateContent({ mediaUrl: e.target.value })}
                 placeholder="https://example.com/image-or-video.jpg"
                 className="h-9"
@@ -115,7 +133,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
                   mediaId: m.id,
                   mediaUrl: m.url,
                   mediaType: type,
-                  mediaAlt: (block.content as any)?.mediaAlt || m.alt || m.originalName || m.filename,
+                  mediaAlt: blockData?.mediaAlt || m.alt || m.originalName || m.filename,
                 });
               }}
             />
@@ -124,7 +142,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="media-alt" className="text-sm font-medium text-gray-700">Alt Text</Label>
             <Input
               id="media-alt"
-              value={(block.content as any)?.mediaAlt || ''}
+              value={blockData?.mediaAlt || ''}
               onChange={(e) => updateContent({ mediaAlt: e.target.value })}
               placeholder="Describe the media"
               className="mt-1 h-9"
@@ -134,7 +152,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="text-content" className="text-sm font-medium text-gray-700">Text Content (HTML)</Label>
             <Textarea
               id="text-content"
-              value={(block.content as any)?.content || ''}
+              value={blockData?.content || ''}
               onChange={(e) => updateContent({ content: e.target.value })}
               placeholder="<p>Add your content…</p>"
               rows={4}
@@ -150,7 +168,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
           <div>
             <Label htmlFor="media-position" className="text-sm font-medium text-gray-700">Media Position</Label>
             <Select
-              value={(block.content as any)?.mediaPosition || 'left'}
+              value={blockData?.mediaPosition || 'left'}
               onValueChange={(value) => updateContent({ mediaPosition: value })}
             >
               <SelectTrigger id="media-position" className="h-9 mt-1">
@@ -170,7 +188,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
               type="number"
               min={0}
               max={100}
-              value={(block.content as any)?.mediaWidth ?? 50}
+              value={blockData?.mediaWidth ?? 50}
               onChange={(e) => updateContent({ mediaWidth: Number(e.target.value) })}
               className="h-9 mt-1"
             />
@@ -180,7 +198,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="stacked-mobile" className="text-sm font-medium text-gray-700">Stack on mobile</Label>
             <Switch
               id="stacked-mobile"
-              checked={Boolean((block.content as any)?.isStackedOnMobile)}
+              checked={Boolean(blockData?.isStackedOnMobile)}
               onCheckedChange={(checked) => updateContent({ isStackedOnMobile: checked })}
               />
             </div>
@@ -189,7 +207,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="image-fill" className="text-sm font-medium text-gray-700">Image fill</Label>
             <Switch
               id="image-fill"
-              checked={Boolean((block.content as any)?.imageFill)}
+              checked={Boolean(blockData?.imageFill)}
               onCheckedChange={(checked) => updateContent({ imageFill: checked })}
             />
           </div>
@@ -197,7 +215,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
           <div>
             <Label htmlFor="vertical-align" className="text-sm font-medium text-gray-700">Vertical alignment</Label>
             <Select
-              value={(block.content as any)?.verticalAlignment || 'center'}
+              value={blockData?.verticalAlignment || 'center'}
               onValueChange={(value) => updateContent({ verticalAlignment: value })}
             >
               <SelectTrigger id="vertical-align" className="h-9 mt-1">
@@ -220,7 +238,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="media-link" className="text-sm font-medium text-gray-700">Media Link</Label>
             <Input
               id="media-link"
-              value={(block.content as any)?.href || ''}
+              value={blockData?.href || ''}
               onChange={(e) => updateContent({ href: e.target.value })}
               placeholder="https://example.com"
               className="mt-1 h-9"
@@ -230,7 +248,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
           <div>
             <Label htmlFor="media-target" className="text-sm font-medium text-gray-700">Link Target</Label>
             <Select
-              value={(block.content as any)?.linkTarget || '_self'}
+              value={blockData?.linkTarget || '_self'}
               onValueChange={(value) => updateContent({ linkTarget: value })}
             >
               <SelectTrigger id="media-target" className="h-9 mt-1">
@@ -247,7 +265,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="media-rel" className="text-sm font-medium text-gray-700">Rel</Label>
             <Input
               id="media-rel"
-              value={(block.content as any)?.rel || ''}
+              value={blockData?.rel || ''}
               onChange={(e) => updateContent({ rel: e.target.value })}
               placeholder="noopener noreferrer"
               className="h-9 mt-1"
@@ -258,7 +276,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="media-title" className="text-sm font-medium text-gray-700">Title</Label>
             <Input
               id="media-title"
-              value={(block.content as any)?.title || ''}
+              value={blockData?.title || ''}
               onChange={(e) => updateContent({ title: e.target.value })}
               placeholder="Media title"
               className="mt-1 h-9"
@@ -274,7 +292,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="anchor" className="text-sm font-medium text-gray-700">Anchor ID</Label>
             <Input
               id="anchor"
-              value={(block.content as any)?.anchor || ''}
+              value={blockData?.anchor || ''}
               onChange={(e) => updateContent({ anchor: e.target.value })}
               placeholder="section-id"
               className="mt-1 h-9 text-sm"
@@ -284,7 +302,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="extra-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="extra-class"
-              value={(block.content as any)?.className || ''}
+              value={blockData?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="custom-class is-style-something"
               className="mt-1 h-9 text-sm"
@@ -298,27 +316,30 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
 
 const MediaTextBlock: BlockDefinition = {
   id: 'core/media-text',
-  name: 'Media & Text',
+  label: 'Media & Text',
   icon: ImageIcon,
   description: 'Display media and text side by side',
   category: 'media',
   defaultContent: {
-    mediaId: undefined,
-    mediaUrl: 'https://via.placeholder.com/800x600?text=Media',
-    mediaType: 'image',
-    mediaAlt: '',
-    mediaPosition: 'left',
-    mediaWidth: 50,
-    isStackedOnMobile: false,
-    imageFill: false,
-    verticalAlignment: 'center',
-    href: '',
-    linkTarget: '_self',
-    rel: '',
-    title: '',
-    content: '<p>Add your content…</p>',
-    anchor: '',
-    className: '',
+    kind: 'structured',
+    data: {
+      mediaId: undefined,
+      mediaUrl: 'https://via.placeholder.com/800x600?text=Media',
+      mediaType: 'image',
+      mediaAlt: '',
+      mediaPosition: 'left',
+      mediaWidth: 50,
+      isStackedOnMobile: false,
+      imageFill: false,
+      verticalAlignment: 'center',
+      href: '',
+      linkTarget: '_self',
+      rel: '',
+      title: '',
+      content: '<p>Add your content…</p>',
+      anchor: '',
+      className: '',
+    },
   },
   defaultStyles: {},
   renderer: MediaTextRenderer,

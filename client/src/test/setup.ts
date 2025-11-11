@@ -1,4 +1,8 @@
 import '@testing-library/jest-dom'
+import { blockRegistry } from '../components/PageBuilder/blocks';
+
+// Debug log for blockRegistry
+console.log('Test Setup - blockRegistry:', blockRegistry);
 import { vi } from 'vitest'
 
 // Mock IntersectionObserver

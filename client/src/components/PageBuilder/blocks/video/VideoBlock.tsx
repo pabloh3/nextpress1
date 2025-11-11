@@ -11,8 +11,12 @@ import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Video as VideoIcon, AlignCenter, Maximize, Settings, Wrench } from "lucide-react";
 
 function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+  // Defensive: extract url from discriminated union
+  const url = block.content?.kind === 'media' && block.content.mediaType === 'video'
+    ? block.content.url
+    : '';
+  
   const {
-    src,
     poster,
     controls = true,
     autoplay = false,
@@ -94,7 +98,7 @@ function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
     }
   };
 
-  const youTubeId = isYouTubeUrl(src) ? extractYouTubeId(src!) : null;
+  const youTubeId = isYouTubeUrl(url) ? extractYouTubeId(url) : null;
   if (youTubeId) {
     const params = new URLSearchParams();
     if (autoplay) params.set('autoplay', '1');
@@ -104,7 +108,7 @@ function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
       params.set('playlist', youTubeId);
     }
     if (muted) params.set('mute', '1');
-    const start = parseStartSeconds(src!);
+    const start = parseStartSeconds(url);
     if (start && start > 0) params.set('start', String(start));
     params.set('rel', '0');
     params.set('modestbranding', '1');
@@ -154,7 +158,7 @@ function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   return (
     <figure id={anchor} className={classes} style={{ ...block.styles }}>
       <video
-        src={src}
+        src={url}
         poster={poster}
         controls={controls}
         autoPlay={autoplay}
@@ -220,8 +224,8 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <div className="flex items-center gap-2">
               <Input
                 id="video-src"
-                value={(block.content as any)?.src || ''}
-                onChange={(e) => updateContent({ src: e.target.value })}
+                value={(block.content as any)?.url || ''}
+                onChange={(e) => updateContent({ url: e.target.value })}
                 placeholder="https://example.com/video.mp4 or YouTube URL"
               />
               <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>Choose from library</Button>
@@ -231,7 +235,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               onOpenChange={setPickerOpen}
               kind="video"
               onSelect={(m) => {
-                updateContent({ id: m.id, src: m.url });
+                updateContent({ id: m.id, url: m.url });
               }}
             />
           </div>
@@ -427,12 +431,14 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
 
 const VideoBlock: BlockDefinition = {
   id: 'core/video',
-  name: 'Video',
+  label: 'Video',
   icon: VideoIcon,
   description: 'Add a video player',
   category: 'media',
   defaultContent: {
-    src: '',
+    kind: 'media',
+    mediaType: 'video',
+    url: '',
     id: undefined,
     poster: '',
     autoplay: false,

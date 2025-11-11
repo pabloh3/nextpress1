@@ -110,7 +110,7 @@ function DividerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 
 const DividerBlock: BlockDefinition = {
   id: 'divider',
-  name: 'Divider',
+  label: 'Divider',
   icon: MinusIcon,
   description: 'Add a horizontal line',
   category: 'layout',

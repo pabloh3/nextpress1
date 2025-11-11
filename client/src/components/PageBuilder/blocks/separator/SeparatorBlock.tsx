@@ -113,7 +113,7 @@ function SeparatorSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
 
 const SeparatorBlock: BlockDefinition = {
   id: 'core/separator',
-  name: 'Separator',
+  label: 'Separator',
   icon: SeparatorIcon,
   description: 'Create a break between ideas or sections',
   category: 'layout',

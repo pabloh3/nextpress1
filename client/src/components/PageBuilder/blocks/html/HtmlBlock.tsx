@@ -105,7 +105,7 @@ function HtmlSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
 
 const HtmlBlock: BlockDefinition = {
   id: 'core/html',
-  name: 'Custom HTML',
+  label: 'Custom HTML',
   icon: HtmlIcon,
   description: 'Add custom HTML code',
   category: 'advanced',

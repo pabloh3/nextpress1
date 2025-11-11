@@ -188,7 +188,7 @@ function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
 
 const QuoteBlock: BlockDefinition = {
   id: 'core/quote',
-  name: 'Quote',
+  label: 'Quote',
   icon: QuoteIcon,
   description: 'Add a blockquote',
   category: 'advanced',

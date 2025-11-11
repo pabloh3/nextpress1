@@ -74,24 +74,38 @@ export type NewSession = typeof sessions.$inferInsert;
 // Block configuration types
 
 /**
+ * Discriminated union for block content
+ * Each content type has a unique 'kind' discriminator for type-safe handling
+ */
+export type BlockContent =
+  | { kind: 'text'; value: string; textAlign?: string; dropCap?: boolean }
+  | { kind: 'markdown'; value: string; textAlign?: string }
+  | { kind: 'media'; url: string; alt?: string; caption?: string; mediaType: 'image' | 'video' | 'audio' }
+  | { kind: 'html'; value: string; sanitized: boolean }
+  | { kind: 'structured'; data: Record<string, unknown> } // For complex blocks like tables, columns
+  | { kind: 'empty' } // Explicitly empty block
+  | undefined; // No content set
+
+/**
  * Core block configuration for PageBuilder runtime
  * Used during editing and rendering
  */
 export interface BlockConfig {
   // Core identity & type
-  id: string;
-  name: string; // Internal name: "heading", "text", "columns", "group"
-  type: "block" | "container"; // Explicit union type
+  id: string; // Unique instance ID
+  name: string; // Canonical machine key (e.g., 'core/heading', 'core/paragraph')
+  type: "block" | "container"; // Structural kind: can this block have children?
   parentId: string | null; // Parent block ID or null for root-level blocks
   
   // Display metadata
-  displayName?: string; // UI-friendly name: "Heading", "Two Columns"
+  label?: string; // User-facing display name (e.g., 'Heading', 'Two Columns')
   category?: "basic" | "layout" | "media" | "advanced";
   
-  // Content
-  // - For containers: configuration like {gap, alignment, direction}
-  // - For blocks: data like {text, url, level}
-  content: Record<string, any>;
+  // Content - Discriminated union for type-safe handling
+  // - For text blocks: { kind: 'text', value: '...' }
+  // - For media blocks: { kind: 'media', url: '...', mediaType: 'image' }
+  // - For containers: { kind: 'structured', data: { gap, alignment, ... } }
+  content: BlockContent;
   
   // Styling (three layers: typed styles → block dev CSS → user CSS)
   styles?: React.CSSProperties; // Typed inline styles: {marginTop: "4rem", fontSize: "2rem"}

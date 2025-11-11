@@ -8,7 +8,7 @@ describe('useBlockManager', () => {
 
   const createMockBlock = (id: string, blockType: string = 'core/paragraph', children?: BlockConfig[]): BlockConfig => ({
     id,
-    name: blockType.split('/')[1] || 'paragraph',
+    name: blockType,
     type: children !== undefined && children.length > 0 ? 'container' : 'block',
     parentId: null,
     content: { text: `Content for ${id}` },

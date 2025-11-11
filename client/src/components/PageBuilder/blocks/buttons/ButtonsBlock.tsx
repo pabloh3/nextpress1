@@ -30,19 +30,22 @@ function ButtonsRenderer({
   block: BlockConfig;
   isPreview: boolean;
 }) {
-  const buttons: ButtonItem[] = Array.isArray((block.content as any)?.buttons)
-    ? (block.content as any).buttons
+  // Defensive check for discriminated union
+  const buttonsData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
+  
+  const buttons: ButtonItem[] = Array.isArray(buttonsData?.buttons)
+    ? buttonsData.buttons
     : [];
 
-  const layout = (block.content as any)?.layout || 'flex-start';
-  const orientation = (block.content as any)?.orientation || 'horizontal';
+  const layout = buttonsData?.layout || 'flex-start';
+  const orientation = buttonsData?.orientation || 'horizontal';
   const className = [
     'wp-block-buttons',
     orientation === 'vertical' ? 'is-vertical' : '',
     layout === 'center' ? 'is-content-justification-center' : '',
     layout === 'right' ? 'is-content-justification-right' : '',
     layout === 'space-between' ? 'is-content-justification-space-between' : '',
-    block.content?.className || '',
+    buttonsData?.className || '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -94,16 +97,22 @@ function ButtonsRenderer({
 }
 
 function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  const buttons: ButtonItem[] = Array.isArray((block.content as any)?.buttons)
-    ? (block.content as any).buttons
+  // Defensive check for discriminated union
+  const buttonsData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
+  
+  const buttons: ButtonItem[] = Array.isArray(buttonsData?.buttons)
+    ? buttonsData.buttons
     : [];
   
 
   const updateContent = (contentUpdates: any) => {
     onUpdate({
       content: {
-        ...block.content,
-        ...contentUpdates,
+        kind: 'structured',
+        data: {
+          ...buttonsData,
+          ...contentUpdates,
+        },
       },
     });
   };
@@ -213,7 +222,7 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
           <div>
             <Label htmlFor="buttons-layout" className="text-sm font-medium text-gray-700">Layout</Label>
             <Select
-              value={(block.content as any)?.layout || 'flex-start'}
+              value={buttonsData?.layout || 'flex-start'}
               onValueChange={(value) => updateContent({ layout: value })}>
               <SelectTrigger id="buttons-layout" className="h-9">
                 <SelectValue />
@@ -230,7 +239,7 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
           <div>
             <Label htmlFor="buttons-orientation" className="text-sm font-medium text-gray-700">Orientation</Label>
             <Select
-              value={(block.content as any)?.orientation || 'horizontal'}
+              value={buttonsData?.orientation || 'horizontal'}
               onValueChange={(value) => updateContent({ orientation: value })}>
               <SelectTrigger id="buttons-orientation" className="h-9">
                 <SelectValue />
@@ -251,7 +260,7 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
             <Label htmlFor="buttons-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="buttons-class"
-              value={block.content?.className || ''}
+              value={buttonsData?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. is-style-outline"
               className="mt-1 h-9 text-sm"
@@ -265,26 +274,29 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 
 const ButtonsBlock: BlockDefinition = {
   id: 'core/buttons',
-  name: 'Buttons',
+  label: 'Buttons',
   icon: SquareMousePointer,
   description:
     'Prompt visitors to take action with a group of button-style links',
   category: 'basic',
   defaultContent: {
-    buttons: [
-      {
-        id: 'btn-1',
-        text: 'Click Me',
-        url: '#',
-        linkTarget: '_self',
-        rel: '',
-        title: '',
-        className: '',
-      },
-    ],
-    layout: 'flex-start',
-    orientation: 'horizontal',
-    className: '',
+    kind: 'structured',
+    data: {
+      buttons: [
+        {
+          id: 'btn-1',
+          text: 'Click Me',
+          url: '#',
+          linkTarget: '_self',
+          rel: '',
+          title: '',
+          className: '',
+        },
+      ],
+      layout: 'flex-start',
+      orientation: 'horizontal',
+      className: '',
+    },
   },
   defaultStyles: {},
   renderer: ButtonsRenderer,

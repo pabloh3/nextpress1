@@ -23,6 +23,9 @@ interface HeadingBlockConfig extends Omit<BlockConfig, 'content'> {
 }
 
 function HeadingRenderer({ block }: { block: HeadingBlockConfig; isPreview: boolean }) {
+  // Extract text content safely using discriminated union pattern
+  const textContent = block.content?.kind === 'text' ? block.content.value : '';
+  
   const level = (block.content?.level as number) || 2;
   const Tag = ("h" + level) as keyof JSX.IntrinsicElements;
 
@@ -40,7 +43,7 @@ function HeadingRenderer({ block }: { block: HeadingBlockConfig; isPreview: bool
 
   return (
     <Tag id={anchor} className={className} style={block.styles}>
-      {block.content?.content ?? block.content?.text}
+      {textContent}
     </Tag>
   );
 }
@@ -63,8 +66,8 @@ function HeadingSettings({ block, onUpdate }: { block: HeadingBlockConfig; onUpd
 <Input
              id="heading-text"
              aria-label="Heading text"
-             value={(block.content?.content ?? block.content?.text) || ''}
-             onChange={(e) => updateContent({ content: e.target.value, text: undefined })}
+             value={block.content?.kind === 'text' ? block.content.value : ''}
+             onChange={(e) => updateContent({ kind: 'text', value: e.target.value })}
              placeholder="Enter heading text"
              className="mt-1 h-9"
            />
@@ -153,12 +156,13 @@ function HeadingSettings({ block, onUpdate }: { block: HeadingBlockConfig; onUpd
 
 export const HeadingBlock: BlockDefinition = {
   id: 'core/heading',
-  name: 'Heading',
+  label: 'Heading',
   icon: Heading1,
   description: 'Add a heading text',
   category: 'basic',
   defaultContent: {
-    content: 'Your heading here',
+    kind: 'text',
+    value: 'Your heading here',
     level: 2,
     textAlign: 'left',
     anchor: '',

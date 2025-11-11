@@ -108,7 +108,7 @@ function CodeSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
 
 const CodeBlock: BlockDefinition = {
   id: 'core/code',
-  name: 'Code',
+  label: 'Code',
   icon: CodeIcon,
   description: 'Display code with syntax highlighting',
   category: 'advanced',

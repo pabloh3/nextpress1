@@ -17,8 +17,10 @@ describe('Block Editing', () => {
     it('should update heading text when input changes', () => {
       const block: BlockConfig = {
         id: 'heading-1',
-        type: 'core/heading',
-        content: { content: 'Original Heading', level: 2 },
+        name: 'core/heading',
+        type: 'block',
+        parentId: null,
+        content: { kind: 'text', value: 'Original Heading', level: 2 },
         styles: {},
         children: [],
         settings: {},
@@ -32,9 +34,9 @@ describe('Block Editing', () => {
 
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          content: 'Updated Heading',
+          kind: 'text',
+          value: 'Updated Heading',
           level: 2,
-          text: undefined,
         },
       });
     });
@@ -42,8 +44,10 @@ describe('Block Editing', () => {
     it('should update heading level when button clicked', () => {
       const block: BlockConfig = {
         id: 'heading-1',
-        type: 'core/heading',
-        content: { content: 'Test', level: 2 },
+        name: 'core/heading',
+        type: 'block',
+        parentId: null,
+        content: { kind: 'text', value: 'Test', level: 2 },
         styles: {},
         children: [],
         settings: {},
@@ -57,7 +61,8 @@ describe('Block Editing', () => {
 
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          content: 'Test',
+          kind: 'text',
+          value: 'Test',
           level: 4,
         },
       });
@@ -66,8 +71,10 @@ describe('Block Editing', () => {
     it('should update text alignment', () => {
       const block: BlockConfig = {
         id: 'heading-1',
-        type: 'core/heading',
-        content: { content: 'Test', level: 2 },
+        name: 'core/heading',
+        type: 'block',
+        parentId: null,
+        content: { kind: 'text', value: 'Test', level: 2 },
         styles: {},
         children: [],
         settings: {},
@@ -85,7 +92,8 @@ describe('Block Editing', () => {
 
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          content: 'Test',
+          kind: 'text',
+          value: 'Test',
           level: 2,
           textAlign: 'center',
         },
@@ -97,8 +105,10 @@ describe('Block Editing', () => {
     it('should update text content when textarea changes', () => {
       const block: BlockConfig = {
         id: 'text-1',
-        type: 'core/paragraph',
-        content: { content: 'Original text' },
+        name: 'core/paragraph',
+        type: 'block',
+        parentId: null,
+        content: { kind: 'text', value: 'Original text' },
         styles: {},
         children: [],
         settings: {},
@@ -112,8 +122,8 @@ describe('Block Editing', () => {
 
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          content: 'Updated text',
-          text: undefined,
+          kind: 'text',
+          value: 'Updated text',
         },
       });
     });
@@ -121,8 +131,10 @@ describe('Block Editing', () => {
     it('should update text alignment', () => {
       const block: BlockConfig = {
         id: 'text-1',
-        type: 'core/paragraph',
-        content: { content: 'Test text' },
+        name: 'core/paragraph',
+        type: 'block',
+        parentId: null,
+        content: { kind: 'text', value: 'Test text' },
         styles: {},
         children: [],
         settings: {},
@@ -136,8 +148,9 @@ describe('Block Editing', () => {
 
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          content: 'Test text',
-          align: 'right',
+          kind: 'text',
+          value: 'Test text',
+          textAlign: 'right',
         },
       });
     });
@@ -147,8 +160,10 @@ describe('Block Editing', () => {
     it('should update button text', () => {
       const block: BlockConfig = {
         id: 'button-1',
-        type: 'core/button',
-        content: { text: 'Click me', url: 'https://example.com' },
+        name: 'core/button',
+        type: 'block',
+        parentId: null,
+        content: { kind: 'text', value: 'Click me', url: 'https://example.com' },
         styles: {},
         children: [],
         settings: {},
@@ -162,7 +177,8 @@ describe('Block Editing', () => {
 
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          text: 'New button text',
+          kind: 'text',
+          value: 'New button text',
           url: 'https://example.com',
         },
       });
@@ -171,8 +187,10 @@ describe('Block Editing', () => {
     it('should update button URL', () => {
       const block: BlockConfig = {
         id: 'button-1',
-        type: 'core/button',
-        content: { text: 'Click me', url: 'https://example.com' },
+        name: 'core/button',
+        type: 'block',
+        parentId: null,
+        content: { kind: 'text', value: 'Click me', url: 'https://example.com' },
         styles: {},
         children: [],
         settings: {},
@@ -186,7 +204,8 @@ describe('Block Editing', () => {
 
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          text: 'Click me',
+          kind: 'text',
+          value: 'Click me',
           url: 'https://newurl.com',
         },
       });
@@ -197,7 +216,9 @@ describe('Block Editing', () => {
     it('should update spacer height via input', () => {
       const block: BlockConfig = {
         id: 'spacer-1',
-        type: 'core/spacer',
+        name: 'core/spacer',
+        type: 'block',
+        parentId: null,
         content: { height: 100 },
         styles: {},
         children: [],
@@ -222,9 +243,12 @@ describe('Block Editing', () => {
     it('should preserve existing content properties when updating', () => {
       const block: BlockConfig = {
         id: 'heading-1',
-        type: 'core/heading',
+        name: 'core/heading',
+        type: 'block',
+        parentId: null,
         content: {
-          content: 'Test',
+          kind: 'text',
+          value: 'Test',
           level: 2,
           textAlign: 'center',
           anchor: 'my-anchor',
@@ -245,12 +269,12 @@ describe('Block Editing', () => {
       // Should merge with existing properties
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          content: 'New Text',
+          kind: 'text',
+          value: 'New Text',
           level: 2,
           textAlign: 'center',
           anchor: 'my-anchor',
           className: 'custom-class',
-          text: undefined,
         },
       });
     });
@@ -258,9 +282,12 @@ describe('Block Editing', () => {
     it('should allow overwriting specific properties', () => {
       const block: BlockConfig = {
         id: 'heading-1',
-        type: 'core/heading',
+        name: 'core/heading',
+        type: 'block',
+        parentId: null,
         content: {
-          content: 'Test',
+          kind: 'text',
+          value: 'Test',
           level: 2,
           textAlign: 'left',
         },
@@ -278,7 +305,8 @@ describe('Block Editing', () => {
 
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          content: 'Test',
+          kind: 'text',
+          value: 'Test',
           level: 5,
           textAlign: 'left',
         },
@@ -290,7 +318,9 @@ describe('Block Editing', () => {
     it('should handle empty content gracefully', () => {
       const block: BlockConfig = {
         id: 'heading-1',
-        type: 'core/heading',
+        name: 'core/heading',
+        type: 'block',
+        parentId: null,
         content: {},
         styles: {},
         children: [],
@@ -307,8 +337,8 @@ describe('Block Editing', () => {
 
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          content: 'New content',
-          text: undefined,
+          kind: 'text',
+          value: 'New content',
         },
       });
     });
@@ -316,7 +346,9 @@ describe('Block Editing', () => {
     it('should handle undefined content', () => {
       const block: BlockConfig = {
         id: 'heading-1',
-        type: 'core/heading',
+        name: 'core/heading',
+        type: 'block',
+        parentId: null,
         content: {},
         styles: {},
         children: [],

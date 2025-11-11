@@ -44,21 +44,24 @@ describe('PageBuilder Real-World Scenarios', () => {
     mockBlocks = [
       {
         id: 'heading-1',
-        type: 'core/heading',
+        name: 'core/heading', type: 'block',
+        parentId: null,
         content: { text: 'Main Heading' },
         styles: {},
         settings: {},
       },
       {
         id: 'group-1',
-        type: 'core/group',
+        name: 'core/group', type: 'container',
+        parentId: null,
         content: {},
         styles: {},
         settings: {},
         children: [
           {
             id: 'para-1',
-            type: 'core/paragraph',
+            name: 'core/paragraph', type: 'block',
+            parentId: 'group-1',
             content: { text: 'First paragraph' },
             styles: {},
             settings: {},
@@ -101,21 +104,24 @@ describe('PageBuilder Real-World Scenarios', () => {
       const nestedBlocks: BlockConfig[] = [
         {
           id: 'orphan-para',
-          type: 'core/paragraph',
+          name: 'core/paragraph', type: 'block',
+          parentId: null,
           content: { text: 'Orphan paragraph' },
           styles: {},
           settings: {},
         },
         {
           id: 'outer-group',
-          type: 'core/group',
+          name: 'core/group', type: 'container',
+          parentId: null,
           content: {},
           styles: {},
           settings: {},
           children: [
             {
               id: 'inner-group',
-              type: 'core/group',
+              name: 'core/group', type: 'container',
+              parentId: 'outer-group',
               content: {},
               styles: {},
               settings: {},
@@ -152,21 +158,24 @@ describe('PageBuilder Real-World Scenarios', () => {
       const blocksWithTwoGroups: BlockConfig[] = [
         {
           id: 'group-a',
-          type: 'core/group',
+          name: 'core/group', type: 'container',
+          parentId: null,
           content: {},
           styles: {},
           settings: {},
           children: [
             {
               id: 'para-a1',
-              type: 'core/paragraph',
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-a',
               content: { text: 'Paragraph A1' },
               styles: {},
               settings: {},
             },
             {
               id: 'para-a2',
-              type: 'core/paragraph',
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-a',
               content: { text: 'Paragraph A2' },
               styles: {},
               settings: {},
@@ -175,14 +184,16 @@ describe('PageBuilder Real-World Scenarios', () => {
         },
         {
           id: 'group-b',
-          type: 'core/group',
+          name: 'core/group', type: 'container',
+          parentId: null,
           content: {},
           styles: {},
           settings: {},
           children: [
             {
               id: 'para-b1',
-              type: 'core/paragraph',
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-b',
               content: { text: 'Paragraph B1' },
               styles: {},
               settings: {},
@@ -218,28 +229,32 @@ describe('PageBuilder Real-World Scenarios', () => {
       const groupWithMultipleBlocks: BlockConfig[] = [
         {
           id: 'group-1',
-          type: 'core/group',
+          name: 'core/group', type: 'container',
+          parentId: null,
           content: {},
           styles: {},
           settings: {},
           children: [
             {
               id: 'block-1',
-              type: 'core/heading',
+              name: 'core/heading', type: 'block',
+              parentId: 'group-1',
               content: { text: 'Heading 1' },
               styles: {},
               settings: {},
             },
             {
               id: 'block-2',
-              type: 'core/paragraph',
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-1',
               content: { text: 'Paragraph 1' },
               styles: {},
               settings: {},
             },
             {
               id: 'block-3',
-              type: 'core/heading',
+              name: 'core/heading', type: 'block',
+              parentId: 'group-1',
               content: { text: 'Heading 2' },
               styles: {},
               settings: {},
@@ -302,28 +317,32 @@ describe('PageBuilder Real-World Scenarios', () => {
       const complexBlocks: BlockConfig[] = [
         {
           id: 'root-para',
-          type: 'core/paragraph',
+          name: 'core/paragraph', type: 'block',
+          parentId: null,
           content: { text: 'Root paragraph' },
           styles: {},
           settings: {},
         },
         {
           id: 'columns-1',
-          type: 'core/columns',
+          name: 'core/columns', type: 'container',
+          parentId: null,
           content: {},
           styles: {},
           settings: {},
           children: [
             {
               id: 'col-1-group',
-              type: 'core/group',
+              name: 'core/group', type: 'container',
+              parentId: 'columns-1',
               content: {},
               styles: {},
               settings: {},
               children: [
                 {
                   id: 'nested-para',
-                  type: 'core/paragraph',
+                  name: 'core/paragraph', type: 'block',
+                  parentId: 'col-1-group',
                   content: { text: 'Deeply nested paragraph' },
                   styles: {},
                   settings: {},
@@ -334,7 +353,8 @@ describe('PageBuilder Real-World Scenarios', () => {
         },
         {
           id: 'simple-group',
-          type: 'core/group',
+          name: 'core/group', type: 'container',
+          parentId: null,
           content: {},
           styles: {},
           settings: {},
@@ -370,16 +390,17 @@ describe('PageBuilder Real-World Scenarios', () => {
       let blocks = [
         {
           id: 'group-1',
-          type: 'core/group',
+          name: 'core/group', type: 'container',
+          parentId: null,
           content: {},
           styles: {},
           settings: {},
           children: [
-            { id: 'c1', type: 'core/paragraph', content: { text: 'One' }, styles: {}, settings: {} },
-            { id: 'c2', type: 'core/paragraph', content: { text: 'Two' }, styles: {}, settings: {} }
+            { id: 'c1', name: 'core/paragraph', type: 'block', parentId: 'group-1', content: { text: 'One' }, styles: {}, settings: {} },
+            { id: 'c2', name: 'core/paragraph', type: 'block', parentId: 'group-1', content: { text: 'Two' }, styles: {}, settings: {} }
           ]
         },
-        { id: 'solo', type: 'core/paragraph', content: { text: 'Solo' }, styles: {}, settings: {} }
+        { id: 'solo', name: 'core/paragraph', type: 'block', parentId: null, content: { text: 'Solo' }, styles: {}, settings: {} }
       ] as BlockConfig[];
 
       const selectedId = 'c2'; // Pretend this is selected in UI

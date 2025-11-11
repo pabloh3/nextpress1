@@ -7,6 +7,9 @@ import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { MousePointer, ExternalLink, Type, Settings, Link } from "lucide-react";
 
 function ButtonRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
+  // Extract text content safely using discriminated union pattern
+  const textContent = block.content?.kind === 'text' ? block.content.value : '';
+  
   const url = block.content?.url as string | undefined;
   const linkTarget = (block.content?.linkTarget as string | undefined) || (block.content?.target as string | undefined);
   const rel = block.content?.rel as string | undefined;
@@ -26,7 +29,7 @@ function ButtonRenderer({ block, isPreview }: { block: BlockConfig; isPreview: b
         style={block.styles}
         className={anchorClass}
       >
-        {block.content?.text}
+        {textContent}
       </a>
     </div>
   );
@@ -50,8 +53,8 @@ function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
             <Label htmlFor="button-text" className="text-sm font-medium text-gray-700">Button Text</Label>
             <Input
               id="button-text"
-              value={block.content?.text || ''}
-              onChange={(e) => updateContent({ text: e.target.value })}
+              value={block.content?.kind === 'text' ? block.content.value : ''}
+              onChange={(e) => updateContent({ kind: 'text', value: e.target.value })}
               placeholder="Button text"
               className="mt-1 h-9"
             />
@@ -137,12 +140,13 @@ function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
 
 const ButtonBlock: BlockDefinition = {
   id: 'core/button',
-  name: 'Button',
+  label: 'Button',
   icon: MousePointer,
   description: 'Add a clickable button',
   category: 'basic',
   defaultContent: {
-    text: 'Click Me',
+    kind: 'text',
+    value: 'Click Me',
     url: '#',
     linkTarget: '_self',
     rel: '',

@@ -193,7 +193,7 @@ function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
 
 const PullquoteBlock: BlockDefinition = {
   id: 'core/pullquote',
-  name: 'Pullquote',
+  label: 'Pullquote',
   icon: QuoteIcon,
   description: 'Give special visual emphasis to a quote from your text',
   category: 'advanced',

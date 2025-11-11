@@ -9,6 +9,7 @@ import { usePageSave } from "../../hooks/usePageSave";
 import { BuilderSidebar } from "./BuilderSidebar";
 import { BuilderTopBar } from "./BuilderTopBar";
 import { BuilderCanvas } from "./BuilderCanvas";
+import { blockRegistry } from "./blocks";
 import { BlockActionsProvider } from "./BlockActionsContext";
 
 interface PageBuilderProps {
@@ -125,6 +126,32 @@ export default function PageBuilder({
 						return handleDragEnd(result as any);
 					}}
 					onDragStart={() => console.log("Drag started, id:", selectedBlockId)}
+					renderOverlay={({ id }) => {
+						// id may refer directly to block definition id (library drag) or block instance id (canvas drag)
+						// Attempt to resolve instance id by checking current blocks mapping name
+						let def = blockRegistry[id];
+						if (!def) {
+							const instance = blocks.find(b => b.id === id);
+							if (instance) def = blockRegistry[instance.name];
+						}
+						return (
+							<div style={{
+								background: 'rgba(255,255,255,0.95)',
+								border: '1px solid #e5e7eb',
+								padding: '6px 10px',
+								borderRadius: 0,
+								boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+								color: '#374151',
+								fontSize: 12,
+								display: 'inline-flex',
+								alignItems: 'center',
+								gap: 6,
+							}}>
+								{def?.icon ? <def.icon className="w-4 h-4 text-gray-600" /> : null}
+								<span style={{ opacity: 0.85 }}>{def?.label || id}</span>
+							</div>
+						);
+					}}
 				>
 					{sidebarVisible && (
 						<BuilderSidebar

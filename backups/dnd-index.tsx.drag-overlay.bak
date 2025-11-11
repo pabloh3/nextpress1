@@ -1,5 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+// Backup prior to adding drag overlay
+// (content identical to current working version before overlay modifications)
+
 // Public types compatible with previous library usage
 export interface DropLocation {
   droppableId: string;
@@ -20,7 +23,6 @@ type DragDropContextProps = {
   children: React.ReactNode;
   onDragEnd: (result: DropResult) => void;
   onDragStart?: () => void;
-  renderOverlay?: (data: { id: string }) => React.ReactNode;
 };
 
 type InternalDragState = {
@@ -45,9 +47,6 @@ const DndContext = createContext<{
   getOver: () => { id: string | null; index: number };
   wasDropCommitted: () => boolean;
   clearDropCommitted: () => void;
-  showOverlay: (data: { id: string; x: number; y: number }) => void;
-  updateOverlay: (coords: { x: number; y: number }) => void;
-  clearOverlay: () => void;
 }>({
   registerDroppable: () => {},
   onDragStart: () => {},
@@ -60,16 +59,12 @@ const DndContext = createContext<{
   getOver: () => ({ id: null, index: -1 }),
   wasDropCommitted: () => false,
   clearDropCommitted: () => {},
-  showOverlay: () => {},
-  updateOverlay: () => {},
-  clearOverlay: () => {},
 });
 
-export function DragDropContext({ children, onDragEnd, onDragStart, renderOverlay }: DragDropContextProps) {
+export function DragDropContext({ children, onDragEnd, onDragStart }: DragDropContextProps) {
   const registryRef = useRef<DndRegistry>({ droppables: new Map() });
   const [dragState, setDragState] = useState<InternalDragState>({ draggingId: null, sourceDroppableId: null, sourceIndex: null });
   const [overState, setOverState] = useState<{ id: string | null; index: number }>({ id: null, index: -1 });
-  const [overlay, setOverlay] = useState<{ id: string | null; x: number; y: number; visible: boolean }>({ id: null, x: 0, y: 0, visible: false });
   const committedRef = useRef<boolean>(false);
 
   const registerDroppable = useCallback((id: string, el: HTMLElement | null) => {
@@ -82,7 +77,7 @@ export function DragDropContext({ children, onDragEnd, onDragStart, renderOverla
   }, []);
 
   const ctxOnDragStart = useCallback((draggableId: string, droppableId: string, index: number) => {
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] ctxOnDragStart', { draggableId, droppableId, index });
+    console.log('[DND] ctxOnDragStart', { draggableId, droppableId, index });
     if (dragState.draggingId) return;
     setDragState({ draggingId: draggableId, sourceDroppableId: droppableId, sourceIndex: index });
     try { onDragStart?.(); } catch (e) { console.warn('[DND] onDragStart callback errored:', e); }
@@ -99,13 +94,13 @@ export function DragDropContext({ children, onDragEnd, onDragStart, renderOverla
       combine: null,
     };
 
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] ctxOnDragEnd building result', result);
+    console.log('[DND] ctxOnDragEnd building result', result);
 
     setOverState({ id: null, index: -1 });
     setDragState({ draggingId: null, sourceDroppableId: null, sourceIndex: null });
 
     if (destination) committedRef.current = true;
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] ctxOnDragEnd → onDragEnd(result)', result);
+    console.log('[DND] ctxOnDragEnd \u2192 onDragEnd(result)', result);
     try { onDragEnd(result); } catch (e) { console.warn('[DND] onDragEnd callback errored:', e); }
   }, [onDragEnd, dragState]);
 
@@ -125,23 +120,12 @@ export function DragDropContext({ children, onDragEnd, onDragStart, renderOverla
       type: 'DEFAULT',
       combine: null,
     };
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] finalizeDrag → onDragEnd(result)', result);
+    console.log('[DND] finalizeDrag \u2192 onDragEnd(result)', result);
     setOverState({ id: null, index: -1 });
     setDragState({ draggingId: null, sourceDroppableId: null, sourceIndex: null });
-    setOverlay({ id: null, x: 0, y: 0, visible: false });
     if (destination) committedRef.current = true;
     try { onDragEnd(result); } catch (e) { console.warn('[DND] onDragEnd callback errored:', e); }
   }, [onDragEnd]);
-
-  const showOverlay = useCallback((data: { id: string; x: number; y: number }) => {
-    setOverlay({ id: data.id, x: data.x, y: data.y, visible: true });
-  }, []);
-  const updateOverlay = useCallback((coords: { x: number; y: number }) => {
-    setOverlay((prev) => ({ ...prev, x: coords.x, y: coords.y }));
-  }, []);
-  const clearOverlay = useCallback(() => {
-    setOverlay({ id: null, x: 0, y: 0, visible: false });
-  }, []);
 
   const value = useMemo(() => ({
     registerDroppable,
@@ -155,45 +139,10 @@ export function DragDropContext({ children, onDragEnd, onDragStart, renderOverla
     getOver: () => overState,
     wasDropCommitted: () => committedRef.current,
     clearDropCommitted: () => { committedRef.current = false; },
-    showOverlay,
-    updateOverlay,
-    clearOverlay,
   }), [registerDroppable, ctxOnDragStart, ctxOnDragEnd, finalizeDrag, isDraggingOver, dragState, setOver, getOverIndex]);
 
   return (
-    <DndContext.Provider value={value}>
-      {children}
-      {overlay.visible && overlay.id ? (
-        <div
-          style={{
-            position: 'fixed',
-            left: overlay.x + 12,
-            top: overlay.y + 12,
-            pointerEvents: 'none',
-            zIndex: 9999,
-          }}
-        >
-          {renderOverlay ? (
-            renderOverlay({ id: overlay.id })
-          ) : (
-            <div style={{
-              background: 'rgba(255,255,255,0.95)',
-              border: '1px solid #e5e7eb',
-              padding: '6px 8px',
-              borderRadius: 0,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-              color: '#374151',
-              fontSize: 12,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-            }}>
-              <span style={{ opacity: 0.85 }}>{overlay.id}</span>
-            </div>
-          )}
-        </div>
-      ) : null}
-    </DndContext.Provider>
+    <DndContext.Provider value={value}>{children}</DndContext.Provider>
   );
 }
 
@@ -254,7 +203,7 @@ export function Droppable({ droppableId, children, direction = 'vertical', isDro
     isUsingPlaceholder: false,
   };
 
-  return <>{children(provided, snapshot)}</>;
+  return <>{children(provided, snapshot)}</>; 
 }
 
 // Draggable component
@@ -299,7 +248,7 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (isDragDisabled) return;
 
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] Draggable.handleDragStart', {
+    console.log('[DND] Draggable.handleDragStart', {
       draggableId,
       index,
       type: (e as any)?.type,
@@ -307,23 +256,10 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
     });
 
     e.stopPropagation();
-    // Prevent browser text selection initiation (mouse and touch)
-    e.preventDefault();
-    setIsDragging(true);
-
-    if (typeof document !== 'undefined' && document.body) {
-      document.body.classList.add('npb-dragging');
+    if ((e as any)?.type === 'touchstart') {
+      e.preventDefault();
     }
-
-    const getPoint = (evt: React.MouseEvent | React.TouchEvent) => {
-      if ('touches' in evt && evt.touches.length > 0) {
-        return { x: evt.touches[0].clientX, y: evt.touches[0].clientY };
-      }
-      const m = evt as React.MouseEvent;
-      return { x: m.clientX, y: m.clientY };
-    };
-
-    const startPoint = getPoint(e);
+    setIsDragging(true);
 
     // Resolve source droppable
     let parent = elementRef.current?.parentElement;
@@ -333,10 +269,7 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
     const sourceDroppableId = parent?.getAttribute('data-rfd-droppable-id') || 'unknown';
     dragMetaRef.current = { id: draggableId, source: sourceDroppableId, index };
 
-    // show overlay with starting position
-    context.showOverlay({ id: draggableId, x: startPoint.x, y: startPoint.y });
-
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] Draggable.start → parent droppable', { sourceDroppableId });
+    console.log('[DND] Draggable.start \u2192 parent droppable', { sourceDroppableId });
     context.onDragStart(draggableId, sourceDroppableId, index);
 
     const computeDroppableAtPoint = (clientX: number, clientY: number) => {
@@ -356,11 +289,8 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
       }
       const clientX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : (moveEvent as MouseEvent).clientX;
       const clientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : (moveEvent as MouseEvent).clientY;
-      context.updateOverlay({ x: clientX, y: clientY });
       const { droppableUnder, underId } = computeDroppableAtPoint(clientX, clientY);
-      if (import.meta.env?.DEBUG_BUILDER) {
-        console.log('[DND] move', { clientX, clientY, underId });
-      }
+      console.log('[DND] move', { clientX, clientY, underId });
 
       if (underId && droppableUnder) {
         const draggables = Array.from(droppableUnder.querySelectorAll('[data-rfd-draggable-id]')) as HTMLElement[];
@@ -370,24 +300,16 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
           const middle = rect.top + rect.height / 2;
           if (clientY < middle) { targetIndex = i; break; }
         }
-        if (import.meta.env?.DEBUG_BUILDER) {
-          console.log('[DND] setOver', { underId, targetIndex });
-        }
+        console.log('[DND] setOver', { underId, targetIndex });
         context.setOver(underId, targetIndex);
       } else if (!underId) {
-        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] move.null-droppable');
+        console.log('[DND] move.null-droppable');
       }
     };
 
     // Handle drag end (recompute destination)
     const handleEnd = (endEvent: MouseEvent | TouchEvent) => {
       setIsDragging(false);
-
-      if (typeof document !== 'undefined' && document.body) {
-        document.body.classList.remove('npb-dragging');
-      }
-
-      context.clearOverlay();
 
       let clientX: number;
       let clientY: number;
@@ -404,7 +326,7 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
 
       const { droppableUnder, underId } = computeDroppableAtPoint(clientX, clientY);
       const storedOver = context.getOver();
-      if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.recompute', { clientX, clientY, underId, storedOver });
+      console.log('[DND] end.recompute', { clientX, clientY, underId, storedOver });
 
       let finalDestination: DropLocation | null = null;
       if (underId && droppableUnder) {
@@ -421,7 +343,7 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
       }
 
       if (!finalDestination && storedOver.id) {
-        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.mismatch', { recomputed: underId, storedOver });
+        console.log('[DND] end.mismatch', { recomputed: underId, storedOver });
       }
 
       const meta = dragMetaRef.current;
@@ -429,10 +351,10 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
         console.warn('[DND] end.without-meta');
         context.finalizeDrag({ id: '', source: 'unknown-source', index: 0 }, null);
       } else if (finalDestination) {
-        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.finalDestination', finalDestination, 'meta', meta);
+        console.log('[DND] end.finalDestination', finalDestination, 'meta', meta);
         context.finalizeDrag(meta, finalDestination);
       } else {
-        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.cancel', 'meta', meta);
+        console.log('[DND] end.cancel', 'meta', meta);
         context.finalizeDrag(meta, null);
       }
 
@@ -476,7 +398,7 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
     mode: isDragging ? 'FLUID' : null,
   };
 
-  return <>{children(provided, snapshot)}</>;
+  return <>{children(provided, snapshot)}</>; 
 }
 
 export default {

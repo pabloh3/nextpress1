@@ -20,7 +20,6 @@ type DragDropContextProps = {
   children: React.ReactNode;
   onDragEnd: (result: DropResult) => void;
   onDragStart?: () => void;
-  renderOverlay?: (data: { id: string }) => React.ReactNode;
 };
 
 type InternalDragState = {
@@ -65,7 +64,7 @@ const DndContext = createContext<{
   clearOverlay: () => {},
 });
 
-export function DragDropContext({ children, onDragEnd, onDragStart, renderOverlay }: DragDropContextProps) {
+export function DragDropContext({ children, onDragEnd, onDragStart }: DragDropContextProps) {
   const registryRef = useRef<DndRegistry>({ droppables: new Map() });
   const [dragState, setDragState] = useState<InternalDragState>({ draggingId: null, sourceDroppableId: null, sourceIndex: null });
   const [overState, setOverState] = useState<{ id: string | null; index: number }>({ id: null, index: -1 });
@@ -82,7 +81,7 @@ export function DragDropContext({ children, onDragEnd, onDragStart, renderOverla
   }, []);
 
   const ctxOnDragStart = useCallback((draggableId: string, droppableId: string, index: number) => {
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] ctxOnDragStart', { draggableId, droppableId, index });
+    console.log('[DND] ctxOnDragStart', { draggableId, droppableId, index });
     if (dragState.draggingId) return;
     setDragState({ draggingId: draggableId, sourceDroppableId: droppableId, sourceIndex: index });
     try { onDragStart?.(); } catch (e) { console.warn('[DND] onDragStart callback errored:', e); }
@@ -99,13 +98,13 @@ export function DragDropContext({ children, onDragEnd, onDragStart, renderOverla
       combine: null,
     };
 
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] ctxOnDragEnd building result', result);
+    console.log('[DND] ctxOnDragEnd building result', result);
 
     setOverState({ id: null, index: -1 });
     setDragState({ draggingId: null, sourceDroppableId: null, sourceIndex: null });
 
     if (destination) committedRef.current = true;
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] ctxOnDragEnd → onDragEnd(result)', result);
+    console.log('[DND] ctxOnDragEnd [~]8;;file:///home/kizz/Code~Vault/OPEN SOURCE/nextpress/client/src/lib/dnd/index.tsx#L107onDragEnd(result)]8;;\', result);
     try { onDragEnd(result); } catch (e) { console.warn('[DND] onDragEnd callback errored:', e); }
   }, [onDragEnd, dragState]);
 
@@ -125,7 +124,7 @@ export function DragDropContext({ children, onDragEnd, onDragStart, renderOverla
       type: 'DEFAULT',
       combine: null,
     };
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] finalizeDrag → onDragEnd(result)', result);
+    console.log('[DND] finalizeDrag [~]8;;file:///home/kizz/Code~Vault/OPEN SOURCE/nextpress/client/src/lib/dnd/index.tsx#L127]8;;\\ onDragEnd(result)', result);
     setOverState({ id: null, index: -1 });
     setDragState({ draggingId: null, sourceDroppableId: null, sourceIndex: null });
     setOverlay({ id: null, x: 0, y: 0, visible: false });
@@ -173,24 +172,20 @@ export function DragDropContext({ children, onDragEnd, onDragStart, renderOverla
             zIndex: 9999,
           }}
         >
-          {renderOverlay ? (
-            renderOverlay({ id: overlay.id })
-          ) : (
-            <div style={{
-              background: 'rgba(255,255,255,0.95)',
-              border: '1px solid #e5e7eb',
-              padding: '6px 8px',
-              borderRadius: 0,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-              color: '#374151',
-              fontSize: 12,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-            }}>
-              <span style={{ opacity: 0.85 }}>{overlay.id}</span>
-            </div>
-          )}
+          <div style={{
+            background: 'rgba(255,255,255,0.95)',
+            border: '1px solid #e5e7eb',
+            padding: '6px 8px',
+            borderRadius: 0,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            color: '#374151',
+            fontSize: 12,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}>
+            <span style={{ opacity: 0.85 }}>{overlay.id}</span>
+          </div>
         </div>
       ) : null}
     </DndContext.Provider>
@@ -299,7 +294,7 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (isDragDisabled) return;
 
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] Draggable.handleDragStart', {
+    console.log('[DND] Draggable.handleDragStart', {
       draggableId,
       index,
       type: (e as any)?.type,
@@ -307,13 +302,10 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
     });
 
     e.stopPropagation();
-    // Prevent browser text selection initiation (mouse and touch)
-    e.preventDefault();
-    setIsDragging(true);
-
-    if (typeof document !== 'undefined' && document.body) {
-      document.body.classList.add('npb-dragging');
+    if ((e as any)?.type === 'touchstart') {
+      e.preventDefault();
     }
+    setIsDragging(true);
 
     const getPoint = (evt: React.MouseEvent | React.TouchEvent) => {
       if ('touches' in evt && evt.touches.length > 0) {
@@ -336,7 +328,7 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
     // show overlay with starting position
     context.showOverlay({ id: draggableId, x: startPoint.x, y: startPoint.y });
 
-    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] Draggable.start → parent droppable', { sourceDroppableId });
+    console.log('[DND] Draggable.start [~]8;;file:///home/kizz/Code~Vault/OPEN SOURCE/nextpress/client/src/lib/dnd/index.tsx#L331parent droppable]8;;\', { sourceDroppableId });
     context.onDragStart(draggableId, sourceDroppableId, index);
 
     const computeDroppableAtPoint = (clientX: number, clientY: number) => {
@@ -375,17 +367,13 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
         }
         context.setOver(underId, targetIndex);
       } else if (!underId) {
-        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] move.null-droppable');
+        console.log('[DND] move.null-droppable');
       }
     };
 
     // Handle drag end (recompute destination)
     const handleEnd = (endEvent: MouseEvent | TouchEvent) => {
       setIsDragging(false);
-
-      if (typeof document !== 'undefined' && document.body) {
-        document.body.classList.remove('npb-dragging');
-      }
 
       context.clearOverlay();
 
@@ -404,7 +392,7 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
 
       const { droppableUnder, underId } = computeDroppableAtPoint(clientX, clientY);
       const storedOver = context.getOver();
-      if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.recompute', { clientX, clientY, underId, storedOver });
+      console.log('[DND] end.recompute', { clientX, clientY, underId, storedOver });
 
       let finalDestination: DropLocation | null = null;
       if (underId && droppableUnder) {
@@ -421,7 +409,7 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
       }
 
       if (!finalDestination && storedOver.id) {
-        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.mismatch', { recomputed: underId, storedOver });
+        console.log('[DND] end.mismatch', { recomputed: underId, storedOver });
       }
 
       const meta = dragMetaRef.current;
@@ -429,10 +417,10 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
         console.warn('[DND] end.without-meta');
         context.finalizeDrag({ id: '', source: 'unknown-source', index: 0 }, null);
       } else if (finalDestination) {
-        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.finalDestination', finalDestination, 'meta', meta);
+        console.log('[DND] end.finalDestination', finalDestination, 'meta', meta);
         context.finalizeDrag(meta, finalDestination);
       } else {
-        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.cancel', 'meta', meta);
+        console.log('[DND] end.cancel', 'meta', meta);
         context.finalizeDrag(meta, null);
       }
 

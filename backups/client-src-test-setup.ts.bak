@@ -42,9 +42,3 @@ Object.defineProperty(window, 'DragEvent', {
     }
   }
 })
-
-// Mock document.elementFromPoint for jsdom (returns body)
-Object.defineProperty(document, 'elementFromPoint', {
-  value: vi.fn().mockImplementation(() => document.body),
-  writable: true,
-})

@@ -225,7 +225,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               <Input
                 id="video-src"
                 value={(block.content as any)?.url || ''}
-                onChange={(e) => updateContent({ url: e.target.value })}
+                onChange={(e) => updateContent({ kind: 'media', mediaType: 'video', url: e.target.value })}
                 placeholder="https://example.com/video.mp4 or YouTube URL"
               />
               <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>Choose from library</Button>

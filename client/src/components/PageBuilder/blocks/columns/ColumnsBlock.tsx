@@ -75,7 +75,7 @@ function readColumnsData(content: BlockContent): ColumnsData {
 function writeColumnsData(prev: BlockContent, updates: Partial<ColumnsData>): BlockContent {
   const current = readColumnsData(prev);
   const next: ColumnsData = { ...current, ...updates };
-  return { kind: "structured", data: next as Record<string, unknown> } as const;
+  return { kind: "structured", data: next as Record<string, unknown> };
 }
 
 function ColumnsRenderer({

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useBlockManager } from '../hooks/useBlockManager'
 import type { BlockConfig } from '@shared/schema-types'
+import { normalizeBlockContent } from './setup'
 
 describe('useBlockManager', () => {
   const mockGenerateId = () => `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -11,7 +12,7 @@ describe('useBlockManager', () => {
     name: blockType,
     type: children !== undefined && children.length > 0 ? 'container' : 'block',
     parentId: null,
-    content: { text: `Content for ${id}` },
+    content: normalizeBlockContent({ text: `Content for ${id}` }),
     styles: {},
     ...(children !== undefined && children.length > 0 && { children }),
     settings: {}
@@ -57,13 +58,13 @@ describe('useBlockManager', () => {
       
       act(() => {
         const updateResult = result.current.updateBlock('block1', { 
-          content: { text: 'Updated content' } 
+          content: normalizeBlockContent({ text: 'Updated content' })
         })
         expect(updateResult.status).toBe(true)
       })
 
       const updatedBlock = result.current.blocks.find(b => b.id === 'block1')
-      expect(updatedBlock?.content.text).toBe('Updated content')
+      expect(updatedBlock?.content).toEqual({ kind: 'text', value: 'Updated content' })
     })
 
     it('should update nested block', () => {
@@ -71,14 +72,14 @@ describe('useBlockManager', () => {
       
       act(() => {
         const updateResult = result.current.updateBlock('nested1', { 
-          content: { text: 'Updated nested content' } 
+          content: normalizeBlockContent({ text: 'Updated nested content' })
         })
         expect(updateResult.status).toBe(true)
       })
 
       const container = result.current.blocks.find(b => b.id === 'container1')
       const nestedBlock = container?.children?.find(b => b.id === 'nested1')
-      expect(nestedBlock?.content.text).toBe('Updated nested content')
+      expect(nestedBlock?.content).toEqual({ kind: 'text', value: 'Updated nested content' })
     })
 
     it('should return failure status for non-existent block', () => {
@@ -88,7 +89,7 @@ describe('useBlockManager', () => {
       
       act(() => {
         const updateResult = result.current.updateBlock('non-existent', { 
-          content: { text: 'Should not work' } 
+          content: normalizeBlockContent({ text: 'Should not work' })
         })
         expect(updateResult.status).toBe(false)
       })
@@ -116,7 +117,7 @@ describe('useBlockManager', () => {
       const originalBlock = result.current.blocks.find(b => b.id === 'block1')
       
       expect(duplicatedBlock).toBeTruthy()
-      expect(duplicatedBlock?.content.text).toBe(originalBlock?.content.text)
+      expect(duplicatedBlock?.content).toEqual(originalBlock?.content)
       expect(duplicatedBlock?.type).toBe(originalBlock?.type)
     })
 

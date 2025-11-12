@@ -3,18 +3,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react'
 import { DragDropContext } from '@/lib/dnd'
 import BlockRenderer, { ContainerChildren } from '../components/PageBuilder/BlockRenderer'
 import { BlockActionsProvider } from '../components/PageBuilder/BlockActionsContext'
-import type { BlockConfig, BlockContent } from '@shared/schema-types'
-
-function getText(content: BlockContent): string {
-  if (!content) return ''
-  if (typeof content === 'object' && 'kind' in content) {
-    return (content as any).kind === 'text' ? (content as any).value ?? '' : ''
-  }
-  if (typeof (content as any)?.text === 'string') return (content as any).text
-  if (typeof (content as any)?.content === 'string') return (content as any).content
-  if (typeof content === 'string') return content
-  return ''
-}
+import type { BlockConfig } from '@shared/schema-types'
 
 // Mock the block registry
 vi.mock('../components/PageBuilder/blocks', () => ({
@@ -24,7 +13,7 @@ vi.mock('../components/PageBuilder/blocks', () => ({
       name: 'Paragraph',
       renderer: ({ block }: { block: BlockConfig }) => (
         <p className="wp-block-paragraph" style={block.styles as any}>
-          {getText(block.content)}
+          {block.content?.content ?? block.content?.text}
         </p>
       ),
       isContainer: false
@@ -69,7 +58,7 @@ describe('BlockRenderer', () => {
     type: children ? 'container' : 'block',
     parentId: null,
     label: name === 'core/paragraph' ? 'Paragraph' : name === 'core/group' ? 'Group' : name,
-    content: children ? { kind: 'structured', data: {} } : { kind: 'text', value: `Content for ${id}` },
+    content: { kind: 'text', value: `Content for ${id}` },
     styles: {},
     children: children || [],
     settings: {}

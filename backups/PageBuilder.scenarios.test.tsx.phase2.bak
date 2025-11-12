@@ -453,7 +453,7 @@ describe('PageBuilder Real-World Scenarios', () => {
             ...block,
             children: block.children?.map(child => 
               child.id === newBlockId 
-                ? { ...child, content: { kind: 'text', value: 'Updated Heading Text' } as const }
+                ? { ...child, content: { kind: 'text', value: 'Updated Heading Text' } }
                 : child
             )
           };

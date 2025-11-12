@@ -1,0 +1,1 @@
+Intent: migrate tests to BlockContent union shape and container structured content. Update any legacy {text: ''} or plain content to { kind: 'text', value: '' }. For containers use { kind: 'structured', data: {} }. Keep assertions stable using visible text. Respect existing block definitions; do not alter runtime code.

@@ -7,7 +7,7 @@ const makeBlock = (id: string, children?: BlockConfig[]): BlockConfig => ({
   name: 'core/text',
   type: children !== undefined ? 'container' : 'block',
   parentId: 'wrong-initial-value', // Intentionally wrong to test correction
-  content: children !== undefined ? { kind: 'structured', data: {} } : { kind: 'text', value: '' },
+  content: {},
   ...(children !== undefined && { children })
 });
 
@@ -114,15 +114,15 @@ describe('ParentId Management', () => {
           name: 'core/group',
           type: 'container',
           parentId: null,
-          content: { kind: 'structured', data: {} },
+          content: {},
           children: [{
             id: 'parent',
             name: 'core/group',
             type: 'container',
             parentId: 'grandparent',
-            content: { kind: 'structured', data: {} },
+            content: {},
             children: [
-              { id: 'child', name: 'core/text', type: 'block', parentId: 'parent', content: { kind: 'text', value: '' } }
+              { id: 'child', name: 'core/text', type: 'block', parentId: 'parent', content: {} }
             ]
           }]
         }
@@ -135,7 +135,7 @@ describe('ParentId Management', () => {
     
     it('should return null for root block', () => {
       const blocks: BlockConfig[] = [
-        { id: 'root', name: 'core/text', type: 'block', parentId: null, content: { kind: 'text', value: '' } }
+        { id: 'root', name: 'core/text', type: 'block', parentId: null, content: {} }
       ];
       
       const parent = findParentBlock(blocks, 'root');
@@ -169,9 +169,9 @@ describe('ParentId Management', () => {
           name: 'core/group',
           type: 'container',
           parentId: null,
-          content: { kind: 'structured', data: {} },
+          content: {},
           children: [
-            { id: 'child1', name: 'core/text', type: 'block', parentId: 'container1', content: { kind: 'text', value: '' } }
+            { id: 'child1', name: 'core/text', type: 'block', parentId: 'container1', content: {} }
           ]
         },
         {
@@ -179,9 +179,9 @@ describe('ParentId Management', () => {
           name: 'core/group',
           type: 'container',
           parentId: null,
-          content: { kind: 'structured', data: {} },
+          content: {},
           children: [
-            { id: 'child2', name: 'core/text', type: 'block', parentId: 'container2', content: { kind: 'text', value: '' } }
+            { id: 'child2', name: 'core/text', type: 'block', parentId: 'container2', content: {} }
           ]
         }
       ];

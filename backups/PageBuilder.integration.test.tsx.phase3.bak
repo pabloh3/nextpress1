@@ -28,7 +28,7 @@ describe("PageBuilder Integration", () => {
 			name: "core/group",
 			type: "container",
 			parentId: null,
-			content: { kind: "structured", data: { tagName: "div" } },
+			content: { tagName: "div" },
 			styles: {},
 			settings: {},
 			children: [
@@ -278,7 +278,7 @@ describe("PageBuilder Integration", () => {
 					name: "core/group",
 					type: "container",
 					parentId: null,
-					content: { kind: "structured", data: { tagName: "div" } },
+					content: { tagName: "div" },
 					styles: {},
 					settings: {},
 					children: [
@@ -287,7 +287,7 @@ describe("PageBuilder Integration", () => {
 							name: "core/group",
 							type: "container",
 							parentId: "root",
-							content: { kind: "structured", data: { tagName: "div" } },
+							content: { tagName: "div" },
 							styles: {},
 							settings: {},
 							children: [

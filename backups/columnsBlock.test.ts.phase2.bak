@@ -9,7 +9,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
       id: 'core/text',
       label: 'Text',
       isContainer: false,
-      defaultContent: { kind: 'text', value: '' },
+      defaultContent: { text: '' },
       defaultStyles: {},
       category: 'basic'
     },
@@ -17,7 +17,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
       id: 'core/heading',
       label: 'Heading',
       isContainer: false,
-      defaultContent: { kind: 'text', value: '', level: 1 },
+      defaultContent: { text: '', level: 1 },
       defaultStyles: {},
       category: 'basic'
     },
@@ -25,7 +25,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
       id: 'core/button',
       label: 'Button',
       isContainer: false,
-      defaultContent: { kind: 'text', value: 'Button' },
+      defaultContent: { text: 'Button' },
       defaultStyles: {},
       category: 'basic'
     },
@@ -33,7 +33,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
       id: 'core/group',
       label: 'Group',
       isContainer: true,
-      defaultContent: { kind: 'structured', data: {} },
+      defaultContent: {},
       defaultStyles: {},
       category: 'layout'
     }
@@ -47,7 +47,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
         parentId: null,
         label: 'Text',
         category: 'basic',
-        content: { kind: 'text', value: '' },
+        content: { text: '' },
         styles: {},
         settings: {}
       },
@@ -58,7 +58,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
         parentId: null,
         label: 'Heading',
         category: 'basic',
-        content: { kind: 'text', value: '', level: 1 },
+        content: { text: '', level: 1 },
         styles: {},
         settings: {}
       },
@@ -69,7 +69,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
         parentId: null,
         label: 'Button',
         category: 'basic',
-        content: { kind: 'text', value: 'Button' },
+        content: { text: 'Button' },
         styles: {},
         settings: {}
       },
@@ -80,7 +80,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
         parentId: null,
         label: 'Group',
         category: 'layout',
-        content: { kind: 'structured', data: {} },
+        content: {},
         styles: {},
         settings: {},
         children: []
@@ -106,7 +106,12 @@ describe('ColumnsBlock with New Structure', () => {
       type: 'container',
       parentId: null,
       label: 'Columns',
-      content: { kind: 'structured', data: { gap: '20px', direction: 'row', verticalAlignment: 'top', horizontalAlignment: 'left' } },
+      content: {
+        gap: '20px',
+        direction: 'row',
+        verticalAlignment: 'top',
+        horizontalAlignment: 'left'
+      },
       settings: {
         columnLayout: [
           { columnId: 'col-1', width: '50%', blockIds: [] },

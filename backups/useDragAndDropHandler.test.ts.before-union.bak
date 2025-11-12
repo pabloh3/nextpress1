@@ -1,3 +1,6 @@
+// Full backup of useDragAndDropHandler.test.ts before BlockContent union migration
+// Date: 2025-11-12
+
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useDragAndDropHandler } from '../hooks/useDragAndDropHandler'
@@ -12,7 +15,7 @@ vi.mock('../components/PageBuilder/blocks', () => ({
       id: 'core/paragraph',
       label: 'Paragraph',
       isContainer: false,
-      defaultContent: { kind: 'text', value: '' },
+      defaultContent: {},
       defaultStyles: {},
       category: 'basic'
     },
@@ -20,7 +23,7 @@ vi.mock('../components/PageBuilder/blocks', () => ({
       id: 'core/group',
       label: 'Group',
       isContainer: true,
-      defaultContent: { kind: 'structured', data: {} },
+      defaultContent: {},
       defaultStyles: {},
       category: 'layout'
     },
@@ -28,7 +31,7 @@ vi.mock('../components/PageBuilder/blocks', () => ({
       id: 'core/columns',
       label: 'Columns',
       isContainer: true,
-      defaultContent: { kind: 'structured', data: {} },
+      defaultContent: {},
       defaultStyles: {},
       category: 'layout'
     }
@@ -42,7 +45,7 @@ vi.mock('../components/PageBuilder/blocks', () => ({
         parentId: null,
         label: 'Paragraph',
         category: 'basic',
-        content: { kind: 'text', value: '' },
+        content: {},
         styles: {},
         settings: {}
       },
@@ -53,7 +56,7 @@ vi.mock('../components/PageBuilder/blocks', () => ({
         parentId: null,
         label: 'Group',
         category: 'layout',
-        content: { kind: 'structured', data: {} },
+        content: {},
         styles: {},
         settings: {},
         children: []
@@ -75,7 +78,7 @@ describe('useDragAndDropHandler', () => {
     type: type.includes('group') || type.includes('columns') ? 'container' : 'block',
     parentId: null,
     label: type.split('/')[1] || 'Block',
-    content: type.includes('group') || type.includes('columns') ? { kind: 'structured', data: {} } : { kind: 'text', value: `Content for ${id}` },
+    content: { text: `Content for ${id}` },
     styles: {},
     children: children || [],
     settings: {}
@@ -195,7 +198,7 @@ describe('useDragAndDropHandler', () => {
       const updater = setBlocks.mock.calls[0][0]
       const next = typeof updater === 'function' ? updater(blocks) : updater
       const container = next.find((b: BlockConfig) => b.id === 'container1')!
-      expect(container.children!.map((c: BlockConfig) => c.id)).toEqual(['nested2','nested3','nested1'])
+      expect(container.children!.map(c => c.id)).toEqual(['nested2','nested3','nested1'])
     })
 
     it('should handle moving from canvas to container', () => {

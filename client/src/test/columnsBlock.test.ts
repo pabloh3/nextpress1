@@ -174,21 +174,21 @@ describe('ColumnsBlock with New Structure', () => {
             name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
-            content: { text: 'Text 1' }
+            content: { kind: 'text', value: 'Text 1' }
           },
           {
             id: 'text-2',
             name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
-            content: { text: 'Text 2' }
+            content: { kind: 'text', value: 'Text 2' }
           },
           {
             id: 'text-3',
             name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
-            content: { text: 'Text 3' }
+            content: { kind: 'text', value: 'Text 3' }
           }
         ],
         settings: {
@@ -225,7 +225,7 @@ describe('ColumnsBlock with New Structure', () => {
             name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
-            content: { text: 'Text 1' }
+            content: { kind: 'text', value: 'Text 1' }
           }
         ],
         settings: {
@@ -278,7 +278,7 @@ describe('ColumnsBlock with New Structure', () => {
             name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
-            content: { text: 'Text 1' }
+            content: { kind: 'text', value: 'Text 1' }
           }
         ],
         settings: {
@@ -330,21 +330,21 @@ describe('ColumnsBlock with New Structure', () => {
             name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
-            content: { text: 'Text 1' }
+            content: { kind: 'text', value: 'Text 1' }
           },
           {
             id: 'text-2',
             name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
-            content: { text: 'Text 2' }
+            content: { kind: 'text', value: 'Text 2' }
           },
           {
             id: 'text-3',
             name: 'core/text',
             type: 'block',
             parentId: 'columns-1',
-            content: { text: 'Text 3' }
+            content: { kind: 'text', value: 'Text 3' }
           }
         ]
       }];

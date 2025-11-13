@@ -10,7 +10,6 @@ import {
 	createPluginModel,
 	createOptionModel,
 	createTemplateModel,
-	createBlockModel,
 } from "../storage";
 import {
 	blogs,
@@ -23,7 +22,6 @@ import {
 	plugins,
 	options,
 	templates,
-	blocks,
 } from "@shared/schema";
 
 // Helper function to generate consistent test UUIDs
@@ -81,7 +79,6 @@ describe("Specialized Model Factories", () => {
 		await testDb.delete(plugins);
 		await testDb.delete(options);
 		await testDb.delete(templates);
-		await testDb.delete(blocks);
 		await testDb.delete(blogs);
 		await testDb.delete(users);
 
@@ -805,86 +802,188 @@ describe("Specialized Model Factories", () => {
 		});
 	});
 
-	describe("Block Model Specialized Methods", () => {
-		const blockModel = createBlockModel(testDb);
+	describe("Block Storage Tests (within Templates/Pages)", () => {
+		const templateModel = createTemplateModel(testDb);
+		const pageModel = createPageModel(testDb);
 
 		beforeEach(async () => {
-			// Clean up existing blocks
+			// Clean up existing test pages/templates
 			try {
-				await blockModel.delete(testUuids.block1);
+				await templateModel.delete(testUuids.template1);
 			} catch (error) {
-				// Ignore if block doesn't exist
+				// Ignore if doesn't exist
 			}
 			try {
-				await blockModel.delete(testUuids.block2);
+				await pageModel.delete(testUuids.page1);
 			} catch (error) {
-				// Ignore if block doesn't exist
+				// Ignore if doesn't exist
 			}
+		});
 
-			// Create test blocks using model methods
-			await blockModel.create({
-				id: testUuids.block1,
-				name: "text",
-				type: "block",
-				category: "basic",
-				version: "1.0.0",
-				requires: "1.0.0",
+		it("should store and retrieve blocks in templates", async () => {
+			const blockConfigs = [
+				{
+					id: testUuids.block1,
+					name: "heading",
+					type: "block",
+					parentId: null,
+					content: { text: "Template Heading", level: 1 },
+					styles: {},
+				},
+				{
+					id: testUuids.block2,
+					name: "text",
+					type: "block",
+					parentId: null,
+					content: { text: "Template text content" },
+					styles: {},
+				},
+			];
+
+			const template = await templateModel.create({
+				id: testUuids.template1,
+				name: "Test Template",
+				type: "page",
 				authorId: testUuids.user1,
+				blocks: blockConfigs,
 			});
-			await blockModel.create({
-				id: testUuids.block2,
-				name: "image",
-				type: "block",
-				category: "media",
-				version: "1.0.0",
-				requires: "1.0.0",
+
+			expect(template.blocks).toHaveLength(2);
+			expect((template.blocks as any)[0].name).toBe("heading");
+			expect((template.blocks as any)[1].name).toBe("text");
+		});
+
+		it("should store and retrieve blocks in pages", async () => {
+			const blockConfigs = [
+				{
+					id: testUuids.block1,
+					name: "heading",
+					type: "block",
+					parentId: null,
+					content: { text: "Page Heading", level: 2 },
+					styles: {},
+				},
+			];
+
+			const page = await pageModel.create({
+				id: testUuids.page1,
+				title: "Test Page",
+				content: "Page content",
+				slug: "test-page-blocks",
 				authorId: testUuids.user1,
+				blocks: blockConfigs,
 			});
+
+			expect(page.blocks).toHaveLength(1);
+			expect((page.blocks as any)[0].name).toBe("heading");
 		});
 
-		it("should find blocks by type", async () => {
-			const textBlocks = await blockModel.findByType("block");
-			expect(textBlocks).toHaveLength(2);
-			expect(textBlocks[0].type).toBe("block");
+		it("should update blocks in templates", async () => {
+			const initialBlocks = [
+				{
+					id: testUuids.block1,
+					name: "text",
+					type: "block",
+					parentId: null,
+					content: { text: "Initial text" },
+					styles: {},
+				},
+			];
 
-			const imageBlocks = await blockModel.findByType("block");
-			expect(imageBlocks).toHaveLength(2);
-			expect(imageBlocks[0].type).toBe("block");
-		});
-
-		it("should find reusable blocks", async () => {
-			const reusableBlocks = await blockModel.findReusableBlocks();
-			expect(reusableBlocks).toHaveLength(2);
-			expect(reusableBlocks.every((block) => block.type === "block")).toBe(
-				true,
-			);
-		});
-
-		it("should find blocks ordered by type", async () => {
-			const blocks = await blockModel.findMany({
-				orderBy: { property: "type", order: "ascending" },
+			const template = await templateModel.create({
+				id: testUuids.template1,
+				name: "Updatable Template",
+				type: "page",
+				authorId: testUuids.user1,
+				blocks: initialBlocks,
 			});
-			expect(blocks).toHaveLength(2);
-			expect(blocks[0].type).toBe("block");
-			expect(blocks[1].type).toBe("block");
-		});
 
-		it("should find blocks ordered by creation date descending", async () => {
-			const blocks = await blockModel.findMany({
-				orderBy: { property: "createdAt", order: "descending" },
+			const updatedBlocks = [
+				{
+					id: testUuids.block1,
+					name: "text",
+					type: "block",
+					parentId: null,
+					content: { text: "Updated text" },
+					styles: {},
+				},
+				{
+					id: testUuids.block2,
+					name: "heading",
+					type: "block",
+					parentId: null,
+					content: { text: "New heading", level: 1 },
+					styles: {},
+				},
+			];
+
+			const updated = await templateModel.update(template.id, {
+				blocks: updatedBlocks,
 			});
-			expect(blocks).toHaveLength(2);
-			expect(blocks.every((block) => block.authorId === testUuids.user1)).toBe(
-				true,
-			);
+
+			expect(updated.blocks).toHaveLength(2);
+			expect((updated.blocks as any)[0].content.text).toBe("Updated text");
+			expect((updated.blocks as any)[1].name).toBe("heading");
 		});
 
-		it("should handle invalid UUID gracefully", async () => {
-			// Use a valid UUID format but non-existent ID
-			const result = await blockModel.findById(
-				"550e8400-e29b-41d4-a716-446655440999",
-			);
-			expect(result).toBeUndefined();
+		it("should handle nested container blocks", async () => {
+			const nestedBlocks = [
+				{
+					id: testUuids.block1,
+					name: "group",
+					type: "container",
+					parentId: null,
+					content: {},
+					styles: {},
+					children: [
+						{
+							id: testUuids.block2,
+							name: "heading",
+							type: "block",
+							parentId: testUuids.block1,
+							content: { text: "Nested heading", level: 1 },
+							styles: {},
+						},
+					],
+				},
+			];
+
+			const template = await templateModel.create({
+				id: testUuids.template1,
+				name: "Nested Template",
+				type: "page",
+				authorId: testUuids.user1,
+				blocks: nestedBlocks,
+			});
+
+			expect(template.blocks).toHaveLength(1);
+			const containerBlock = (template.blocks as any)[0];
+			expect(containerBlock.type).toBe("container");
+			expect(containerBlock.children).toHaveLength(1);
+			expect(containerBlock.children[0].parentId).toBe(testUuids.block1);
+		});
+
+		it("should find templates with blocks", async () => {
+			await templateModel.create({
+				id: testUuids.template1,
+				name: "Template with Blocks",
+				type: "page",
+				authorId: testUuids.user1,
+				blocks: [
+					{
+						id: testUuids.block1,
+						name: "heading",
+						type: "block",
+						parentId: null,
+						content: { text: "Test", level: 1 },
+						styles: {},
+					},
+				],
+			});
+
+			const found = await templateModel.findById(testUuids.template1);
+			expect(found).toBeDefined();
+			expect(found?.blocks).toHaveLength(1);
 		});
 	});
 

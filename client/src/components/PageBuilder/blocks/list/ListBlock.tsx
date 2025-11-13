@@ -1,5 +1,5 @@
 import React from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -216,7 +216,7 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
 
 const ListBlock: BlockDefinition = {
   id: 'core/list',
-  name: 'List',
+  label: 'List',
   icon: ListIcon,
   description: 'Add a bulleted or numbered list',
   category: 'advanced',

@@ -1,5 +1,24 @@
 import '@testing-library/jest-dom'
+import { blockRegistry } from '../components/PageBuilder/blocks';
+import type { BlockConfig, BlockContent } from '@shared/schema-types';
+
+// Debug log for blockRegistry
+console.log('Test Setup - blockRegistry:', blockRegistry);
 import { vi } from 'vitest'
+
+/**
+ * Helper function to normalize content for test blocks.
+ * Converts legacy content format { text: '...' } to proper format { kind: 'text', value: '...' }
+ */
+export function normalizeBlockContent(content: any): BlockContent {
+  if (!content) return content;
+  if (typeof content === 'object' && 'kind' in content) return content;
+  if (typeof content === 'string') return { kind: 'text', value: content };
+  if (typeof content === 'object' && typeof content.text === 'string') {
+    return { kind: 'text', value: content.text };
+  }
+  return content;
+}
 
 // Mock IntersectionObserver
 global.IntersectionObserver = vi.fn().mockImplementation(() => ({
@@ -37,4 +56,10 @@ Object.defineProperty(window, 'DragEvent', {
       super(type, options)
     }
   }
+})
+
+// Mock document.elementFromPoint for jsdom (returns body)
+Object.defineProperty(document, 'elementFromPoint', {
+  value: vi.fn().mockImplementation(() => document.body),
+  writable: true,
 })

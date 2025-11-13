@@ -1,0 +1,475 @@
+import React from 'react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { DragDropContext } from '@/lib/dnd';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
+
+import { useBlockManager } from '@/hooks/useBlockManager';
+import { useDragAndDropHandler } from '@/hooks/useDragAndDropHandler';
+import { insertNewBlock, moveExistingBlock } from '@/lib/handlers/treeUtils';
+import type { BlockConfig } from '@shared/schema-types';
+
+// Mock the block registry
+vi.mock('@/components/PageBuilder/blocks', () => ({
+  getDefaultBlock: (type: string, id: string) => ({
+    id,
+    type,
+    content: type === 'core/heading' ? { kind: 'text', value: 'New Heading' } : 
+             type === 'core/paragraph' ? { kind: 'text', value: 'New Paragraph' } :
+             type === 'core/group' ? { kind: 'structured', data: {} } : { kind: 'structured', data: {} },
+    styles: {},
+    settings: {},
+    children: type === 'core/group' || type === 'core/columns' ? [] : undefined,
+  }),
+  blockRegistry: {
+    'core/heading': { name: 'Heading', isContainer: false },
+    'core/paragraph': { name: 'Paragraph', isContainer: false },
+    'core/group': { name: 'Group', isContainer: true },
+    'core/columns': { name: 'Columns', isContainer: true },
+  }
+}));
+
+// Helper to extract text content from a block using union shape
+function getText(block?: BlockConfig): string {
+  if (!block) return '';
+  const c: any = block.content;
+  if (c && typeof c === 'object' && 'kind' in c) {
+    if (c.kind === 'text') return c.value || '';
+    return ''; // non-text content
+  }
+  // Legacy fallback (should be phased out)
+  return (block as any).content?.text || '';
+}
+
+describe('PageBuilder Real-World Scenarios', () => {
+  let mockBlocks: BlockConfig[];
+  
+  beforeEach(() => {
+    // Mock crypto.randomUUID if not available in test environment
+    if (!global.crypto?.randomUUID) {
+      vi.stubGlobal('crypto', {
+        ...global.crypto,
+        randomUUID: () => Math.random().toString(36).substring(2, 15),
+      });
+    }
+
+    // Set up initial blocks for each test
+    mockBlocks = [
+      {
+        id: 'heading-1',
+        name: 'core/heading', type: 'block',
+        parentId: null,
+        content: { kind: 'text', value: 'Main Heading' },
+        styles: {},
+        settings: {},
+      },
+      {
+        id: 'group-1',
+        name: 'core/group', type: 'container',
+        parentId: null,
+        content: { kind: 'structured', data: {} },
+        styles: {},
+        settings: {},
+        children: [
+          {
+            id: 'para-1',
+            name: 'core/paragraph', type: 'block',
+            parentId: 'group-1',
+            content: { kind: 'text', value: 'First paragraph' },
+            styles: {},
+            settings: {},
+          },
+        ],
+      },
+    ];
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  describe('Container Block Functionality', () => {
+    test('should allow adding multiple blocks to a container', () => {
+      let blocks = [...mockBlocks];
+      
+      // Add a second paragraph to the group
+      const result1 = insertNewBlock(blocks, 'group-1', 1, 'core/paragraph');
+      blocks = result1.blocks;
+      
+      // Verify the group now has 2 children
+      const group = blocks.find(b => b.id === 'group-1');
+      expect(group?.children).toHaveLength(2);
+      expect(getText(group?.children?.[0])).toBe('First paragraph');
+      expect(group?.children?.[1].type).toBe('core/paragraph');
+      
+      // Add a third block (heading) to the group
+      const result2 = insertNewBlock(blocks, 'group-1', 2, 'core/heading');
+      blocks = result2.blocks;
+      
+      // Verify the group now has 3 children
+      const updatedGroup = blocks.find(b => b.id === 'group-1');
+      expect(updatedGroup?.children).toHaveLength(3);
+      expect(updatedGroup?.children?.[2].type).toBe('core/heading');
+    });
+
+    test('should allow moving blocks into nested containers', () => {
+      // Create a nested structure: Group -> Nested Group (empty)
+      const nestedBlocks: BlockConfig[] = [
+        {
+          id: 'orphan-para',
+          name: 'core/paragraph', type: 'block',
+          parentId: null,
+          content: { kind: 'text', value: 'Orphan paragraph' },
+          styles: {},
+          settings: {},
+        },
+        {
+          id: 'outer-group',
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
+          styles: {},
+          settings: {},
+          children: [
+            {
+              id: 'inner-group',
+              name: 'core/group', type: 'container',
+              parentId: 'outer-group',
+              content: { kind: 'structured', data: {} },
+              styles: {},
+              settings: {},
+              children: [],
+            },
+          ],
+        },
+      ];
+
+      // Move the orphan paragraph into the inner group
+      const result = moveExistingBlock(
+        nestedBlocks,
+        null, // source parent (root)
+        0,    // source index
+        'inner-group', // destination parent
+        0     // destination index
+      );
+
+      // Verify the orphan paragraph is now in the inner group
+      const outerGroup = result.find(b => b.id === 'outer-group');
+      const innerGroup = outerGroup?.children?.[0];
+      
+      expect(innerGroup?.children).toHaveLength(1);
+      expect(innerGroup?.children?.[0].id).toBe('orphan-para');
+      expect(getText(innerGroup?.children?.[0])).toBe('Orphan paragraph');
+      
+      // Verify it's no longer at the root
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('outer-group');
+    });
+
+    test('should allow moving blocks between different containers', () => {
+      // Create two groups with blocks
+      const blocksWithTwoGroups: BlockConfig[] = [
+        {
+          id: 'group-a',
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
+          styles: {},
+          settings: {},
+          children: [
+            {
+              id: 'para-a1',
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-a',
+              content: { kind: 'text', value: 'Paragraph A1' },
+              styles: {},
+              settings: {},
+            },
+            {
+              id: 'para-a2',
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-a',
+              content: { kind: 'text', value: 'Paragraph A2' },
+              styles: {},
+              settings: {},
+            },
+          ],
+        },
+        {
+          id: 'group-b',
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
+          styles: {},
+          settings: {},
+          children: [
+            {
+              id: 'para-b1',
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-b',
+              content: { kind: 'text', value: 'Paragraph B1' },
+              styles: {},
+              settings: {},
+            },
+          ],
+        },
+      ];
+
+      // Move para-a2 from group-a to group-b
+      const result = moveExistingBlock(
+        blocksWithTwoGroups,
+        'group-a', // source parent
+        1,         // source index (para-a2)
+        'group-b', // destination parent  
+        1          // destination index (after para-b1)
+      );
+
+      // Verify group-a now has only 1 child
+      const groupA = result.find(b => b.id === 'group-a');
+      expect(groupA?.children).toHaveLength(1);
+      expect(groupA?.children?.[0].id).toBe('para-a1');
+
+      // Verify group-b now has 2 children
+      const groupB = result.find(b => b.id === 'group-b');
+      expect(groupB?.children).toHaveLength(2);
+      expect(groupB?.children?.[0].id).toBe('para-b1');
+      expect(groupB?.children?.[1].id).toBe('para-a2');
+      expect(getText(groupB?.children?.[1])).toBe('Paragraph A2');
+    });
+
+    test('should allow reordering blocks within the same container', () => {
+      // Create a group with 3 blocks
+      const groupWithMultipleBlocks: BlockConfig[] = [
+        {
+          id: 'group-1',
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
+          styles: {},
+          settings: {},
+          children: [
+            {
+              id: 'block-1',
+              name: 'core/heading', type: 'block',
+              parentId: 'group-1',
+              content: { kind: 'text', value: 'Heading 1' },
+              styles: {},
+              settings: {},
+            },
+            {
+              id: 'block-2',
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-1',
+              content: { kind: 'text', value: 'Paragraph 1' },
+              styles: {},
+              settings: {},
+            },
+            {
+              id: 'block-3',
+              name: 'core/heading', type: 'block',
+              parentId: 'group-1',
+              content: { kind: 'text', value: 'Heading 2' },
+              styles: {},
+              settings: {},
+            },
+          ],
+        },
+      ];
+
+      // Move block-3 to the beginning (index 0)
+      const result = moveExistingBlock(
+        groupWithMultipleBlocks,
+        'group-1', // source parent
+        2,         // source index (block-3)
+        'group-1', // destination parent (same)
+        0          // destination index (beginning)
+      );
+
+      const group = result.find(b => b.id === 'group-1');
+      expect(group?.children).toHaveLength(3);
+      
+      // Verify the order is now: block-3, block-1, block-2
+      expect(group?.children?.[0].id).toBe('block-3');
+      expect(getText(group?.children?.[0])).toBe('Heading 2');
+      expect(group?.children?.[1].id).toBe('block-1');
+      expect(getText(group?.children?.[1])).toBe('Heading 1');
+      expect(group?.children?.[2].id).toBe('block-2');
+      expect(getText(group?.children?.[2])).toBe('Paragraph 1');
+    });
+  });
+
+  describe('Drag and Drop Handler Integration', () => {
+    test('should handle drag from block library to container', () => {
+      const mockSetBlocks = vi.fn();
+      const mockSetSelectedBlockId = vi.fn();
+      const mockSetActiveTab = vi.fn();
+
+      let currentBlocks = [...mockBlocks];
+      mockSetBlocks.mockImplementation((newBlocks) => {
+        currentBlocks = newBlocks;
+      });
+
+      // Simulate dragging from block library to group
+      const dragResult = {
+        source: { droppableId: 'block-library', index: 0 },
+        destination: { droppableId: 'group-1', index: 1 },
+        draggableId: 'core/heading',
+      };
+
+      const result = insertNewBlock(currentBlocks, 'group-1', 1, 'core/heading');
+      mockSetBlocks(result.blocks);
+
+      // Verify the block was added to the group
+      const group = result.blocks.find(b => b.id === 'group-1');
+      expect(group?.children).toHaveLength(2);
+      expect(group?.children?.[1].type).toBe('core/heading');
+    });
+
+    test('should handle complex multi-level drag operations', () => {
+      // Create a complex nested structure
+      const complexBlocks: BlockConfig[] = [
+        {
+          id: 'root-para',
+          name: 'core/paragraph', type: 'block',
+          parentId: null,
+          content: { kind: 'text', value: 'Root paragraph' },
+          styles: {},
+          settings: {},
+        },
+        {
+          id: 'columns-1',
+          name: 'core/columns', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
+          styles: {},
+          settings: {},
+          children: [
+            {
+              id: 'col-1-group',
+              name: 'core/group', type: 'container',
+              parentId: 'columns-1',
+              content: { kind: 'structured', data: {} },
+              styles: {},
+              settings: {},
+              children: [
+                {
+                  id: 'nested-para',
+                  name: 'core/paragraph', type: 'block',
+                  parentId: 'col-1-group',
+                  content: { kind: 'text', value: 'Deeply nested paragraph' },
+                  styles: {},
+                  settings: {},
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: 'simple-group',
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
+          styles: {},
+          settings: {},
+          children: [],
+        },
+      ];
+
+      // Move the deeply nested paragraph to the simple group
+      const result = moveExistingBlock(
+        complexBlocks,
+        'col-1-group',    // source parent (nested group in columns)
+        0,                // source index
+        'simple-group',   // destination parent
+        0                 // destination index
+      );
+
+      // Verify the paragraph moved correctly
+      const simpleGroup = result.find(b => b.id === 'simple-group');
+      expect(simpleGroup?.children).toHaveLength(1);
+      expect(simpleGroup?.children?.[0].id).toBe('nested-para');
+      expect(getText(simpleGroup?.children?.[0])).toBe('Deeply nested paragraph');
+
+      // Verify it was removed from the original location
+      const columns = result.find(b => b.id === 'columns-1');
+      const colGroup = columns?.children?.[0];
+      expect(colGroup?.children).toHaveLength(0);
+    });
+  });
+
+  describe('Selection Persistence', () => {
+    test('selected nested block remains consistent after move', () => {
+      // Start with group containing two children
+      let blocks = [
+        {
+          id: 'group-1',
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
+          styles: {},
+          settings: {},
+          children: [
+            { id: 'c1', name: 'core/paragraph', type: 'block', parentId: 'group-1', content: { kind: 'text', value: 'One' }, styles: {}, settings: {} },
+            { id: 'c2', name: 'core/paragraph', type: 'block', parentId: 'group-1', content: { kind: 'text', value: 'Two' }, styles: {}, settings: {} }
+          ]
+        },
+        { id: 'solo', name: 'core/paragraph', type: 'block', parentId: null, content: { kind: 'text', value: 'Solo' }, styles: {}, settings: {} }
+      ] as BlockConfig[];
+
+      const selectedId = 'c2'; // Pretend this is selected in UI
+
+      // Move c2 from group to root index 1
+      blocks = moveExistingBlock(blocks, 'group-1', 1, null, 1);
+
+      // After move, ensure block still exists and content intact
+      const stillExistsAtRoot = blocks[1];
+      expect(stillExistsAtRoot.id).toBe(selectedId);
+      expect(getText(stillExistsAtRoot)).toBe('Two');
+
+      // Move it back into group at index 0
+      blocks = moveExistingBlock(blocks, null, 1, 'group-1', 0);
+      const group = blocks.find(b => b.id === 'group-1');
+      expect(group?.children?.[0].id).toBe(selectedId);
+      expect(getText(group?.children?.[0])).toBe('Two');
+    });
+  });
+
+  describe('Block Management Operations', () => {
+    test('should support all CRUD operations on nested blocks', () => {
+      let blocks = [...mockBlocks];
+
+      // CREATE: Add a new block to nested container
+      const createResult = insertNewBlock(blocks, 'group-1', 1, 'core/heading');
+      blocks = createResult.blocks;
+      
+      const group = blocks.find(b => b.id === 'group-1');
+      expect(group?.children).toHaveLength(2);
+
+      // UPDATE: This would be handled by useBlockManager in real usage
+      // We'll simulate updating the newly added block
+      const newBlockId = createResult.newId!;
+      const updatedBlocks = blocks.map(block => {
+        if (block.id === 'group-1') {
+          return {
+            ...block,
+            children: block.children?.map(child => 
+              child.id === newBlockId 
+                ? { ...child, content: { kind: 'text', value: 'Updated Heading Text' } }
+                : child
+            )
+          };
+        }
+        return block;
+      });
+      blocks = updatedBlocks;
+
+      const updatedGroup = blocks.find(b => b.id === 'group-1');
+      const updatedBlock = updatedGroup?.children?.find(c => c.id === newBlockId);
+      expect(getText(updatedBlock)).toBe('Updated Heading Text');
+
+      // DELETE: Remove the updated block
+      const deleteResult = moveExistingBlock(blocks, 'group-1', 1, null, -1);
+      // Note: moveExistingBlock doesn't handle deletion directly, but this simulates removal
+      // In practice, deletion would be handled by a separate function in useBlockManager
+    });
+  });
+});

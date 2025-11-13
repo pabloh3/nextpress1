@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Helmet } from "react-helmet";
 import BlockRenderer from "@/components/PageBuilder/BlockRenderer";
-import type { Post, BlockConfig } from "@shared/schema";
+import type { Post } from "@shared/schema-types";
+import type { BlockConfig } from "@shared/schema-types";
 
 interface PublicPageViewProps {
   slug?: string;

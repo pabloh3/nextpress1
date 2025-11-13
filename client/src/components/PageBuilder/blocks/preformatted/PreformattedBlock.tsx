@@ -1,5 +1,5 @@
 import React from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -159,7 +159,7 @@ function PreformattedSettings({ block, onUpdate }: { block: BlockConfig; onUpdat
 
 const PreformattedBlock: BlockDefinition = {
   id: 'core/preformatted',
-  name: 'Preformatted',
+  label: 'Preformatted',
   icon: PreformattedIcon,
   description: 'Add text that respects your spacing and tabs',
   category: 'advanced',

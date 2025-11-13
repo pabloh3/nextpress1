@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useDragAndDropHandler } from '../hooks/useDragAndDropHandler'
-import type { BlockConfig } from '@shared/schema'
+import type { BlockConfig } from '@shared/schema-types'
 import type { DropResult } from '@/lib/dnd'
 import * as toastModule from '@/hooks/use-toast'
 
@@ -10,19 +10,56 @@ vi.mock('../components/PageBuilder/blocks', () => ({
   blockRegistry: {
     'core/paragraph': {
       id: 'core/paragraph',
-      name: 'Paragraph',
-      isContainer: false
+      label: 'Paragraph',
+      isContainer: false,
+      defaultContent: { kind: 'text', value: '' },
+      defaultStyles: {},
+      category: 'basic'
     },
     'core/group': {
       id: 'core/group',
-      name: 'Group',
-      isContainer: true
+      label: 'Group',
+      isContainer: true,
+      defaultContent: { kind: 'structured', data: {} },
+      defaultStyles: {},
+      category: 'layout'
     },
     'core/columns': {
       id: 'core/columns',
-      name: 'Columns',
-      isContainer: true
+      label: 'Columns',
+      isContainer: true,
+      defaultContent: { kind: 'structured', data: {} },
+      defaultStyles: {},
+      category: 'layout'
     }
+  },
+  getDefaultBlock: (type: string, id: string) => {
+    const registry: any = {
+      'core/paragraph': {
+        id,
+        name: 'core/paragraph',
+        type: 'block',
+        parentId: null,
+        label: 'Paragraph',
+        category: 'basic',
+        content: { kind: 'text', value: '' },
+        styles: {},
+        settings: {}
+      },
+      'core/group': {
+        id,
+        name: 'core/group',
+        type: 'container',
+        parentId: null,
+        label: 'Group',
+        category: 'layout',
+        content: { kind: 'structured', data: {} },
+        styles: {},
+        settings: {},
+        children: []
+      }
+    };
+    return registry[type] || null;
   }
 }))
 
@@ -34,8 +71,11 @@ describe('useDragAndDropHandler', () => {
 
   const createMockBlock = (id: string, type: string = 'core/paragraph', children?: BlockConfig[]): BlockConfig => ({
     id,
-    type,
-    content: { text: `Content for ${id}` },
+    name: type,
+    type: type.includes('group') || type.includes('columns') ? 'container' : 'block',
+    parentId: null,
+    label: type.split('/')[1] || 'Block',
+    content: type.includes('group') || type.includes('columns') ? { kind: 'structured', data: {} } : { kind: 'text', value: `Content for ${id}` },
     styles: {},
     children: children || [],
     settings: {}
@@ -155,7 +195,7 @@ describe('useDragAndDropHandler', () => {
       const updater = setBlocks.mock.calls[0][0]
       const next = typeof updater === 'function' ? updater(blocks) : updater
       const container = next.find((b: BlockConfig) => b.id === 'container1')!
-      expect(container.children!.map(c => c.id)).toEqual(['nested2','nested3','nested1'])
+      expect(container.children!.map((c: BlockConfig) => c.id)).toEqual(['nested2','nested3','nested1'])
     })
 
     it('should handle moving from canvas to container', () => {

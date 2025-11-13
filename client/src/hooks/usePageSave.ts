@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import type { BlockConfig, Post, Template } from '@shared/schema';
+import type { BlockConfig, Post, Template } from '@shared/schema-types';
 
 export function usePageSave({ isTemplate, data, onSave }: { isTemplate: boolean, data: Post | Template | undefined, onSave?: (updatedData: Post | Template) => void }) {
   const toast = useToast();

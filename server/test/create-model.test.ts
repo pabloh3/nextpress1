@@ -12,7 +12,6 @@ import {
 	plugins,
 	options,
 	templates,
-	blocks,
 	blogs,
 } from "../../shared/schema";
 
@@ -81,7 +80,6 @@ describe("createModel - Generic CRUD Operations", () => {
 		await testDb.delete(plugins);
 		await testDb.delete(options);
 		await testDb.delete(templates);
-		await testDb.delete(blocks);
 		await testDb.delete(blogs);
 		await testDb.delete(users);
 
@@ -538,25 +536,36 @@ describe("createModel - Generic CRUD Operations", () => {
 		});
 	});
 
-	describe("Block Model Tests", () => {
-		const blockModel = createModel(blocks, testDb);
+	describe("Block Storage Tests (within Pages)", () => {
+		const pageModel = createModel(pages, testDb);
 
-		it("should create and find blocks", async () => {
-			const newBlock = {
+		it("should create and find pages with blocks", async () => {
+			const blockConfig = {
 				id: generateId(),
-				type: "text",
-				name: "Test Block",
-				authorId: testUser.id,
-				version: "1.0.0",
-				requires: "1.0.0",
+				name: "heading",
+				type: "block",
+				parentId: null,
+				content: { text: "Test Heading", level: 1 },
+				styles: {},
 			};
 
-			const created = await blockModel.create(newBlock);
-			expect(created.type).toBe("text");
-			expect(created.name).toBe("Test Block");
+			const newPage = {
+				id: generateId(),
+				title: "Test Page with Blocks",
+				content: "Page content",
+				slug: "test-page-blocks",
+				authorId: testUser.id,
+				blocks: [blockConfig],
+			};
 
-			const found = await blockModel.findById(created.id);
-			expect(found?.type).toBe("text");
+			const created = await pageModel.create(newPage);
+			expect(created.blocks).toBeDefined();
+			expect(Array.isArray(created.blocks)).toBe(true);
+			expect(created.blocks).toHaveLength(1);
+
+			const found = await pageModel.findById(created.id);
+			expect(found?.blocks).toHaveLength(1);
+			expect((found?.blocks as any)[0].name).toBe("heading");
 		});
 	});
 
@@ -572,7 +581,7 @@ describe("createModel - Generic CRUD Operations", () => {
 		it("should throw error for invalid column in orderBy", async () => {
 			await expect(
 				userModel.findMany({
-					orderBy: { property: "invalidColumn", direction: "asc" },
+					orderBy: { property: "invalidColumn", order: "ascending" },
 				}),
 			).rejects.toThrow("Column 'invalidColumn' does not exist on table");
 		});

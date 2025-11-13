@@ -1,5 +1,5 @@
 import React from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -101,7 +101,7 @@ function SpacerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
 
 const SpacerBlock: BlockDefinition = {
   id: 'core/spacer',
-  name: 'Spacer',
+  label: 'Spacer',
   icon: SpaceIcon,
   description: 'Add vertical spacing',
   category: 'layout',

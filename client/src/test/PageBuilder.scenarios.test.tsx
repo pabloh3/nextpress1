@@ -6,16 +6,16 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useBlockManager } from '@/hooks/useBlockManager';
 import { useDragAndDropHandler } from '@/hooks/useDragAndDropHandler';
 import { insertNewBlock, moveExistingBlock } from '@/lib/handlers/treeUtils';
-import type { BlockConfig } from '@shared/schema';
+import type { BlockConfig } from '@shared/schema-types';
 
 // Mock the block registry
 vi.mock('@/components/PageBuilder/blocks', () => ({
   getDefaultBlock: (type: string, id: string) => ({
     id,
     type,
-    content: type === 'core/heading' ? { text: 'New Heading' } : 
-             type === 'core/paragraph' ? { text: 'New Paragraph' } :
-             type === 'core/group' ? {} : {},
+    content: type === 'core/heading' ? { kind: 'text', value: 'New Heading' } : 
+             type === 'core/paragraph' ? { kind: 'text', value: 'New Paragraph' } :
+             type === 'core/group' ? { kind: 'structured', data: {} } : { kind: 'structured', data: {} },
     styles: {},
     settings: {},
     children: type === 'core/group' || type === 'core/columns' ? [] : undefined,
@@ -27,6 +27,18 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
     'core/columns': { name: 'Columns', isContainer: true },
   }
 }));
+
+// Helper to extract text content from a block using union shape
+function getText(block?: BlockConfig): string {
+  if (!block) return '';
+  const c: any = block.content;
+  if (c && typeof c === 'object' && 'kind' in c) {
+    if (c.kind === 'text') return c.value || '';
+    return ''; // non-text content
+  }
+  // Legacy fallback (should be phased out)
+  return (block as any).content?.text || '';
+}
 
 describe('PageBuilder Real-World Scenarios', () => {
   let mockBlocks: BlockConfig[];
@@ -44,22 +56,25 @@ describe('PageBuilder Real-World Scenarios', () => {
     mockBlocks = [
       {
         id: 'heading-1',
-        type: 'core/heading',
-        content: { text: 'Main Heading' },
+        name: 'core/heading', type: 'block',
+        parentId: null,
+        content: { kind: 'text', value: 'Main Heading' },
         styles: {},
         settings: {},
       },
       {
         id: 'group-1',
-        type: 'core/group',
-        content: {},
+        name: 'core/group', type: 'container',
+        parentId: null,
+        content: { kind: 'structured', data: {} },
         styles: {},
         settings: {},
         children: [
           {
             id: 'para-1',
-            type: 'core/paragraph',
-            content: { text: 'First paragraph' },
+            name: 'core/paragraph', type: 'block',
+            parentId: 'group-1',
+            content: { kind: 'text', value: 'First paragraph' },
             styles: {},
             settings: {},
           },
@@ -83,7 +98,7 @@ describe('PageBuilder Real-World Scenarios', () => {
       // Verify the group now has 2 children
       const group = blocks.find(b => b.id === 'group-1');
       expect(group?.children).toHaveLength(2);
-      expect(group?.children?.[0].content.text).toBe('First paragraph');
+      expect(getText(group?.children?.[0])).toBe('First paragraph');
       expect(group?.children?.[1].type).toBe('core/paragraph');
       
       // Add a third block (heading) to the group
@@ -101,22 +116,25 @@ describe('PageBuilder Real-World Scenarios', () => {
       const nestedBlocks: BlockConfig[] = [
         {
           id: 'orphan-para',
-          type: 'core/paragraph',
-          content: { text: 'Orphan paragraph' },
+          name: 'core/paragraph', type: 'block',
+          parentId: null,
+          content: { kind: 'text', value: 'Orphan paragraph' },
           styles: {},
           settings: {},
         },
         {
           id: 'outer-group',
-          type: 'core/group',
-          content: {},
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
           styles: {},
           settings: {},
           children: [
             {
               id: 'inner-group',
-              type: 'core/group',
-              content: {},
+              name: 'core/group', type: 'container',
+              parentId: 'outer-group',
+              content: { kind: 'structured', data: {} },
               styles: {},
               settings: {},
               children: [],
@@ -140,7 +158,7 @@ describe('PageBuilder Real-World Scenarios', () => {
       
       expect(innerGroup?.children).toHaveLength(1);
       expect(innerGroup?.children?.[0].id).toBe('orphan-para');
-      expect(innerGroup?.children?.[0].content.text).toBe('Orphan paragraph');
+      expect(getText(innerGroup?.children?.[0])).toBe('Orphan paragraph');
       
       // Verify it's no longer at the root
       expect(result).toHaveLength(1);
@@ -152,22 +170,25 @@ describe('PageBuilder Real-World Scenarios', () => {
       const blocksWithTwoGroups: BlockConfig[] = [
         {
           id: 'group-a',
-          type: 'core/group',
-          content: {},
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
           styles: {},
           settings: {},
           children: [
             {
               id: 'para-a1',
-              type: 'core/paragraph',
-              content: { text: 'Paragraph A1' },
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-a',
+              content: { kind: 'text', value: 'Paragraph A1' },
               styles: {},
               settings: {},
             },
             {
               id: 'para-a2',
-              type: 'core/paragraph',
-              content: { text: 'Paragraph A2' },
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-a',
+              content: { kind: 'text', value: 'Paragraph A2' },
               styles: {},
               settings: {},
             },
@@ -175,15 +196,17 @@ describe('PageBuilder Real-World Scenarios', () => {
         },
         {
           id: 'group-b',
-          type: 'core/group',
-          content: {},
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
           styles: {},
           settings: {},
           children: [
             {
               id: 'para-b1',
-              type: 'core/paragraph',
-              content: { text: 'Paragraph B1' },
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-b',
+              content: { kind: 'text', value: 'Paragraph B1' },
               styles: {},
               settings: {},
             },
@@ -210,7 +233,7 @@ describe('PageBuilder Real-World Scenarios', () => {
       expect(groupB?.children).toHaveLength(2);
       expect(groupB?.children?.[0].id).toBe('para-b1');
       expect(groupB?.children?.[1].id).toBe('para-a2');
-      expect(groupB?.children?.[1].content.text).toBe('Paragraph A2');
+      expect(getText(groupB?.children?.[1])).toBe('Paragraph A2');
     });
 
     test('should allow reordering blocks within the same container', () => {
@@ -218,29 +241,33 @@ describe('PageBuilder Real-World Scenarios', () => {
       const groupWithMultipleBlocks: BlockConfig[] = [
         {
           id: 'group-1',
-          type: 'core/group',
-          content: {},
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
           styles: {},
           settings: {},
           children: [
             {
               id: 'block-1',
-              type: 'core/heading',
-              content: { text: 'Heading 1' },
+              name: 'core/heading', type: 'block',
+              parentId: 'group-1',
+              content: { kind: 'text', value: 'Heading 1' },
               styles: {},
               settings: {},
             },
             {
               id: 'block-2',
-              type: 'core/paragraph',
-              content: { text: 'Paragraph 1' },
+              name: 'core/paragraph', type: 'block',
+              parentId: 'group-1',
+              content: { kind: 'text', value: 'Paragraph 1' },
               styles: {},
               settings: {},
             },
             {
               id: 'block-3',
-              type: 'core/heading',
-              content: { text: 'Heading 2' },
+              name: 'core/heading', type: 'block',
+              parentId: 'group-1',
+              content: { kind: 'text', value: 'Heading 2' },
               styles: {},
               settings: {},
             },
@@ -262,11 +289,11 @@ describe('PageBuilder Real-World Scenarios', () => {
       
       // Verify the order is now: block-3, block-1, block-2
       expect(group?.children?.[0].id).toBe('block-3');
-      expect(group?.children?.[0].content.text).toBe('Heading 2');
+      expect(getText(group?.children?.[0])).toBe('Heading 2');
       expect(group?.children?.[1].id).toBe('block-1');
-      expect(group?.children?.[1].content.text).toBe('Heading 1');
+      expect(getText(group?.children?.[1])).toBe('Heading 1');
       expect(group?.children?.[2].id).toBe('block-2');
-      expect(group?.children?.[2].content.text).toBe('Paragraph 1');
+      expect(getText(group?.children?.[2])).toBe('Paragraph 1');
     });
   });
 
@@ -302,29 +329,33 @@ describe('PageBuilder Real-World Scenarios', () => {
       const complexBlocks: BlockConfig[] = [
         {
           id: 'root-para',
-          type: 'core/paragraph',
-          content: { text: 'Root paragraph' },
+          name: 'core/paragraph', type: 'block',
+          parentId: null,
+          content: { kind: 'text', value: 'Root paragraph' },
           styles: {},
           settings: {},
         },
         {
           id: 'columns-1',
-          type: 'core/columns',
-          content: {},
+          name: 'core/columns', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
           styles: {},
           settings: {},
           children: [
             {
               id: 'col-1-group',
-              type: 'core/group',
-              content: {},
+              name: 'core/group', type: 'container',
+              parentId: 'columns-1',
+              content: { kind: 'structured', data: {} },
               styles: {},
               settings: {},
               children: [
                 {
                   id: 'nested-para',
-                  type: 'core/paragraph',
-                  content: { text: 'Deeply nested paragraph' },
+                  name: 'core/paragraph', type: 'block',
+                  parentId: 'col-1-group',
+                  content: { kind: 'text', value: 'Deeply nested paragraph' },
                   styles: {},
                   settings: {},
                 },
@@ -334,8 +365,9 @@ describe('PageBuilder Real-World Scenarios', () => {
         },
         {
           id: 'simple-group',
-          type: 'core/group',
-          content: {},
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
           styles: {},
           settings: {},
           children: [],
@@ -355,7 +387,7 @@ describe('PageBuilder Real-World Scenarios', () => {
       const simpleGroup = result.find(b => b.id === 'simple-group');
       expect(simpleGroup?.children).toHaveLength(1);
       expect(simpleGroup?.children?.[0].id).toBe('nested-para');
-      expect(simpleGroup?.children?.[0].content.text).toBe('Deeply nested paragraph');
+      expect(getText(simpleGroup?.children?.[0])).toBe('Deeply nested paragraph');
 
       // Verify it was removed from the original location
       const columns = result.find(b => b.id === 'columns-1');
@@ -370,16 +402,17 @@ describe('PageBuilder Real-World Scenarios', () => {
       let blocks = [
         {
           id: 'group-1',
-          type: 'core/group',
-          content: {},
+          name: 'core/group', type: 'container',
+          parentId: null,
+          content: { kind: 'structured', data: {} },
           styles: {},
           settings: {},
           children: [
-            { id: 'c1', type: 'core/paragraph', content: { text: 'One' }, styles: {}, settings: {} },
-            { id: 'c2', type: 'core/paragraph', content: { text: 'Two' }, styles: {}, settings: {} }
+            { id: 'c1', name: 'core/paragraph', type: 'block', parentId: 'group-1', content: { kind: 'text', value: 'One' }, styles: {}, settings: {} },
+            { id: 'c2', name: 'core/paragraph', type: 'block', parentId: 'group-1', content: { kind: 'text', value: 'Two' }, styles: {}, settings: {} }
           ]
         },
-        { id: 'solo', type: 'core/paragraph', content: { text: 'Solo' }, styles: {}, settings: {} }
+        { id: 'solo', name: 'core/paragraph', type: 'block', parentId: null, content: { kind: 'text', value: 'Solo' }, styles: {}, settings: {} }
       ] as BlockConfig[];
 
       const selectedId = 'c2'; // Pretend this is selected in UI
@@ -390,13 +423,13 @@ describe('PageBuilder Real-World Scenarios', () => {
       // After move, ensure block still exists and content intact
       const stillExistsAtRoot = blocks[1];
       expect(stillExistsAtRoot.id).toBe(selectedId);
-      expect(stillExistsAtRoot.content.text).toBe('Two');
+      expect(getText(stillExistsAtRoot)).toBe('Two');
 
       // Move it back into group at index 0
       blocks = moveExistingBlock(blocks, null, 1, 'group-1', 0);
       const group = blocks.find(b => b.id === 'group-1');
       expect(group?.children?.[0].id).toBe(selectedId);
-      expect(group?.children?.[0].content.text).toBe('Two');
+      expect(getText(group?.children?.[0])).toBe('Two');
     });
   });
 
@@ -420,7 +453,7 @@ describe('PageBuilder Real-World Scenarios', () => {
             ...block,
             children: block.children?.map(child => 
               child.id === newBlockId 
-                ? { ...child, content: { text: 'Updated Heading Text' } }
+                ? { ...child, content: { kind: 'text', value: 'Updated Heading Text' } as const }
                 : child
             )
           };
@@ -431,7 +464,7 @@ describe('PageBuilder Real-World Scenarios', () => {
 
       const updatedGroup = blocks.find(b => b.id === 'group-1');
       const updatedBlock = updatedGroup?.children?.find(c => c.id === newBlockId);
-      expect(updatedBlock?.content.text).toBe('Updated Heading Text');
+      expect(getText(updatedBlock)).toBe('Updated Heading Text');
 
       // DELETE: Remove the updated block
       const deleteResult = moveExistingBlock(blocks, 'group-1', 1, null, -1);

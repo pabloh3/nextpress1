@@ -1,6 +1,6 @@
 import type {
-	comments,
 	users,
+	comments,
 	sites,
 	roles,
 	userRoles,
@@ -11,116 +11,137 @@ import type {
 	options,
 	blogs,
 	posts,
-	blocks,
 	media,
+	sessions,
 } from "./schema";
-import type {
-	createUserSchema,
-	insertCommentSchema,
-	insertUserSchema,
-	updateUserSchema,
-	insertSiteSchema,
-	updateSiteSchema,
-	insertRoleSchema,
-	updateRoleSchema,
-	insertUserRoleSchema,
-	insertPageSchema,
-	updatePageSchema,
-	insertPostSchema,
-	updatePostSchema,
-	insertBlogSchema,
-	updateBlogSchema,
-	insertTemplateSchema,
-	updateTemplateSchema,
-	insertThemeSchema,
-	updateThemeSchema,
-	insertPluginSchema,
-	updatePluginSchema,
-	insertOptionSchema,
-	insertBlockSchema,
-	updateBlockSchema,
-	insertMediaSchema,
-	updateMediaSchema,
-} from "./zod-schema";
-import type { z } from "zod";
 
 // User types
 export type User = typeof users.$inferSelect;
-export type UpsertUser = typeof users.$inferInsert;
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type CreateUser = z.infer<typeof createUserSchema>;
-export type UpdateUser = z.infer<typeof updateUserSchema>;
+export type NewUser = typeof users.$inferInsert;
 
 // Comment types
 export type Comment = typeof comments.$inferSelect;
-export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type NewComment = typeof comments.$inferInsert;
 
 // Site types
 export type Site = typeof sites.$inferSelect;
-export type UpsertSite = typeof sites.$inferInsert;
-export type InsertSite = z.infer<typeof insertSiteSchema>;
-export type UpdateSite = z.infer<typeof updateSiteSchema>;
+export type NewSite = typeof sites.$inferInsert;
 
 // Role types
 export type Role = typeof roles.$inferSelect;
-export type UpsertRole = typeof roles.$inferInsert;
-export type InsertRole = z.infer<typeof insertRoleSchema>;
-export type UpdateRole = z.infer<typeof updateRoleSchema>;
+export type NewRole = typeof roles.$inferInsert;
 
 // UserRole types
 export type UserRole = typeof userRoles.$inferSelect;
-export type UpsertUserRole = typeof userRoles.$inferInsert;
-export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
+export type NewUserRole = typeof userRoles.$inferInsert;
 
 // Page types
 export type Page = typeof pages.$inferSelect;
-export type UpsertPage = typeof pages.$inferInsert;
-export type InsertPage = z.infer<typeof insertPageSchema>;
-export type UpdatePage = z.infer<typeof updatePageSchema>;
+export type NewPage = typeof pages.$inferInsert;
 
 // Template types
 export type Template = typeof templates.$inferSelect;
-export type UpsertTemplate = typeof templates.$inferInsert;
-export type InsertTemplate = z.infer<typeof insertTemplateSchema>;
-export type UpdateTemplate = z.infer<typeof updateTemplateSchema>;
+export type NewTemplate = typeof templates.$inferInsert;
 
 // Theme types
 export type Theme = typeof themes.$inferSelect;
-export type UpsertTheme = typeof themes.$inferInsert;
-export type InsertTheme = z.infer<typeof insertThemeSchema>;
-export type UpdateTheme = z.infer<typeof updateThemeSchema>;
+export type NewTheme = typeof themes.$inferInsert;
 
 // Plugin types
 export type Plugin = typeof plugins.$inferSelect;
-export type UpsertPlugin = typeof plugins.$inferInsert;
-export type InsertPlugin = z.infer<typeof insertPluginSchema>;
-export type UpdatePlugin = z.infer<typeof updatePluginSchema>;
+export type NewPlugin = typeof plugins.$inferInsert;
 
 // Option types
 export type Option = typeof options.$inferSelect;
-export type UpsertOption = typeof options.$inferInsert;
-export type InsertOption = z.infer<typeof insertOptionSchema>;
+export type NewOption = typeof options.$inferInsert;
 
 // Blog types
 export type Blog = typeof blogs.$inferSelect;
-export type UpsertBlog = typeof blogs.$inferInsert;
-export type InsertBlog = z.infer<typeof insertBlogSchema>;
-export type UpdateBlog = z.infer<typeof updateBlogSchema>;
+export type NewBlog = typeof blogs.$inferInsert;
 
 // Post types
 export type Post = typeof posts.$inferSelect;
-export type UpsertPost = typeof posts.$inferInsert;
-export type InsertPost = z.infer<typeof insertPostSchema>;
-export type UpdatePost = z.infer<typeof updatePostSchema>;
-
-// Block types
-export type Block = typeof blocks.$inferSelect;
-export type UpsertBlock = typeof blocks.$inferInsert;
-export type InsertBlock = z.infer<typeof insertBlockSchema>;
-export type UpdateBlock = z.infer<typeof updateBlockSchema>;
+export type NewPost = typeof posts.$inferInsert;
 
 // Media types
 export type Media = typeof media.$inferSelect;
-export type UpsertMedia = typeof media.$inferInsert;
-export type InsertMedia = z.infer<typeof insertMediaSchema>;
-export type UpdateMedia = z.infer<typeof updateMediaSchema>;
+export type NewMedia = typeof media.$inferInsert;
+
+// Session types
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;
+
+// Block configuration types
+
+/**
+ * Discriminated union for block content
+ * Each content type has a unique 'kind' discriminator for type-safe handling
+ */
+export type BlockContent =
+  | { kind: 'text'; value: string; textAlign?: string; dropCap?: boolean }
+  | { kind: 'markdown'; value: string; textAlign?: string }
+  | { kind: 'media'; url: string; alt?: string; caption?: string; mediaType: 'image' | 'video' | 'audio' }
+  | { kind: 'html'; value: string; sanitized: boolean }
+  | { kind: 'structured'; data: Record<string, unknown> } // For complex blocks like tables, columns
+  | { kind: 'empty' } // Explicitly empty block
+  | undefined; // No content set
+
+/**
+ * Core block configuration for PageBuilder runtime
+ * Used during editing and rendering
+ */
+export interface BlockConfig {
+  // Core identity & type
+  id: string; // Unique instance ID
+  name: string; // Canonical machine key (e.g., 'core/heading', 'core/paragraph')
+  type: "block" | "container"; // Structural kind: can this block have children?
+  parentId: string | null; // Parent block ID or null for root-level blocks
+  
+  // Display metadata
+  label?: string; // User-facing display name (e.g., 'Heading', 'Two Columns')
+  category?: "basic" | "layout" | "media" | "advanced";
+  
+  // Content - Discriminated union for type-safe handling
+  // - For text blocks: { kind: 'text', value: '...' }
+  // - For media blocks: { kind: 'media', url: '...', mediaType: 'image' }
+  // - For containers: { kind: 'structured', data: { gap, alignment, ... } }
+  content: BlockContent;
+  
+  // Styling (three layers: typed styles → block dev CSS → user CSS)
+  styles?: React.CSSProperties; // Typed inline styles: {marginTop: "4rem", fontSize: "2rem"}
+  customCss?: string; // CSS string defined by block developer
+  
+  // Container support (ONLY for type: "container")
+  // Regular blocks (type: "block") should NOT have children
+  children?: BlockConfig[];
+  
+  // Configuration
+  settings?: Record<string, any>; // Block settings/options
+  
+  // Compatibility & rendering
+  requires?: string; // Minimal NextPress version: "^4.0", ">=3.2.0", "~5.1"
+  isReactive?: boolean; // If true, renders as React component in renderer
+  
+  // User overrides & extensions
+  other?: {
+    css?: string; // Custom CSS string added by user in editor
+    classNames?: string; // CSS class names
+    js?: string; // Custom JavaScript
+    html?: string; // Custom HTML override
+    attributes?: Record<string, any>; // HTML attributes
+    metadata?: Record<string, any>; // Any additional custom data
+  };
+}
+
+/**
+ * Saved block configuration with version history & authorship
+ * Used when persisting to database (posts.blocks, templates.blocks, pages.blocks)
+ * Note: Version history types defined but not implemented yet (future feature)
+ */
+export interface SavedBlockConfig extends BlockConfig {
+  version: number; // Current version number (increments on each save)
+  previousState?: SavedBlockConfig; // Full N-1 version for undo/redo
+  authorId: string; // UUID of user who created/owns this block
+  createdAt: string; // ISO timestamp when first created
+  updatedAt: string; // ISO timestamp when last updated
+}

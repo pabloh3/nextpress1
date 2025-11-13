@@ -1,5 +1,5 @@
 import React from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -18,16 +18,19 @@ interface TableRow {
 }
 
 function TableRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  const body: TableRow[] = (block.content as any)?.body || [];
-  const head: TableRow[] = (block.content as any)?.head || [];
-  const foot: TableRow[] = (block.content as any)?.foot || [];
-  const hasFixedLayout = (block.content as any)?.hasFixedLayout || false;
-  const caption = (block.content as any)?.caption || '';
+  // Defensive check for discriminated union
+  const tableData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
+  
+  const body: TableRow[] = tableData?.body || [];
+  const head: TableRow[] = tableData?.head || [];
+  const foot: TableRow[] = tableData?.foot || [];
+  const hasFixedLayout = tableData?.hasFixedLayout || false;
+  const caption = tableData?.caption || '';
   
   const className = [
     "wp-block-table",
     hasFixedLayout ? 'has-fixed-layout' : '',
-    block.content?.className || "",
+    tableData?.className || "",
   ].filter(Boolean).join(" ");
 
   if (body.length === 0) {
@@ -117,16 +120,21 @@ function TableRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
 }
 
 function TableSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+  // Defensive check for discriminated union
+  const tableData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
   
-  const body: TableRow[] = (block.content as any)?.body || [];
-  const head: TableRow[] = (block.content as any)?.head || [];
-  const foot: TableRow[] = (block.content as any)?.foot || [];
+  const body: TableRow[] = tableData?.body || [];
+  const head: TableRow[] = tableData?.head || [];
+  const foot: TableRow[] = tableData?.foot || [];
 
   const updateContent = (contentUpdates: any) => {
     onUpdate({
       content: {
-        ...block.content,
-        ...contentUpdates,
+        kind: 'structured',
+        data: {
+          ...tableData,
+          ...contentUpdates,
+        },
       },
     });
   };
@@ -275,7 +283,7 @@ function TableSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="table-caption" className="text-sm font-medium text-gray-700">Table Caption</Label>
             <Input
               id="table-caption"
-              value={(block.content as any)?.caption || ''}
+              value={tableData?.caption || ''}
               onChange={(e) => updateContent({ caption: e.target.value })}
               placeholder="Describe your table"
               className="mt-1 h-9"
@@ -352,7 +360,7 @@ function TableSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="table-fixed" className="text-sm font-medium text-gray-700">Fixed width table cells</Label>
             <Switch
               id="table-fixed"
-              checked={(block.content as any)?.hasFixedLayout || false}
+              checked={tableData?.hasFixedLayout || false}
               onCheckedChange={(checked) => updateContent({ hasFixedLayout: checked })}
             />
           </div>
@@ -366,7 +374,7 @@ function TableSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="table-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="table-class"
-              value={block.content?.className || ''}
+              value={tableData?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. is-style-stripes"
               className="mt-1 h-9 text-sm"
@@ -380,17 +388,20 @@ function TableSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
 
 const TableBlock: BlockDefinition = {
   id: 'core/table',
-  name: 'Table',
+  label: 'Table',
   icon: TableIcon,
   description: 'Create a table to display data',
   category: 'advanced',
   defaultContent: {
-    body: [],
-    head: [],
-    foot: [],
-    hasFixedLayout: false,
-    caption: '',
-    className: '',
+    kind: 'structured',
+    data: {
+      body: [],
+      head: [],
+      foot: [],
+      hasFixedLayout: false,
+      caption: '',
+      className: '',
+    },
   },
   defaultStyles: {
     margin: '1em 0',

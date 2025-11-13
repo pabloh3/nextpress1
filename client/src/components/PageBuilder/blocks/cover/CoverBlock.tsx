@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -13,25 +13,30 @@ import { Square as CoverIcon, Settings, Wrench } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 
 function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  const url = (block.content as any)?.url || '';
-  const alt = (block.content as any)?.alt || '';
-  const hasParallax = (block.content as any)?.hasParallax || false;
-  const dimRatio = (block.content as any)?.dimRatio || 50;
-  const overlayColor = (block.content as any)?.overlayColor || 'rgba(0,0,0,0.5)';
-  const minHeight = (block.content as any)?.minHeight || 400;
-  const contentPosition = (block.content as any)?.contentPosition || 'center center';
-  const customOverlayColor = (block.content as any)?.customOverlayColor || '';
-  const backgroundType = (block.content as any)?.backgroundType || 'image';
-  const focalPoint = (block.content as any)?.focalPoint || { x: 0.5, y: 0.5 };
+  // Extract data from discriminated union structure with defensive check
+  const blockData = block.content?.kind === 'structured' 
+    ? (block.content.data as any) 
+    : {};
+    
+  const url = blockData?.url || '';
+  const alt = blockData?.alt || '';
+  const hasParallax = blockData?.hasParallax || false;
+  const dimRatio = blockData?.dimRatio || 50;
+  const overlayColor = blockData?.overlayColor || 'rgba(0,0,0,0.5)';
+  const minHeight = blockData?.minHeight || 400;
+  const contentPosition = blockData?.contentPosition || 'center center';
+  const customOverlayColor = blockData?.customOverlayColor || '';
+  const backgroundType = blockData?.backgroundType || 'image';
+  const focalPoint = blockData?.focalPoint || { x: 0.5, y: 0.5 };
   
   // Inner content
-  const innerContent = (block.content as any)?.innerContent || '<p>Write title…</p>';
+  const innerContent = blockData?.innerContent || '<p>Write title…</p>';
 
   const className = [
     "wp-block-cover",
     hasParallax ? 'has-parallax' : '',
     backgroundType === 'video' ? 'has-background-video' : '',
-    block.content?.className || "",
+    blockData?.className || "",
   ].filter(Boolean).join(" ");
 
   const overlayStyle = {
@@ -130,15 +135,27 @@ function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
 function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
   
-
+  // Helper to update content within discriminated union structure
   const updateContent = (contentUpdates: any) => {
+    const currentData = block.content?.kind === 'structured' 
+      ? (block.content.data as any) 
+      : {};
+      
     onUpdate({
       content: {
-        ...block.content,
-        ...contentUpdates,
+        kind: 'structured',
+        data: {
+          ...currentData,
+          ...contentUpdates,
+        },
       },
     });
   };
+  
+  // Extract current data for display
+  const blockData = block.content?.kind === 'structured' 
+    ? (block.content.data as any) 
+    : {};
 
   const updateStyles = (styleUpdates: any) => {
     onUpdate({
@@ -158,7 +175,7 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="cover-content" className="text-sm font-medium text-gray-700">Cover Content</Label>
             <Textarea
               id="cover-content"
-              value={(block.content as any)?.innerContent || '<p>Write title…</p>'}
+              value={blockData?.innerContent || '<p>Write title…</p>'}
               onChange={(e) => updateContent({ innerContent: e.target.value })}
               placeholder="Enter your cover content (HTML allowed)"
               rows={4}
@@ -169,7 +186,7 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
           <div>
             <Label htmlFor="cover-background-type" className="text-sm font-medium text-gray-700">Background Type</Label>
             <Select
-              value={(block.content as any)?.backgroundType || 'image'}
+              value={blockData?.backgroundType || 'image'}
               onValueChange={(value) => updateContent({ backgroundType: value })}
             >
               <SelectTrigger id="cover-background-type" className="h-9">
@@ -183,13 +200,13 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
           </div>
 
           <div>
-            <Label htmlFor="cover-media" className="text-sm font-medium text-gray-700">Background {(block.content as any)?.backgroundType === 'video' ? 'Video' : 'Image'}</Label>
+            <Label htmlFor="cover-media" className="text-sm font-medium text-gray-700">Background {blockData?.backgroundType === 'video' ? 'Video' : 'Image'}</Label>
             <div className="flex items-center gap-2 mt-1">
               <Input
                 id="cover-media"
-                value={(block.content as any)?.url || ''}
+                value={blockData?.url || ''}
                 onChange={(e) => updateContent({ url: e.target.value })}
-                placeholder={`https://example.com/${(block.content as any)?.backgroundType === 'video' ? 'video.mp4' : 'image.jpg'}`}
+                placeholder={`https://example.com/${blockData?.backgroundType === 'video' ? 'video.mp4' : 'image.jpg'}`}
                 className="h-9"
               />
               <Button 
@@ -204,22 +221,22 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <MediaPickerDialog
               open={isPickerOpen}
               onOpenChange={setPickerOpen}
-              kind={(block.content as any)?.backgroundType === 'video' ? 'video' : 'image'}
+              kind={blockData?.backgroundType === 'video' ? 'video' : 'image'}
               onSelect={(m) => {
                 updateContent({
                   url: m.url,
-                  alt: (block.content as any)?.alt || m.alt || m.originalName || m.filename,
+                  alt: blockData?.alt || m.alt || m.originalName || m.filename,
                 });
               }}
             />
           </div>
 
-          {(block.content as any)?.backgroundType === 'image' && (
+          {blockData?.backgroundType === 'image' && (
             <div>
               <Label htmlFor="cover-alt" className="text-sm font-medium text-gray-700">Alt Text</Label>
               <Input
                 id="cover-alt"
-                value={(block.content as any)?.alt || ''}
+                value={blockData?.alt || ''}
                 onChange={(e) => updateContent({ alt: e.target.value })}
                 placeholder="Background image description"
                 className="mt-1 h-9"
@@ -232,12 +249,12 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
       {/* Settings Card */}
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
         <div className="space-y-4">
-          {(block.content as any)?.backgroundType === 'image' && (
+          {blockData?.backgroundType === 'image' && (
             <div className="flex items-center justify-between">
               <Label htmlFor="cover-parallax" className="text-sm font-medium text-gray-700">Fixed Background</Label>
               <Switch
                 id="cover-parallax"
-                checked={(block.content as any)?.hasParallax || false}
+                checked={blockData?.hasParallax || false}
                 onCheckedChange={(checked) => updateContent({ hasParallax: checked })}
               />
             </div>
@@ -248,7 +265,7 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Input
               id="cover-min-height"
               type="number"
-              value={(block.content as any)?.minHeight || 400}
+              value={blockData?.minHeight || 400}
               onChange={(e) => updateContent({ minHeight: parseInt(e.target.value) || 400 })}
               className="mt-1 h-9"
             />
@@ -257,7 +274,7 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
           <div>
             <Label htmlFor="cover-content-position" className="text-sm font-medium text-gray-700">Content Position</Label>
             <Select
-              value={(block.content as any)?.contentPosition || 'center center'}
+              value={blockData?.contentPosition || 'center center'}
               onValueChange={(value) => updateContent({ contentPosition: value })}
             >
               <SelectTrigger id="cover-content-position" className="h-9">
@@ -282,7 +299,7 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <div className="flex items-center space-x-4 mt-1">
               <Slider
                 aria-label="Overlay opacity percentage"
-                value={[(block.content as any)?.dimRatio || 50]}
+                value={[blockData?.dimRatio || 50]}
                 onValueChange={([value]) => updateContent({ dimRatio: value })}
                 max={100}
                 min={0}
@@ -292,7 +309,7 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               <Input
                 id="cover-overlay-opacity"
                 type="number"
-                value={(block.content as any)?.dimRatio || 50}
+                value={blockData?.dimRatio || 50}
                 onChange={(e) => updateContent({ dimRatio: parseInt(e.target.value) || 50 })}
                 className="w-20 h-9"
                 min="0"
@@ -307,12 +324,12 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               <Input
                 id="cover-overlay-color"
                 type="color"
-                value={(block.content as any)?.customOverlayColor || '#000000'}
+                value={blockData?.customOverlayColor || '#000000'}
                 onChange={(e) => updateContent({ customOverlayColor: e.target.value })}
                 className="w-12 h-9 p-1 border-gray-200"
               />
               <Input
-                value={(block.content as any)?.customOverlayColor || '#000000'}
+                value={blockData?.customOverlayColor || '#000000'}
                 onChange={(e) => updateContent({ customOverlayColor: e.target.value })}
                 placeholder="#000000"
                 className="flex-1 h-9 text-sm"
@@ -329,7 +346,7 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="cover-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="cover-class"
-              value={block.content?.className || ''}
+              value={blockData?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. is-light has-background-gradient"
               className="mt-1 h-9 text-sm"
@@ -343,22 +360,25 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
 
 const CoverBlock: BlockDefinition = {
   id: 'core/cover',
-  name: 'Cover',
+  label: 'Cover',
   icon: CoverIcon,
   description: 'Add an image or video with a text overlay',
   category: 'media',
   defaultContent: {
-    url: '',
-    alt: '',
-    hasParallax: false,
-    dimRatio: 50,
-    minHeight: 400,
-    contentPosition: 'center center',
-    customOverlayColor: '#000000',
-    backgroundType: 'image',
-    focalPoint: { x: 0.5, y: 0.5 },
-    innerContent: '<p style="font-size: 2.5em; font-weight: bold;">Write title…</p>',
-    className: '',
+    kind: 'structured',
+    data: {
+      url: '',
+      alt: '',
+      hasParallax: false,
+      dimRatio: 50,
+      minHeight: 400,
+      contentPosition: 'center center',
+      customOverlayColor: '#000000',
+      backgroundType: 'image',
+      focalPoint: { x: 0.5, y: 0.5 },
+      innerContent: '<p style="font-size: 2.5em; font-weight: bold;">Write title…</p>',
+      className: '',
+    },
   },
   defaultStyles: {},
   renderer: CoverRenderer,

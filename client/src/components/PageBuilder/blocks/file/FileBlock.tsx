@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -11,22 +11,27 @@ import { File as FileIcon, Download, Settings, Wrench } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 
 function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  const url = (block.content as any)?.href || '';
-  const fileName = (block.content as any)?.fileName || '';
-  const textLinkHref = (block.content as any)?.textLinkHref || url;
-  const textLinkTarget = (block.content as any)?.textLinkTarget || '_self';
-  const showDownloadButton = (block.content as any)?.showDownloadButton !== false;
-  const downloadButtonText = (block.content as any)?.downloadButtonText || 'Download';
-  const displayPreview = (block.content as any)?.displayPreview !== false;
+  // Extract data from discriminated union structure with defensive check
+  const blockData = block.content?.kind === 'structured' 
+    ? (block.content.data as any) 
+    : {};
+    
+  const url = blockData?.href || '';
+  const fileName = blockData?.fileName || '';
+  const textLinkHref = blockData?.textLinkHref || url;
+  const textLinkTarget = blockData?.textLinkTarget || '_self';
+  const showDownloadButton = blockData?.showDownloadButton !== false;
+  const downloadButtonText = blockData?.downloadButtonText || 'Download';
+  const displayPreview = blockData?.displayPreview !== false;
   
   const className = [
     "wp-block-file",
-    block.content?.className || "",
+    blockData?.className || "",
   ].filter(Boolean).join(" ");
 
   // Extract file extension and size info if available
   const fileExtension = fileName ? fileName.split('.').pop()?.toUpperCase() : '';
-  const fileSize = (block.content as any)?.fileSize || '';
+  const fileSize = blockData?.fileSize || '';
 
   if (!url) {
     return (
@@ -101,15 +106,27 @@ function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
 function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
   
-
+  // Helper to update content within discriminated union structure
   const updateContent = (contentUpdates: any) => {
+    const currentData = block.content?.kind === 'structured' 
+      ? (block.content.data as any) 
+      : {};
+      
     onUpdate({
       content: {
-        ...block.content,
-        ...contentUpdates,
+        kind: 'structured',
+        data: {
+          ...currentData,
+          ...contentUpdates,
+        },
       },
     });
   };
+  
+  // Extract current data for display
+  const blockData = block.content?.kind === 'structured' 
+    ? (block.content.data as any) 
+    : {};
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -129,7 +146,7 @@ function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <div className="flex items-center gap-2 mt-1">
               <Input
                 id="file-url"
-                value={(block.content as any)?.href || ''}
+                value={blockData?.href || ''}
                 onChange={(e) => updateContent({ href: e.target.value, textLinkHref: e.target.value })}
                 placeholder="https://example.com/document.pdf"
                 className="h-9"
@@ -162,7 +179,7 @@ function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Label htmlFor="file-name" className="text-sm font-medium text-gray-700">File Name</Label>
             <Input
               id="file-name"
-              value={(block.content as any)?.fileName || ''}
+              value={blockData?.fileName || ''}
               onChange={(e) => updateContent({ fileName: e.target.value })}
               placeholder="document.pdf"
               className="mt-1 h-9"
@@ -173,7 +190,7 @@ function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Label htmlFor="file-size" className="text-sm font-medium text-gray-700">File Size (optional)</Label>
             <Input
               id="file-size"
-              value={(block.content as any)?.fileSize || ''}
+              value={blockData?.fileSize || ''}
               onChange={(e) => updateContent({ fileSize: e.target.value })}
               placeholder="2.5 MB"
               className="mt-1 h-9"
@@ -189,7 +206,7 @@ function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Label htmlFor="file-show-preview" className="text-sm font-medium text-gray-700">Show file preview</Label>
             <Switch
               id="file-show-preview"
-              checked={(block.content as any)?.displayPreview !== false}
+              checked={blockData?.displayPreview !== false}
               onCheckedChange={(checked) => updateContent({ displayPreview: checked })}
             />
           </div>
@@ -198,17 +215,17 @@ function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Label htmlFor="file-show-download" className="text-sm font-medium text-gray-700">Show download button</Label>
             <Switch
               id="file-show-download"
-              checked={(block.content as any)?.showDownloadButton !== false}
+              checked={blockData?.showDownloadButton !== false}
               onCheckedChange={(checked) => updateContent({ showDownloadButton: checked })}
             />
           </div>
 
-          {(block.content as any)?.showDownloadButton !== false && (
+          {blockData?.showDownloadButton !== false && (
             <div>
               <Label htmlFor="file-button-text" className="text-sm font-medium text-gray-700">Download Button Text</Label>
               <Input
                 id="file-button-text"
-                value={(block.content as any)?.downloadButtonText || 'Download'}
+                value={blockData?.downloadButtonText || 'Download'}
                 onChange={(e) => updateContent({ downloadButtonText: e.target.value })}
                 placeholder="Download"
                 className="mt-1 h-9"
@@ -219,7 +236,7 @@ function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
           <div>
             <Label htmlFor="file-link-target" className="text-sm font-medium text-gray-700">Link Target</Label>
             <Select
-              value={(block.content as any)?.textLinkTarget || '_self'}
+              value={blockData?.textLinkTarget || '_self'}
               onValueChange={(value) => updateContent({ textLinkTarget: value })}
             >
               <SelectTrigger id="file-link-target" className="h-9">
@@ -241,7 +258,7 @@ function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Label htmlFor="file-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="file-class"
-              value={block.content?.className || ''}
+              value={blockData?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. is-style-outline"
               className="mt-1 h-9 text-sm"
@@ -255,20 +272,23 @@ function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
 
 const FileBlock: BlockDefinition = {
   id: 'core/file',
-  name: 'File',
+  label: 'File',
   icon: FileIcon,
   description: 'Add a link to a downloadable file',
   category: 'media',
   defaultContent: {
-    href: '',
-    fileName: '',
-    textLinkHref: '',
-    textLinkTarget: '_self',
-    showDownloadButton: true,
-    downloadButtonText: 'Download',
-    displayPreview: true,
-    fileSize: '',
-    className: '',
+    kind: 'structured',
+    data: {
+      href: '',
+      fileName: '',
+      textLinkHref: '',
+      textLinkTarget: '_self',
+      showDownloadButton: true,
+      downloadButtonText: 'Download',
+      displayPreview: true,
+      fileSize: '',
+      className: '',
+    },
   },
   defaultStyles: {
     margin: '1em 0',

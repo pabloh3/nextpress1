@@ -1,16 +1,19 @@
 import React, { useState, isValidElement, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, Trash2, Move } from "lucide-react";
-import type { BlockConfig } from "@shared/schema";
+import { Copy, Trash2, GripVertical } from "lucide-react";
+import type { BlockConfig } from "@shared/schema-types";
 import { blockRegistry } from "./blocks";
 import { Droppable, Draggable } from "@/lib/dnd";
 import { useBlockActions } from "./BlockActionsContext";
 
 export function ContainerChildren({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
   const children = Array.isArray(block.children) ? block.children : [];
-  const isContainer = !!blockRegistry[block.type]?.isContainer;
+  const isContainer = !!blockRegistry[block.name]?.isContainer;
   const actions = useBlockActions();
   if (!isContainer) return null;
+  if (import.meta.env.DEBUG_BUILDER) {
+    console.debug('Rendering children for container block in preview mode:', block.id, 'Children:', children);
+  }
   if (isPreview) {
     return (
       <div data-container-children="true">
@@ -139,7 +142,10 @@ export default function BlockRenderer({
   const alignItems = vertical === 'middle' ? 'center' : vertical === 'bottom' ? 'flex-end' : 'flex-start';
 
   const renderContent = () => {
-    const def = blockRegistry[block.type];
+    if (import.meta.env.DEBUG_BUILDER) {
+      console.debug('Rendering block:', block.name);
+    }
+    const def = blockRegistry[block.name];
     if (def?.renderer) {
       const Renderer = def.renderer;
       return <Renderer block={block} isPreview={isPreview} />;
@@ -147,7 +153,7 @@ export default function BlockRenderer({
     return (
       <div style={block.styles} className="p-4 border border-dashed border-gray-300 rounded">
         <div className="text-center text-gray-400">
-          {blockRegistry[block.type]?.name || block.type} block
+          {blockRegistry[block.name]?.label || block.name} block
           <br />
           <small>Not implemented yet</small>
         </div>
@@ -155,7 +161,7 @@ export default function BlockRenderer({
     );
   };
 
-  const def = blockRegistry[block.type];
+  const def = blockRegistry[block.name];
   const isContainer = !!def?.isContainer;
   const contentEl = renderContent();
   const childrenHandledInRenderer = !!def?.handlesOwnChildren || containsContainerChildren(contentEl);
@@ -174,23 +180,26 @@ export default function BlockRenderer({
     >
       {!isPreview && (
         <>
-          {/* Invisible drag handle overlay when draggable but not hovered/selected */}
-          {dragHandleProps && !(effectiveSelected || isHovered) && (
-            <div 
-              className="absolute inset-0 opacity-0 pointer-events-auto"
-              {...dragHandleProps}
-              data-testid="invisible-drag-handle"
-            />
-          )}
-
-          {/* Toolbar visible when hovered or selected, regardless of drag availability */}
+          {/* Toolbar visible when hovered or selected */}
           {(effectiveSelected || isHovered) && (
             <div 
               className="absolute -top-10 left-0 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded shadow-sm p-1"
             >
               <span className="text-xs text-gray-600 px-2">
-                {blockRegistry[block.type]?.name || block.type}
+                {blockRegistry[block.name]?.label || block.name}
               </span>
+              {/* Drag handle - only show when dragHandleProps provided (canvas blocks) */}
+              {dragHandleProps && (
+                <Button
+                  {...dragHandleProps}
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Drag to reorder block"
+                  className="h-6 w-6 p-0 cursor-grab active:cursor-grabbing"
+                >
+                  <GripVertical className="w-3 h-3" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -215,14 +224,6 @@ export default function BlockRenderer({
               >
                 <Trash2 className="w-3 h-3" />
               </Button>
-              {dragHandleProps && (
-                <div 
-                  className="w-6 h-6 flex items-center justify-center cursor-move"
-                  {...dragHandleProps}
-                >
-                  <Move className="w-3 h-3 text-gray-400" />
-                </div>
-              )}
             </div>
           )}
         </>

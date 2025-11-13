@@ -20,6 +20,7 @@ type DragDropContextProps = {
   children: React.ReactNode;
   onDragEnd: (result: DropResult) => void;
   onDragStart?: () => void;
+  renderOverlay?: (data: { id: string }) => React.ReactNode;
 };
 
 type InternalDragState = {
@@ -36,6 +37,7 @@ const DndContext = createContext<{
   registerDroppable: (id: string, el: HTMLElement | null) => void;
   onDragStart: (draggableId: string, droppableId: string, index: number) => void;
   onDragEnd: (destination: DropLocation | null) => void;
+  finalizeDrag: (meta: { id: string; source: string; index: number }, destination: DropLocation | null) => void;
   isDraggingOver: (droppableId: string) => boolean;
   currentDrag: InternalDragState;
   setOver: (droppableId: string | null, index: number) => void;
@@ -43,10 +45,14 @@ const DndContext = createContext<{
   getOver: () => { id: string | null; index: number };
   wasDropCommitted: () => boolean;
   clearDropCommitted: () => void;
+  showOverlay: (data: { id: string; x: number; y: number }) => void;
+  updateOverlay: (coords: { x: number; y: number }) => void;
+  clearOverlay: () => void;
 }>({
   registerDroppable: () => {},
   onDragStart: () => {},
   onDragEnd: () => {},
+  finalizeDrag: () => {},
   isDraggingOver: () => false,
   currentDrag: { draggingId: null, sourceDroppableId: null, sourceIndex: null },
   setOver: () => {},
@@ -54,12 +60,16 @@ const DndContext = createContext<{
   getOver: () => ({ id: null, index: -1 }),
   wasDropCommitted: () => false,
   clearDropCommitted: () => {},
+  showOverlay: () => {},
+  updateOverlay: () => {},
+  clearOverlay: () => {},
 });
 
-export function DragDropContext({ children, onDragEnd, onDragStart }: DragDropContextProps) {
+export function DragDropContext({ children, onDragEnd, onDragStart, renderOverlay }: DragDropContextProps) {
   const registryRef = useRef<DndRegistry>({ droppables: new Map() });
   const [dragState, setDragState] = useState<InternalDragState>({ draggingId: null, sourceDroppableId: null, sourceIndex: null });
   const [overState, setOverState] = useState<{ id: string | null; index: number }>({ id: null, index: -1 });
+  const [overlay, setOverlay] = useState<{ id: string | null; x: number; y: number; visible: boolean }>({ id: null, x: 0, y: 0, visible: false });
   const committedRef = useRef<boolean>(false);
 
   const registerDroppable = useCallback((id: string, el: HTMLElement | null) => {
@@ -72,33 +82,32 @@ export function DragDropContext({ children, onDragEnd, onDragStart }: DragDropCo
   }, []);
 
   const ctxOnDragStart = useCallback((draggableId: string, droppableId: string, index: number) => {
-    console.log('[DND] ctxOnDragStart', { draggableId, droppableId, index });
-    // If already dragging, ignore subsequent starts (prevents nested starts)
+    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] ctxOnDragStart', { draggableId, droppableId, index });
     if (dragState.draggingId) return;
     setDragState({ draggingId: draggableId, sourceDroppableId: droppableId, sourceIndex: index });
-    onDragStart?.();
+    try { onDragStart?.(); } catch (e) { console.warn('[DND] onDragStart callback errored:', e); }
   }, [onDragStart, dragState.draggingId]);
 
   const ctxOnDragEnd = useCallback((destination: DropLocation | null) => {
+    const result: DropResult = {
+      draggableId: dragState.draggingId || '',
+      source: { droppableId: dragState.sourceDroppableId || 'unknown-source', index: dragState.sourceIndex ?? 0 },
+      destination,
+      reason: destination ? 'DROP' : 'CANCEL',
+      mode: 'FLUID',
+      type: 'DEFAULT',
+      combine: null,
+    };
+
+    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] ctxOnDragEnd building result', result);
+
     setOverState({ id: null, index: -1 });
-    setDragState((state) => {
-      const result: DropResult = {
-        draggableId: state.draggingId || '',
-        source: { droppableId: state.sourceDroppableId || 'unknown-source', index: state.sourceIndex ?? 0 },
-        destination,
-        reason: destination ? 'DROP' : 'CANCEL',
-        mode: 'FLUID',
-        type: 'DEFAULT',
-        combine: null,
-      };
-      // Reset first to avoid re-entrancy issues
-      const next: InternalDragState = { draggingId: null, sourceDroppableId: null, sourceIndex: null };
-      if (destination) committedRef.current = true;
-      console.log('[DND] ctxOnDragEnd → onDragEnd(result)', result);
-      onDragEnd(result);
-      return next;
-    });
-  }, [onDragEnd]);
+    setDragState({ draggingId: null, sourceDroppableId: null, sourceIndex: null });
+
+    if (destination) committedRef.current = true;
+    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] ctxOnDragEnd → onDragEnd(result)', result);
+    try { onDragEnd(result); } catch (e) { console.warn('[DND] onDragEnd callback errored:', e); }
+  }, [onDragEnd, dragState]);
 
   const isDraggingOver = useCallback((droppableId: string) => overState.id === droppableId, [overState]);
   const setOver = useCallback((droppableId: string | null, index: number) => {
@@ -106,10 +115,39 @@ export function DragDropContext({ children, onDragEnd, onDragStart }: DragDropCo
   }, []);
   const getOverIndex = useCallback((droppableId: string) => (overState.id === droppableId ? overState.index : -1), [overState]);
 
+  const finalizeDrag = useCallback((meta: { id: string; source: string; index: number }, destination: DropLocation | null) => {
+    const result: DropResult = {
+      draggableId: meta?.id || '',
+      source: { droppableId: meta?.source || 'unknown-source', index: meta?.index ?? 0 },
+      destination,
+      reason: destination ? 'DROP' : 'CANCEL',
+      mode: 'FLUID',
+      type: 'DEFAULT',
+      combine: null,
+    };
+    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] finalizeDrag → onDragEnd(result)', result);
+    setOverState({ id: null, index: -1 });
+    setDragState({ draggingId: null, sourceDroppableId: null, sourceIndex: null });
+    setOverlay({ id: null, x: 0, y: 0, visible: false });
+    if (destination) committedRef.current = true;
+    try { onDragEnd(result); } catch (e) { console.warn('[DND] onDragEnd callback errored:', e); }
+  }, [onDragEnd]);
+
+  const showOverlay = useCallback((data: { id: string; x: number; y: number }) => {
+    setOverlay({ id: data.id, x: data.x, y: data.y, visible: true });
+  }, []);
+  const updateOverlay = useCallback((coords: { x: number; y: number }) => {
+    setOverlay((prev) => ({ ...prev, x: coords.x, y: coords.y }));
+  }, []);
+  const clearOverlay = useCallback(() => {
+    setOverlay({ id: null, x: 0, y: 0, visible: false });
+  }, []);
+
   const value = useMemo(() => ({
     registerDroppable,
     onDragStart: ctxOnDragStart,
     onDragEnd: ctxOnDragEnd,
+    finalizeDrag,
     isDraggingOver,
     currentDrag: dragState,
     setOver,
@@ -117,271 +155,328 @@ export function DragDropContext({ children, onDragEnd, onDragStart }: DragDropCo
     getOver: () => overState,
     wasDropCommitted: () => committedRef.current,
     clearDropCommitted: () => { committedRef.current = false; },
-  }), [registerDroppable, ctxOnDragStart, ctxOnDragEnd, isDraggingOver, dragState, setOver, getOverIndex]);
+    showOverlay,
+    updateOverlay,
+    clearOverlay,
+  }), [registerDroppable, ctxOnDragStart, ctxOnDragEnd, finalizeDrag, isDraggingOver, dragState, setOver, getOverIndex]);
 
   return (
-    <DndContext.Provider value={value}>{children}</DndContext.Provider>
+    <DndContext.Provider value={value}>
+      {children}
+      {overlay.visible && overlay.id ? (
+        <div
+          style={{
+            position: 'fixed',
+            left: overlay.x + 12,
+            top: overlay.y + 12,
+            pointerEvents: 'none',
+            zIndex: 9999,
+          }}
+        >
+          {renderOverlay ? (
+            renderOverlay({ id: overlay.id })
+          ) : (
+            <div style={{
+              background: 'rgba(255,255,255,0.95)',
+              border: '1px solid #e5e7eb',
+              padding: '6px 8px',
+              borderRadius: 0,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              color: '#374151',
+              fontSize: 12,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+            }}>
+              <span style={{ opacity: 0.85 }}>{overlay.id}</span>
+            </div>
+          )}
+        </div>
+      ) : null}
+    </DndContext.Provider>
   );
 }
 
-// Droppable
-type DroppableProps = {
+// Droppable component
+export interface DroppableProvided {
+  innerRef: (element: HTMLElement | null) => void;
+  droppableProps: {
+    'data-rfd-droppable-id': string;
+  };
+  placeholder: React.ReactNode;
+}
+
+export interface DroppableStateSnapshot {
+  isDraggingOver: boolean;
+  draggingOverWith: string | null;
+  draggingFromThisWith: string | null;
+  isUsingPlaceholder: boolean;
+}
+
+export interface DroppableProps {
   droppableId: string;
+  children: (provided: DroppableProvided, snapshot: DroppableStateSnapshot) => React.ReactNode;
+  direction?: 'horizontal' | 'vertical';
   isDropDisabled?: boolean;
-  direction?: 'vertical' | 'horizontal';
-  children: (provided: {
-    innerRef: (el: HTMLElement | null) => void;
-    droppableProps: React.HTMLAttributes<HTMLElement>;
-    placeholder: React.ReactNode;
-  }, snapshot: { isDraggingOver: boolean; overIndex: number }) => React.ReactNode;
-};
+  type?: string;
+}
 
-const DroppableIdContext = createContext<string | null>(null);
-
-export function Droppable({ droppableId, isDropDisabled = false, direction = 'vertical', children }: DroppableProps) {
-  const { registerDroppable, isDraggingOver, onDragEnd, currentDrag, setOver, getOverIndex } = useContext(DndContext);
-  const ref = useRef<HTMLElement | null>(null);
-  const [indicatorTop, setIndicatorTop] = useState<number | null>(null);
+export function Droppable({ droppableId, children, direction = 'vertical', isDropDisabled = false }: DroppableProps) {
+  const context = useContext(DndContext);
+  const elementRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    registerDroppable(droppableId, ref.current);
-    return () => registerDroppable(droppableId, null);
-  }, [droppableId, registerDroppable]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    if (isDropDisabled) return;
-    if (!currentDrag.draggingId) return;
-    e.preventDefault();
-    e.stopPropagation();
-    try { e.dataTransfer.dropEffect = 'move'; } catch {}
-    // Ignore droppables that are inside the currently dragged element
-    try {
-      const dragEl = document.querySelector(`[data-draggable-id="${currentDrag.draggingId}"]`) as HTMLElement | null;
-      if (dragEl && ref.current && dragEl.contains(ref.current)) {
-        console.log('[DND] handleDragOver ignored (droppable is inside dragged element)', { droppableId });
-        return;
-      }
-    } catch {}
-    const container = ref.current as HTMLElement | null;
-    if (!container) return;
-    const index = computeIndexFromPointer(container, e.clientX, e.clientY, direction);
-    setOver(droppableId, index);
-    const items = Array.from(container.querySelectorAll('[data-draggable-index]')) as HTMLElement[];
-    const containerRect = container.getBoundingClientRect();
-    let top = 0;
-    if (items.length === 0 || index <= 0) {
-      top = 0;
-    } else if (index >= items.length) {
-      const last = items[items.length - 1].getBoundingClientRect();
-      top = last.bottom - containerRect.top;
-    } else {
-      const before = items[index].getBoundingClientRect();
-      top = before.top - containerRect.top;
+    if (elementRef.current) {
+      context.registerDroppable(droppableId, elementRef.current);
     }
-    setIndicatorTop(top);
-    console.log('[DND] handleDragOver', { droppableId, index, indicatorTop: top });
-  }, [isDropDisabled, currentDrag.draggingId, direction, droppableId, setOver]);
+    return () => {
+      context.registerDroppable(droppableId, null);
+    };
+  }, [droppableId, context]);
 
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    if (isDropDisabled) return;
-    if (!currentDrag.draggingId) return;
-    e.preventDefault();
-    e.stopPropagation();
-    try { e.dataTransfer.dropEffect = 'move'; } catch {}
-    const container = ref.current as HTMLElement | null;
-    if (!container) return;
-    const index = computeIndexFromPointer(container, e.clientX, e.clientY, direction);
-    setOver(droppableId, index);
-    console.log('[DND] handleDragEnter', { droppableId, index });
-  }, [isDropDisabled, currentDrag.draggingId, direction, droppableId, setOver]);
-
-  const computeIndexFromPointer = useCallback((container: HTMLElement, clientX: number, clientY: number, axis: 'vertical' | 'horizontal') => {
-    const items = Array.from(container.querySelectorAll('[data-draggable-index]')) as HTMLElement[];
-    if (items.length === 0) return 0;
-    for (let i = 0; i < items.length; i++) {
-      const rect = items[i].getBoundingClientRect();
-      const mid = axis === 'vertical' ? rect.top + rect.height / 2 : rect.left + rect.width / 2;
-      const pointer = axis === 'vertical' ? clientY : clientX;
-      if (pointer < mid) return i;
-    }
-    return items.length; // append
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    if (isDropDisabled) return;
-    e.preventDefault();
-    e.stopPropagation();
-    // Ignore drops into droppables that are inside the currently dragged element
-    try {
-      const dragEl = document.querySelector(`[data-draggable-id="${currentDrag.draggingId}"]`) as HTMLElement | null;
-      if (dragEl && ref.current && dragEl.contains(ref.current)) {
-        setOver(null, -1);
-        setIndicatorTop(null);
-        console.log('[DND] handleDrop ignored (droppable is inside dragged element)', { droppableId });
-        return;
+  const provided: DroppableProvided = {
+    innerRef: (el: HTMLElement | null) => {
+      elementRef.current = el;
+      if (el) {
+        context.registerDroppable(droppableId, el);
       }
-    } catch {}
-    const container = ref.current as HTMLElement | null;
-    if (!container) return onDragEnd(null);
-    const index = computeIndexFromPointer(container, e.clientX, e.clientY, direction);
-    console.log('[DND] handleDrop commit', { droppableId, index });
-    onDragEnd({ droppableId, index });
-    setOver(null, -1);
-    setIndicatorTop(null);
-  }, [isDropDisabled, direction, computeIndexFromPointer, droppableId, onDragEnd, setOver, currentDrag.draggingId]);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.stopPropagation();
-    // Do not clear over state here to preserve last known destination for fallback
-    setIndicatorTop(null);
-    console.log('[DND] handleDragLeave', { droppableId });
-  }, []);
-
-  const provided = {
-    innerRef: (el: HTMLElement | null) => { ref.current = el; },
+    },
     droppableProps: {
-      onDragOver: handleDragOver,
-      onDragEnter: handleDragEnter,
-      onDrop: handleDrop,
-      onDragLeave: handleDragLeave,
-      'data-droppable-id': droppableId,
-      style: { position: 'relative' },
-    } as React.HTMLAttributes<HTMLElement>,
-    placeholder: (indicatorTop != null && !isDropDisabled && currentDrag.draggingId)
-      ? (
-        (() => {
-          const slot = 12; // visual drop slot height
-          const translateY = (indicatorTop as number) - slot / 2; // center around boundary
-          return (
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                height: slot,
-                background: 'rgba(59,130,246,0.12)',
-                border: '2px solid #3b82f6',
-                boxShadow: '0 0 0 2px rgba(59,130,246,0.15) inset',
-                borderRadius: 6,
-                transform: `translateY(${translateY}px)`,
-                pointerEvents: 'none',
-              }}
-            />
-          );
-        })()
-      ) : null,
+      'data-rfd-droppable-id': droppableId,
+    },
+    placeholder: null,
   };
 
-  const snapshot = { isDraggingOver: isDraggingOver(droppableId), overIndex: getOverIndex(droppableId) };
+  const snapshot: DroppableStateSnapshot = {
+    isDraggingOver: context.isDraggingOver(droppableId),
+    draggingOverWith: context.isDraggingOver(droppableId) ? context.currentDrag.draggingId : null,
+    draggingFromThisWith: context.currentDrag.sourceDroppableId === droppableId ? context.currentDrag.draggingId : null,
+    isUsingPlaceholder: false,
+  };
 
-  return (
-    <DroppableIdContext.Provider value={droppableId}>
-      {children(provided, snapshot)}
-    </DroppableIdContext.Provider>
-  );
+  return <>{children(provided, snapshot)}</>;
 }
 
-// Draggable
-type DraggableProps = {
+// Draggable component
+export interface DraggableProvided {
+  innerRef: (element: HTMLElement | null) => void;
+  draggableProps: {
+    'data-rfd-draggable-id': string;
+    style?: React.CSSProperties;
+    onMouseDown?: (e: React.MouseEvent) => void;
+    onTouchStart?: (e: React.TouchEvent) => void;
+  };
+  dragHandleProps: {
+    'data-rfd-drag-handle-draggable-id': string;
+    onMouseDown: (e: React.MouseEvent) => void;
+    onTouchStart: (e: React.TouchEvent) => void;
+  } | null;
+}
+
+export interface DraggableStateSnapshot {
+  isDragging: boolean;
+  isDropAnimating: boolean;
+  draggingOver: string | null;
+  combineWith: string | null;
+  combineTargetFor: string | null;
+  mode: 'FLUID' | 'SNAP' | null;
+}
+
+export interface DraggableProps {
   draggableId: string;
   index: number;
-  children: (provided: {
-    innerRef: (el: HTMLElement | null) => void;
-    draggableProps: React.HTMLAttributes<HTMLElement> & { draggable: true } & { 'data-draggable-index': number };
-    dragHandleProps: React.HTMLAttributes<HTMLElement> & { draggable: true };
-  }, snapshot: { isDragging: boolean }) => React.ReactNode;
-};
+  children: (provided: DraggableProvided, snapshot: DraggableStateSnapshot) => React.ReactNode;
+  isDragDisabled?: boolean;
+}
 
-export function Draggable({ draggableId, index, children }: DraggableProps) {
-  const droppableId = useContext(DroppableIdContext);
-  const { onDragStart, onDragEnd, getOver, wasDropCommitted, clearDropCommitted } = useContext(DndContext);
-  const ref = useRef<HTMLElement | null>(null);
+export function Draggable({ draggableId, index, children, isDragDisabled = false }: DraggableProps) {
+  const context = useContext(DndContext);
+  const elementRef = useRef<HTMLElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleDragStart = useCallback((e: React.DragEvent) => {
-    if (!droppableId) return;
-    // If another drag is active, ignore
-    // We cannot read dragState here directly, so rely on dataTransfer: still stop propagation
+  const dragMetaRef = useRef<{ id: string; source: string; index: number } | null>(null);
+
+  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (isDragDisabled) return;
+
+    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] Draggable.handleDragStart', {
+      draggableId,
+      index,
+      type: (e as any)?.type,
+      target: (e.target as HTMLElement)?.tagName,
+    });
+
     e.stopPropagation();
-    e.dataTransfer.setData('text/plain', draggableId);
-    // Use a custom type to avoid interference
-    try { e.dataTransfer.setData('application/x-nextpress-dnd', JSON.stringify({ draggableId })); } catch {}
-    onDragStart(draggableId, droppableId, index);
+    // Prevent browser text selection initiation (mouse and touch)
+    e.preventDefault();
     setIsDragging(true);
-    console.log('[DND] draggable onDragStart', { draggableId, droppableId, index });
-  }, [draggableId, droppableId, index, onDragStart]);
 
-  const handleDragEnd = useCallback((e: React.DragEvent) => {
-    setIsDragging(false);
-    e.stopPropagation();
-    // If a drop was already committed by a droppable, do not emit cancel
-    if (wasDropCommitted()) {
-      clearDropCommitted();
-      console.log('[DND] draggable onDragEnd (drop already committed by droppable)');
-      return;
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.classList.add('npb-dragging');
     }
-    const over = getOver();
-    if (over.id != null && over.index >= 0) {
-      console.log('[DND] draggable onDragEnd synthesizing drop', over);
-      onDragEnd({ droppableId: over.id, index: over.index });
-    } else {
-      // Fallback: detect droppable under pointer and compute index
-      let clientX = 0, clientY = 0;
-      try {
-        clientX = (e as any).clientX ?? 0;
-        clientY = (e as any).clientY ?? 0;
-      } catch {}
-      let target = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
-      let container: HTMLElement | null = null;
-      while (target) {
-        const id = target.getAttribute('data-droppable-id');
-        if (id) { container = target as HTMLElement; break; }
-        target = target.parentElement;
+
+    const getPoint = (evt: React.MouseEvent | React.TouchEvent) => {
+      if ('touches' in evt && evt.touches.length > 0) {
+        return { x: evt.touches[0].clientX, y: evt.touches[0].clientY };
       }
-      if (container) {
-        const droppableIdAttr = container.getAttribute('data-droppable-id')!;
-        const items = Array.from(container.querySelectorAll('[data-draggable-index]')) as HTMLElement[];
-        let computedIndex = 0;
-        if (items.length > 0) {
-          // vertical heuristic
-          const pointer = clientY;
-          computedIndex = items.length;
-          for (let i = 0; i < items.length; i++) {
-            const rect = items[i].getBoundingClientRect();
-            const mid = rect.top + rect.height / 2;
-            if (pointer < mid) { computedIndex = i; break; }
-          }
+      const m = evt as React.MouseEvent;
+      return { x: m.clientX, y: m.clientY };
+    };
+
+    const startPoint = getPoint(e);
+
+    // Resolve source droppable
+    let parent = elementRef.current?.parentElement;
+    while (parent && !parent.hasAttribute('data-rfd-droppable-id')) {
+      parent = parent.parentElement;
+    }
+    const sourceDroppableId = parent?.getAttribute('data-rfd-droppable-id') || 'unknown';
+    dragMetaRef.current = { id: draggableId, source: sourceDroppableId, index };
+
+    // show overlay with starting position
+    context.showOverlay({ id: draggableId, x: startPoint.x, y: startPoint.y });
+
+    if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] Draggable.start → parent droppable', { sourceDroppableId });
+    context.onDragStart(draggableId, sourceDroppableId, index);
+
+    const computeDroppableAtPoint = (clientX: number, clientY: number) => {
+      const elementUnder = document.elementFromPoint(clientX, clientY);
+      let droppableUnder = elementUnder as HTMLElement | null;
+      while (droppableUnder && !droppableUnder.hasAttribute('data-rfd-droppable-id')) {
+        droppableUnder = droppableUnder.parentElement as HTMLElement | null;
+      }
+      const underId = droppableUnder?.getAttribute('data-rfd-droppable-id') || null;
+      return { droppableUnder, underId };
+    };
+
+    // Handle drag move
+    const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
+      if ('touches' in moveEvent) {
+        (moveEvent as TouchEvent).preventDefault();
+      }
+      const clientX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : (moveEvent as MouseEvent).clientX;
+      const clientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : (moveEvent as MouseEvent).clientY;
+      context.updateOverlay({ x: clientX, y: clientY });
+      const { droppableUnder, underId } = computeDroppableAtPoint(clientX, clientY);
+      if (import.meta.env?.DEBUG_BUILDER) {
+        console.log('[DND] move', { clientX, clientY, underId });
+      }
+
+      if (underId && droppableUnder) {
+        const draggables = Array.from(droppableUnder.querySelectorAll('[data-rfd-draggable-id]')) as HTMLElement[];
+        let targetIndex = draggables.length;
+        for (let i = 0; i < draggables.length; i++) {
+          const rect = draggables[i].getBoundingClientRect();
+          const middle = rect.top + rect.height / 2;
+          if (clientY < middle) { targetIndex = i; break; }
         }
-        console.log('[DND] draggable onDragEnd fallback commit', { droppableId: droppableIdAttr, index: computedIndex });
-        onDragEnd({ droppableId: droppableIdAttr, index: computedIndex });
-      } else {
-        console.log('[DND] draggable onDragEnd cancel (no over and no container)');
-        onDragEnd(null);
+        if (import.meta.env?.DEBUG_BUILDER) {
+          console.log('[DND] setOver', { underId, targetIndex });
+        }
+        context.setOver(underId, targetIndex);
+      } else if (!underId) {
+        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] move.null-droppable');
       }
-    }
-  }, [onDragEnd, getOver, wasDropCommitted, clearDropCommitted]);
+    };
 
-  const provided = {
-    innerRef: (el: HTMLElement | null) => { ref.current = el; },
+    // Handle drag end (recompute destination)
+    const handleEnd = (endEvent: MouseEvent | TouchEvent) => {
+      setIsDragging(false);
+
+      if (typeof document !== 'undefined' && document.body) {
+        document.body.classList.remove('npb-dragging');
+      }
+
+      context.clearOverlay();
+
+      let clientX: number;
+      let clientY: number;
+      if ('changedTouches' in endEvent && endEvent.changedTouches.length > 0) {
+        clientX = endEvent.changedTouches[0].clientX;
+        clientY = endEvent.changedTouches[0].clientY;
+      } else if ('touches' in endEvent && endEvent.touches.length > 0) {
+        clientX = endEvent.touches[0].clientX;
+        clientY = endEvent.touches[0].clientY;
+      } else {
+        clientX = (endEvent as MouseEvent).clientX;
+        clientY = (endEvent as MouseEvent).clientY;
+      }
+
+      const { droppableUnder, underId } = computeDroppableAtPoint(clientX, clientY);
+      const storedOver = context.getOver();
+      if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.recompute', { clientX, clientY, underId, storedOver });
+
+      let finalDestination: DropLocation | null = null;
+      if (underId && droppableUnder) {
+        const draggables = Array.from(droppableUnder.querySelectorAll('[data-rfd-draggable-id]')) as HTMLElement[];
+        let targetIndex = draggables.length;
+        for (let i = 0; i < draggables.length; i++) {
+          const rect = draggables[i].getBoundingClientRect();
+          const middle = rect.top + rect.height / 2;
+          if (clientY < middle) { targetIndex = i; break; }
+        }
+        finalDestination = { droppableId: underId, index: targetIndex };
+      } else if (storedOver.id && storedOver.index !== -1) {
+        finalDestination = { droppableId: storedOver.id, index: storedOver.index };
+      }
+
+      if (!finalDestination && storedOver.id) {
+        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.mismatch', { recomputed: underId, storedOver });
+      }
+
+      const meta = dragMetaRef.current;
+      if (!meta) {
+        console.warn('[DND] end.without-meta');
+        context.finalizeDrag({ id: '', source: 'unknown-source', index: 0 }, null);
+      } else if (finalDestination) {
+        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.finalDestination', finalDestination, 'meta', meta);
+        context.finalizeDrag(meta, finalDestination);
+      } else {
+        if (import.meta.env?.DEBUG_BUILDER) console.log('[DND] end.cancel', 'meta', meta);
+        context.finalizeDrag(meta, null);
+      }
+
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleEnd as any);
+      document.removeEventListener('touchmove', handleMove);
+      document.removeEventListener('touchend', handleEnd as any);
+      document.removeEventListener('touchcancel', handleEnd as any);
+    };
+
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd as any);
+    document.addEventListener('touchmove', handleMove, { passive: false });
+    document.addEventListener('touchend', handleEnd as any);
+    document.addEventListener('touchcancel', handleEnd as any);
+  }, [draggableId, index, isDragDisabled, context]);
+
+  const provided: DraggableProvided = {
+    innerRef: (el: HTMLElement | null) => {
+      elementRef.current = el;
+    },
     draggableProps: {
-      draggable: true,
-      onDragStart: handleDragStart,
-      onDragEnd: handleDragEnd,
-      'data-draggable-id': draggableId,
-      'data-draggable-index': index,
-    } as React.HTMLAttributes<HTMLElement> & { draggable: true } & { 'data-draggable-index': number },
-    dragHandleProps: {
-      draggable: true,
-      onDragStart: handleDragStart,
-      onDragEnd: handleDragEnd,
-      'data-draggable-id': draggableId,
-    } as React.HTMLAttributes<HTMLElement> & { draggable: true },
+      'data-rfd-draggable-id': draggableId,
+      style: isDragging ? { opacity: 0.5 } : undefined,
+      onMouseDown: isDragDisabled ? undefined : handleDragStart,
+      onTouchStart: isDragDisabled ? undefined : handleDragStart,
+    },
+    dragHandleProps: isDragDisabled ? null : {
+      'data-rfd-drag-handle-draggable-id': draggableId,
+      onMouseDown: handleDragStart,
+      onTouchStart: handleDragStart,
+    },
   };
 
-  const snapshot = { isDragging };
+  const snapshot: DraggableStateSnapshot = {
+    isDragging,
+    isDropAnimating: false,
+    draggingOver: context.getOver().id,
+    combineWith: null,
+    combineTargetFor: null,
+    mode: isDragging ? 'FLUID' : null,
+  };
 
-  return children(provided, snapshot);
+  return <>{children(provided, snapshot)}</>;
 }
 
 export default {
@@ -389,5 +484,3 @@ export default {
   Droppable,
   Draggable,
 };
-
-

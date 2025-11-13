@@ -1,5 +1,5 @@
 import React from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -113,7 +113,7 @@ function SeparatorSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
 
 const SeparatorBlock: BlockDefinition = {
   id: 'core/separator',
-  name: 'Separator',
+  label: 'Separator',
   icon: SeparatorIcon,
   description: 'Create a break between ideas or sections',
   category: 'layout',

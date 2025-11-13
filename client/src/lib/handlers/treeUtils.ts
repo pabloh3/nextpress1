@@ -1,5 +1,5 @@
 
-import type { BlockConfig } from '@shared/schema';
+import type { BlockConfig } from '@shared/schema-types';
 import { blockRegistry, getDefaultBlock as getDefaultBlockExport } from '@/components/PageBuilder/blocks';
 
 export function findBlock(rootBlocks: BlockConfig[], targetId: string): BlockConfig | null {
@@ -9,17 +9,7 @@ export function findBlock(rootBlocks: BlockConfig[], targetId: string): BlockCon
         return block;
       }
       
-      // Check for ColumnsBlock structure - search within columns
-      if (block.type === 'core/columns' && block.content?.columns) {
-        const columns = (block.content as any).columns;
-        for (const column of columns) {
-          if (Array.isArray(column.children)) {
-            const found = search(column.children);
-            if (found) return found;
-          }
-        }
-      }
-      
+      // Only search children array (no special cases)
       if (Array.isArray(block.children)) {
         const found = search(block.children);
         if (found) return found;
@@ -51,61 +41,25 @@ export function findBlockPath(rootBlocks: BlockConfig[], targetId: string): numb
 export function insertNewBlock(rootBlocks: BlockConfig[], parentId: string | null, index: number, type: string): { blocks: BlockConfig[]; newId?: string } {
   const clone = structuredClone(rootBlocks) as BlockConfig[];
   const id = crypto.randomUUID();
-  const def = blockRegistry[type];
-  if (!def) return { blocks: rootBlocks };
-  const newBlock = {
-    id,
-    type,
-    content: (() => {
-      const content = structuredClone(def.defaultContent ?? {});
-      if (type === 'core/columns' && content && Array.isArray(content.columns)) {
-        content.columns = content.columns.map((col: any, i: number) => ({
-          ...col,
-          id: `${id}-col-${i + 1}`,
-          children: Array.isArray(col?.children) ? col.children : [],
-        }));
-      }
-      return content;
-    })(),
-    styles: {
-      padding: '20px',
-      margin: '0px',
-      contentAlignHorizontal: 'left',
-      contentAlignVertical: 'top',
-      ...def.defaultStyles,
-    },
-    settings: {},
-    children: def.isContainer ? [] : undefined,
-  } as BlockConfig;
+  
+  // Use getDefaultBlock to create block with new structure
+  const newBlock = getDefaultBlockExport(type, id);
+  if (!newBlock) return { blocks: rootBlocks };
+  
+  // Set parentId
+  newBlock.parentId = parentId;
+  
   if (!parentId) {
     clone.splice(index, 0, newBlock);
     return { blocks: clone, newId: newBlock.id };
   }
+  
   function insert(list: BlockConfig[]): boolean {
     for (const b of list) {
       if (b.id === parentId) {
         if (!Array.isArray(b.children)) b.children = [];
         b.children.splice(index, 0, newBlock!);
         return true;
-      }
-      
-      // Check for ColumnsBlock structure - insert into column containers
-      if (b.type === 'core/columns' && b.content?.columns) {
-        const columns = (b.content as any).columns;
-        for (const column of columns) {
-          if (column.id === parentId) {
-            if (!Array.isArray(column.children)) column.children = [];
-            column.children.splice(index, 0, newBlock!);
-            return true;
-          }
-        }
-        
-        // Also recursively search in column children for nested blocks
-        for (const column of columns) {
-          if (Array.isArray(column.children) && insert(column.children)) {
-            return true;
-          }
-        }
       }
       
       if (b.children && insert(b.children)) return true;
@@ -132,26 +86,6 @@ function findParent(list: BlockConfig[], parentId: string | null): { container: 
             return { container: block.children, parentBlock: block };
         }
         
-        // Check for ColumnsBlock structure - look for column IDs
-        if (block && block.type === 'core/columns' && block.content?.columns) {
-            const columns = (block.content as any).columns;
-            for (const column of columns) {
-                if (column.id === parentId) {
-                    if (!Array.isArray(column.children)) {
-                        column.children = [];
-                    }
-                    return { container: column.children, parentBlock: block };
-                }
-            }
-            
-            // Also add column children to the queue for recursive search
-            for (const column of columns) {
-                if (Array.isArray(column.children)) {
-                    queue.push(...column.children);
-                }
-            }
-        }
-        
         if (block && Array.isArray(block.children)) {
             queue.push(...block.children);
         }
@@ -176,20 +110,9 @@ export function moveExistingBlock(rootBlocks: BlockConfig[], sourceParentId: str
     return rootBlocks;
   }
 
-  // Prevent moving a block into itself or its descendants (including column containers)
+  // Prevent moving a block into itself or its descendants
   function containsIdInSubtree(node: BlockConfig, targetId: string): boolean {
     if (node.id === targetId) return true;
-    if (node.type === 'core/columns' && (node as any).content?.columns) {
-      const columns = (node as any).content.columns;
-      for (const column of columns) {
-        if (column.id === targetId) return true;
-        if (Array.isArray(column.children)) {
-          for (const child of column.children) {
-            if (containsIdInSubtree(child, targetId)) return true;
-          }
-        }
-      }
-    }
     if (Array.isArray(node.children)) {
       for (const child of node.children) {
         if (containsIdInSubtree(child, targetId)) return true;
@@ -232,6 +155,11 @@ export function moveExistingBlock(rootBlocks: BlockConfig[], sourceParentId: str
   if (targetIndex < 0 || Number.isNaN(targetIndex)) targetIndex = 0;
   if (targetIndex > destContainer.length) targetIndex = destContainer.length;
 
+  // Update parentId when moving to a different parent
+  if (!sameParent) {
+    movedBlock.parentId = destParentId;
+  }
+
   destContainer.splice(targetIndex, 0, movedBlock);
 
   return clone;
@@ -245,21 +173,10 @@ export function findBlockDeep(rootBlocks: BlockConfig[], targetId: string): { fo
       const nextPath = path.concat(i);
       if (b.id === targetId) return { block: b, path: nextPath };
 
-      // Search within standard children
+      // Search within children
       if (Array.isArray(b.children)) {
         const res = dfs(b.children, nextPath);
         if (res) return res;
-      }
-
-      // Additionally search within columns children if present
-      if (b.type === 'core/columns' && (b as any).content?.columns) {
-        const columns = (b as any).content.columns as Array<{ children?: BlockConfig[] }>;
-        for (const col of columns) {
-          if (Array.isArray(col.children)) {
-            const res = dfs(col.children, nextPath);
-            if (res) return res;
-          }
-        }
       }
     }
     return null;
@@ -286,31 +203,6 @@ export function updateBlockDeep(rootBlocks: BlockConfig[], targetId: string, upd
         if (childNext !== b.children) {
           mutated = true;
           updatedChild = childNext;
-        }
-      }
-
-      // Also process columns children if present
-      let updatedBlock: BlockConfig = b;
-      if (b.type === 'core/columns' && (b as any).content?.columns) {
-        const columns = (b as any).content.columns as Array<{ children?: BlockConfig[] }>;
-        let columnsMutated = false;
-        const nextColumns = columns.map((col) => {
-          if (Array.isArray(col.children)) {
-            const childNext = walk(col.children);
-            if (childNext !== col.children) {
-              columnsMutated = true;
-              return { ...col, children: childNext };
-            }
-          }
-          return col;
-        });
-        if (columnsMutated) {
-          mutated = true;
-          updatedBlock = { ...b, content: { ...(b as any).content, columns: nextColumns } } as any;
-          if (updatedChild !== b.children) {
-            updatedBlock = { ...updatedBlock, children: updatedChild };
-          }
-          return updatedBlock;
         }
       }
 
@@ -348,25 +240,6 @@ export function deleteBlockDeep(rootBlocks: BlockConfig[], targetId: string): { 
         }
       }
 
-      if (b.type === 'core/columns' && (b as any).content?.columns) {
-        const columns = (b as any).content.columns as Array<{ children?: BlockConfig[] }>;
-        let columnsMutated = false;
-        const nextColumns = columns.map((col) => {
-          if (Array.isArray(col.children)) {
-            const childNext = walk(col.children);
-            if (childNext !== col.children) {
-              columnsMutated = true;
-              return { ...col, children: childNext };
-            }
-          }
-          return col;
-        });
-        if (columnsMutated) {
-          mutated = true;
-          nextBlock = { ...nextBlock, content: { ...(b as any).content, columns: nextColumns } } as any;
-        }
-      }
-
       filtered.push(nextBlock);
     }
     return mutated ? filtered : list;
@@ -380,14 +253,6 @@ export function duplicateBlockDeep(rootBlocks: BlockConfig[], targetId: string, 
   function remapIds(blk: BlockConfig): void {
     blk.id = generateBlockId();
     if (Array.isArray(blk.children)) blk.children.forEach(remapIds);
-
-    // If block has columns children in content, remap within them as well
-    if (blk.type === 'core/columns' && (blk as any).content?.columns) {
-      const columns = (blk as any).content.columns as Array<{ children?: BlockConfig[] }>;
-      for (const col of columns) {
-        if (Array.isArray(col.children)) col.children.forEach(remapIds);
-      }
-    }
   }
 
   function walk(list: BlockConfig[]): { next: BlockConfig[]; found: boolean } {
@@ -410,30 +275,45 @@ export function duplicateBlockDeep(rootBlocks: BlockConfig[], targetId: string, 
           return { next, found: true };
         }
       }
-
-      if (b.type === 'core/columns' && (b as any).content?.columns) {
-        const columns = (b as any).content.columns as Array<{ children?: BlockConfig[] }>;
-        let columnsMutated = false;
-        const nextColumns = columns.map((col) => {
-          if (Array.isArray(col.children)) {
-            const childRes = walk(col.children);
-            if (childRes.found) {
-              columnsMutated = true;
-              return { ...col, children: childRes.next };
-            }
-          }
-          return col;
-        });
-        if (columnsMutated) {
-          const next = [...list];
-          next[i] = { ...b, content: { ...(b as any).content, columns: nextColumns } } as any;
-          return { next, found: true };
-        }
-      }
     }
     return { next: list, found: false };
   }
 
   const { next, found } = walk(rootBlocks);
   return { found, next, duplicatedId };
+}
+
+/**
+ * Recursively set parentId for all blocks in the tree
+ * @param blocks Array of blocks to process
+ * @param parentId ID of the parent block, or null for root level
+ * @returns New array with parentIds set
+ */
+export function setParentIds(blocks: BlockConfig[], parentId: string | null): BlockConfig[] {
+  return blocks.map(block => ({
+    ...block,
+    parentId,
+    ...(block.children && {
+      children: setParentIds(block.children, block.id)
+    })
+  }));
+}
+
+/**
+ * Find the parent block of a given child block ID
+ * @param blocks Array of blocks to search
+ * @param childId ID of the child block to find parent for
+ * @returns The parent block, or null if not found
+ */
+export function findParentBlock(blocks: BlockConfig[], childId: string): BlockConfig | null {
+  for (const block of blocks) {
+    if (block.children?.some(child => child.id === childId)) {
+      return block;
+    }
+    if (block.children) {
+      const parent = findParentBlock(block.children, childId);
+      if (parent) return parent;
+    }
+  }
+  return null;
 }

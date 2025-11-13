@@ -1,5 +1,5 @@
 import React from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -188,7 +188,7 @@ function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
 
 const QuoteBlock: BlockDefinition = {
   id: 'core/quote',
-  name: 'Quote',
+  label: 'Quote',
   icon: QuoteIcon,
   description: 'Add a blockquote',
   category: 'advanced',

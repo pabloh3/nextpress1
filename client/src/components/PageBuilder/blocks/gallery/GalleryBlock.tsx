@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { BlockConfig, Media } from "@shared/schema";
+import type { BlockConfig, Media } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -18,22 +18,25 @@ interface GalleryImage {
 }
 
 function GalleryRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  const images: GalleryImage[] = Array.isArray((block.content as any)?.images)
-    ? (block.content as any).images
+  // Defensive check for discriminated union
+  const galleryData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
+  
+  const images: GalleryImage[] = Array.isArray(galleryData?.images)
+    ? galleryData.images
     : [];
 
-  const columns = (block.content as any)?.columns || 3;
-  const imageCrop = (block.content as any)?.imageCrop !== false;
-  const linkTo = (block.content as any)?.linkTo || 'none';
-  const sizeSlug = (block.content as any)?.sizeSlug || 'large';
-  const caption = (block.content as any)?.caption || '';
+  const columns = galleryData?.columns || 3;
+  const imageCrop = galleryData?.imageCrop !== false;
+  const linkTo = galleryData?.linkTo || 'none';
+  const sizeSlug = galleryData?.sizeSlug || 'large';
+  const caption = galleryData?.caption || '';
 
   const className = [
     "wp-block-gallery",
     `has-nested-images`,
     `columns-${columns}`,
     imageCrop ? 'is-cropped' : '',
-    block.content?.className || "",
+    galleryData?.className || "",
   ].filter(Boolean).join(" ");
 
   if (images.length === 0) {
@@ -106,16 +109,21 @@ import { Settings, Wrench } from "lucide-react";
 function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
   const [isPickerOpen, setPickerOpen] = useState(false);
   
+  // Defensive check for discriminated union
+  const galleryData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
   
-  const images: GalleryImage[] = Array.isArray((block.content as any)?.images)
-    ? (block.content as any).images
+  const images: GalleryImage[] = Array.isArray(galleryData?.images)
+    ? galleryData.images
     : [];
 
   const updateContent = (contentUpdates: any) => {
     onUpdate({
       content: {
-        ...block.content,
-        ...contentUpdates,
+        kind: 'structured',
+        data: {
+          ...galleryData,
+          ...contentUpdates,
+        },
       },
     });
   };
@@ -207,7 +215,7 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
           <div>
             <Label htmlFor="gallery-columns">Columns</Label>
             <Select
-              value={((block.content as any)?.columns || 3).toString()}
+              value={(galleryData?.columns || 3).toString()}
               onValueChange={(value) => updateContent({ columns: parseInt(value) })}
             >
               <SelectTrigger className="h-9">
@@ -228,7 +236,7 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
             <Label htmlFor="gallery-crop">Crop images</Label>
             <Switch
               id="gallery-crop"
-              checked={(block.content as any)?.imageCrop !== false}
+              checked={galleryData?.imageCrop !== false}
               onCheckedChange={(checked) => updateContent({ imageCrop: checked })}
             />
           </div>
@@ -236,7 +244,7 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
           <div>
             <Label htmlFor="gallery-link-to">Link to</Label>
             <Select
-              value={(block.content as any)?.linkTo || 'none'}
+              value={galleryData?.linkTo || 'none'}
               onValueChange={(value) => updateContent({ linkTo: value })}
             >
               <SelectTrigger className="h-9">
@@ -253,7 +261,7 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
           <div>
             <Label htmlFor="gallery-size">Image Size</Label>
             <Select
-              value={(block.content as any)?.sizeSlug || 'large'}
+              value={galleryData?.sizeSlug || 'large'}
               onValueChange={(value) => updateContent({ sizeSlug: value })}
             >
               <SelectTrigger className="h-9">
@@ -272,7 +280,7 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
             <Label htmlFor="gallery-caption">Gallery Caption</Label>
             <Input
               id="gallery-caption"
-              value={(block.content as any)?.caption || ''}
+              value={galleryData?.caption || ''}
               onChange={(e) => updateContent({ caption: e.target.value })}
               placeholder="Describe the gallery"
               className="h-9"
@@ -288,7 +296,7 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
             <Label htmlFor="gallery-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="gallery-class"
-              value={block.content?.className || ''}
+              value={galleryData?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. is-style-rounded"
               className="h-9 text-sm"
@@ -302,18 +310,21 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 
 const GalleryBlock: BlockDefinition = {
   id: 'core/gallery',
-  name: 'Gallery',
+  label: 'Gallery',
   icon: ImageIcon,
   description: 'Display multiple images in a rich gallery',
   category: 'media',
   defaultContent: {
-    images: [],
-    columns: 3,
-    imageCrop: true,
-    linkTo: 'none',
-    sizeSlug: 'large',
-    caption: '',
-    className: '',
+    kind: 'structured',
+    data: {
+      images: [],
+      columns: 3,
+      imageCrop: true,
+      linkTo: 'none',
+      sizeSlug: 'large',
+      caption: '',
+      className: '',
+    },
   },
   defaultStyles: {},
   renderer: GalleryRenderer,

@@ -1,5 +1,5 @@
 import React from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -105,7 +105,7 @@ function HtmlSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
 
 const HtmlBlock: BlockDefinition = {
   id: 'core/html',
-  name: 'Custom HTML',
+  label: 'Custom HTML',
   icon: HtmlIcon,
   description: 'Add custom HTML code',
   category: 'advanced',

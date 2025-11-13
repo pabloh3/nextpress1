@@ -96,6 +96,7 @@ beforeAll(async () => {
 			parent_id UUID,
 			menu_order INTEGER DEFAULT 0,
 			template_id UUID,
+			blocks JSONB DEFAULT '[]',
 			created_at TIMESTAMP DEFAULT NOW(),
 			updated_at TIMESTAMP DEFAULT NOW(),
 			other JSONB DEFAULT '{}'
@@ -181,24 +182,6 @@ beforeAll(async () => {
 			other JSONB DEFAULT '{}',
 			created_at TIMESTAMP DEFAULT NOW(),
 			updated_at TIMESTAMP DEFAULT NOW()
-		)
-	`);
-
-	await client.exec(`
-		CREATE TABLE IF NOT EXISTS blocks (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			name VARCHAR DEFAULT 'text',
-			type VARCHAR DEFAULT 'block',
-			category VARCHAR DEFAULT 'basic',
-			version VARCHAR NOT NULL,
-			requires VARCHAR NOT NULL,
-			author_id UUID NOT NULL REFERENCES users(id),
-			description TEXT,
-			settings JSONB DEFAULT '{}',
-			created_at TIMESTAMP DEFAULT NOW(),
-			updated_at TIMESTAMP DEFAULT NOW(),
-			children JSONB DEFAULT '[]',
-			other JSONB DEFAULT '{"css":"","js":"","html":"","attributes":{},"customContent":{},"classNames":""}'
 		)
 	`);
 

@@ -1,5 +1,5 @@
 import React from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -193,7 +193,7 @@ function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
 
 const PullquoteBlock: BlockDefinition = {
   id: 'core/pullquote',
-  name: 'Pullquote',
+  label: 'Pullquote',
   icon: QuoteIcon,
   description: 'Give special visual emphasis to a quote from your text',
   category: 'advanced',

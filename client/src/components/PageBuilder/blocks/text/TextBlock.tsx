@@ -1,5 +1,5 @@
 import React from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,7 +21,10 @@ interface TextBlockConfig extends Omit<BlockConfig, 'content'> {
 }
 
 function TextRenderer({ block }: { block: TextBlockConfig; isPreview: boolean }) {
-  const align = (block.content?.align as string) || (block.styles?.textAlign as string | undefined);
+  // Extract text content safely using discriminated union pattern
+  const textContent = block.content?.kind === 'text' ? block.content.value : '';
+  
+  const align = (block.content?.textAlign as string) || (block.content?.align as string) || (block.styles?.textAlign as string | undefined);
   const anchor = block.content?.anchor as string | undefined;
   const extraClass = (block.content?.className as string | undefined) || "";
   const dropCap = Boolean(block.content?.dropCap);
@@ -37,7 +40,7 @@ function TextRenderer({ block }: { block: TextBlockConfig; isPreview: boolean })
 
   return (
     <p id={anchor} className={className} style={block.styles}>
-      {block.content?.content ?? block.content?.text}
+      {textContent}
     </p>
   );
 }
@@ -75,7 +78,7 @@ function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (
     }
   ];
 
-  const currentAlign = block.content?.align || 'left';
+  const currentAlign = block.content?.textAlign || block.content?.align || 'left';
 
   return (
     <div className="space-y-4">
@@ -91,8 +94,8 @@ function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (
               id="text-content"
               aria-label="Text content"
               className="h-36"
-              value={(block.content?.content ?? block.content?.text) || ''}
-              onChange={(e) => updateContent({ content: e.target.value, text: undefined })}
+              value={block.content?.kind === 'text' ? block.content.value : ''}
+              onChange={(e) => updateContent({ kind: 'text', value: e.target.value })}
               placeholder="Enter your text content"
               rows={4}
             />
@@ -114,7 +117,7 @@ function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (
                 return (
                   <button
                     key={option.value}
-                    onClick={() => updateContent({ align: option.value })}
+                    onClick={() => updateContent({ textAlign: option.value })}
                     className={`flex items-center gap-2 p-3 text-sm font-medium rounded-lg border transition-colors ${
                       currentAlign === option.value
                         ? 'bg-gray-200 text-gray-800 border-gray-200 hover:bg-gray-300'
@@ -175,13 +178,14 @@ function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (
 
 const TextBlock: BlockDefinition = {
   id: 'core/paragraph',
-  name: 'Paragraph',
+  label: 'Paragraph',
   icon: Type,
   description: 'Add a paragraph of text',
   category: 'basic',
   defaultContent: {
-    content: 'Add your text content here. You can edit this text and customize its appearance.',
-    align: 'left',
+    kind: 'text',
+    value: 'Add your text content here. You can edit this text and customize its appearance.',
+    textAlign: 'left',
     dropCap: false,
     anchor: '',
     className: '',

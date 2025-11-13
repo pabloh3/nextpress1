@@ -93,7 +93,8 @@ function Router() {
           <Route path="/templates" component={Templates} />
           <Route path="/users" component={Users} />
           <Route path="/settings" component={Settings} />
-          <Route path="/home" component={Home} />
+           <Route path="/home" component={Home} />
+           <Route path="/" component={Home} />
           <Route
             path="/page-builder/:type/:id"
             component={({ params }: any) => (

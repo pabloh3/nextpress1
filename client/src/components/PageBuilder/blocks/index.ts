@@ -1,5 +1,5 @@
 import type { BlockDefinition } from "./types";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import HeadingBlock from "./heading/HeadingBlock";
 import TextBlock from "./text/TextBlock";
 import ButtonBlock from "./button/ButtonBlock";
@@ -23,6 +23,10 @@ import HtmlBlock from "./html/HtmlBlock";
 import PullquoteBlock from "./pullquote/PullquoteBlock";
 import PreformattedBlock from "./preformatted/PreformattedBlock";
 import TableBlock from "./table/TableBlock";
+
+if (import.meta.env.DEBUG_BUILDER) {
+  console.log('Imported Blocks:', { HeadingBlock, TextBlock, ButtonBlock, ImageBlock, VideoBlock, AudioBlock, SpacerBlock, DividerBlock, ColumnsBlock, QuoteBlock, ListBlock, MediaTextBlock, SeparatorBlock, GroupBlock, ButtonsBlock, GalleryBlock, CoverBlock, FileBlock, CodeBlock, HtmlBlock, PullquoteBlock, PreformattedBlock, TableBlock });
+}
 
 export const blockRegistry: Record<string, BlockDefinition> = {
   // Gutenberg-compatible ids (deprecated aliases removed per new architecture)
@@ -48,21 +52,6 @@ export const blockRegistry: Record<string, BlockDefinition> = {
   "core/pullquote": PullquoteBlock,
   "core/preformatted": PreformattedBlock,
   "core/table": TableBlock,
-  
-  // Backward compatibility with existing saved data - removed as db will be reset
-
-
-
-
-
-
-
-
-
-
-  
-  // Custom blocks (keep for backward compatibility)
-
 };
 
 export function getDefaultBlock(type: string, id: string): BlockConfig | null {
@@ -71,30 +60,29 @@ export function getDefaultBlock(type: string, id: string): BlockConfig | null {
 
   // Deep clone default content to avoid shared references across instances
   const content = structuredClone(def.defaultContent ?? {});
-
-  // Ensure unique column IDs for Columns block instances to prevent droppable collisions
-  if (type === 'core/columns' && content && Array.isArray(content.columns)) {
-    content.columns = content.columns.map((col: any, i: number) => ({
-      ...col,
-      id: `${id}-col-${i + 1}`,
-      children: Array.isArray(col?.children) ? col.children : [],
-    }));
-  }
-
-  return {
+  
+  const block: BlockConfig = {
     id,
-    type,
+    name: def.id, // Canonical key (e.g., 'core/heading')
+    label: def.label, // User-facing display name (e.g., 'Heading')
+    type: def.isContainer ? "container" : "block",
+    parentId: null,
+    category: def.category,
     content,
     styles: {
       padding: '20px',
       margin: '0px',
-      contentAlignHorizontal: 'left',
-      contentAlignVertical: 'top',
       ...def.defaultStyles,
     },
     settings: {},
-    children: def.isContainer ? [] : undefined,
   };
+  
+  // Only add children array for containers
+  if (def.isContainer) {
+    block.children = [];
+  }
+  
+  return block;
 }
 
 export type { BlockDefinition } from './types';

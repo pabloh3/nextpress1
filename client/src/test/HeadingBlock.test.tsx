@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import HeadingBlock from '../components/PageBuilder/blocks/heading/HeadingBlock'
-import type { BlockConfig } from '@shared/schema'
+import type { BlockConfig } from '@shared/schema-types'
 
 // Mock the useBlockManager hook
 const mockUpdateBlockContent = vi.fn()
@@ -17,7 +17,10 @@ vi.mock('@/hooks/useBlockManager', () => ({
 describe('HeadingBlock', () => {
   const createHeadingBlock = (content: any): BlockConfig => ({
     id: 'test-heading',
-    type: 'core/heading', 
+    name: 'core/heading',
+    type: 'block',
+    parentId: null,
+    label: 'Heading',
     content,
     styles: {},
     children: [],
@@ -26,7 +29,7 @@ describe('HeadingBlock', () => {
 
   describe('HeadingRenderer', () => {
     it('should render heading with default content', () => {
-      const block = createHeadingBlock({ content: 'Test Heading', level: 2 })
+      const block = createHeadingBlock({ kind: 'text', value: 'Test Heading', level: 2 })
       const Renderer = HeadingBlock.renderer!
       
       render(<Renderer block={block} isPreview={false} />)
@@ -40,7 +43,7 @@ describe('HeadingBlock', () => {
       const levels = [1, 2, 3, 4, 5, 6] as const
       
       levels.forEach(level => {
-        const block = createHeadingBlock({ content: `H${level} Heading`, level })
+        const block = createHeadingBlock({ kind: 'text', value: `H${level} Heading`, level })
         const Renderer = HeadingBlock.renderer!
         
         const { container } = render(<Renderer block={block} isPreview={false} />)
@@ -53,7 +56,8 @@ describe('HeadingBlock', () => {
 
     it('should apply text alignment styles', () => {
       const block = createHeadingBlock({ 
-        content: 'Centered Heading', 
+        kind: 'text',
+        value: 'Centered Heading', 
         level: 2, 
         textAlign: 'center' 
       })
@@ -67,7 +71,8 @@ describe('HeadingBlock', () => {
 
     it('should apply custom anchor ID', () => {
       const block = createHeadingBlock({ 
-        content: 'Anchored Heading', 
+        kind: 'text',
+        value: 'Anchored Heading', 
         level: 2, 
         anchor: 'my-anchor' 
       })
@@ -81,7 +86,8 @@ describe('HeadingBlock', () => {
 
     it('should apply custom CSS classes', () => {
       const block = createHeadingBlock({ 
-        content: 'Custom Heading', 
+        kind: 'text',
+        value: 'Custom Heading', 
         level: 2, 
         className: 'my-custom-class' 
       })
@@ -94,7 +100,7 @@ describe('HeadingBlock', () => {
     })
 
     it('should apply inline styles', () => {
-      const block = createHeadingBlock({ content: 'Styled Heading', level: 2 })
+      const block = createHeadingBlock({ kind: 'text', value: 'Styled Heading', level: 2 })
       block.styles = { color: 'red', fontSize: '24px' }
       
       const Renderer = HeadingBlock.renderer!
@@ -107,20 +113,20 @@ describe('HeadingBlock', () => {
       expect(getComputedStyle(heading).fontSize).toBe('24px')
     })
 
-    it('should handle legacy text property', () => {
-      const block = createHeadingBlock({ text: 'Legacy Text', level: 2 })
+    it('should handle empty content gracefully', () => {
+      const block = createHeadingBlock({ kind: 'text', value: '', level: 2 })
       const Renderer = HeadingBlock.renderer!
       
       render(<Renderer block={block} isPreview={false} />)
       
       const heading = screen.getByRole('heading')
-      expect(heading).toHaveTextContent('Legacy Text')
+      expect(heading).toHaveTextContent('')
     })
 
-    it('should prefer content over text property', () => {
+    it('should render with discriminated union structure', () => {
       const block = createHeadingBlock({ 
-        content: 'New Content', 
-        text: 'Old Text', 
+        kind: 'text',
+        value: 'New Content', 
         level: 2 
       })
       const Renderer = HeadingBlock.renderer!
@@ -138,7 +144,7 @@ describe('HeadingBlock', () => {
     })
 
     it('should render all setting controls', () => {
-      const block = createHeadingBlock({ content: 'Test', level: 2 })
+      const block = createHeadingBlock({ kind: 'text', value: 'Test', level: 2 })
       const Settings = HeadingBlock.settings!
       const mockOnUpdate = vi.fn()
       
@@ -158,7 +164,7 @@ describe('HeadingBlock', () => {
     })
 
     it('should call onUpdate when text changes', () => {
-      const block = createHeadingBlock({ content: 'Test', level: 2 })
+      const block = createHeadingBlock({ kind: 'text', value: 'Test', level: 2 })
       const Settings = HeadingBlock.settings!
       const mockOnUpdate = vi.fn()
       
@@ -169,15 +175,15 @@ describe('HeadingBlock', () => {
       
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          content: 'New Text',
-          level: 2,
-          text: undefined
+          kind: 'text',
+          value: 'New Text',
+          level: 2
         }
       })
     })
 
     it('should call onUpdate when level changes', () => {
-      const block = createHeadingBlock({ content: 'Test', level: 2 })
+      const block = createHeadingBlock({ kind: 'text', value: 'Test', level: 2 })
       const Settings = HeadingBlock.settings!
       const mockOnUpdate = vi.fn()
       
@@ -189,7 +195,8 @@ describe('HeadingBlock', () => {
       
       expect(mockOnUpdate).toHaveBeenCalledWith({
         content: {
-          content: 'Test',
+          kind: 'text',
+          value: 'Test',
           level: 3
         }
       })
@@ -197,7 +204,8 @@ describe('HeadingBlock', () => {
 
     it('should display current values in form fields', () => {
       const block = createHeadingBlock({ 
-        content: 'Current Text', 
+        kind: 'text',
+        value: 'Current Text', 
         level: 3,
         textAlign: 'center',
         anchor: 'test-anchor',
@@ -226,15 +234,16 @@ describe('HeadingBlock', () => {
 
   describe('Block Definition', () => {
     it('should have correct metadata', () => {
-      expect(HeadingBlock.id).toBe('core/heading')
-      expect(HeadingBlock.name).toBe('Heading')
+      expect(HeadingBlock.id).toBe('core/heading') // Machine identifier
+      expect(HeadingBlock.label).toBe('Heading') // Display name
       expect(HeadingBlock.category).toBe('basic')
       expect(HeadingBlock.description).toBe('Add a heading text')
     })
 
     it('should have default content', () => {
       expect(HeadingBlock.defaultContent).toEqual({
-        content: 'Your heading here',
+        kind: 'text',
+        value: 'Your heading here',
         level: 2,
         textAlign: 'left',
         anchor: '',

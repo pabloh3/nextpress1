@@ -1,9 +1,20 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { DragDropContext } from '@/lib/dnd'
 import BlockRenderer, { ContainerChildren } from '../components/PageBuilder/BlockRenderer'
 import { BlockActionsProvider } from '../components/PageBuilder/BlockActionsContext'
-import type { BlockConfig } from '@shared/schema'
+import type { BlockConfig, BlockContent } from '@shared/schema-types'
+
+function getText(content: BlockContent): string {
+  if (!content) return ''
+  if (typeof content === 'object' && 'kind' in content) {
+    return (content as any).kind === 'text' ? (content as any).value ?? '' : ''
+  }
+  if (typeof (content as any)?.text === 'string') return (content as any).text
+  if (typeof (content as any)?.content === 'string') return (content as any).content
+  if (typeof content === 'string') return content
+  return ''
+}
 
 // Mock the block registry
 vi.mock('../components/PageBuilder/blocks', () => ({
@@ -12,8 +23,8 @@ vi.mock('../components/PageBuilder/blocks', () => ({
       id: 'core/paragraph',
       name: 'Paragraph',
       renderer: ({ block }: { block: BlockConfig }) => (
-        <p data-testid="paragraph-block" style={block.styles as any}>
-          {block.content?.text || block.content?.content}
+        <p className="wp-block-paragraph" style={block.styles as any}>
+          {getText(block.content)}
         </p>
       ),
       isContainer: false
@@ -21,14 +32,14 @@ vi.mock('../components/PageBuilder/blocks', () => ({
     'core/group': {
       id: 'core/group',
       name: 'Group',
-      renderer: ({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) => (
+      renderer: ({ block, children }: { block: BlockConfig; children?: React.ReactNode }) => (
         <div data-testid="group-block" data-block-id={block.id}>
           Group Container
-          <ContainerChildren block={block} isPreview={isPreview} />
+          {children}
         </div>
       ),
       isContainer: true,
-      handlesOwnChildren: true
+      handlesOwnChildren: false
     }
   }
 }))
@@ -52,10 +63,13 @@ describe('BlockRenderer', () => {
     )
   }
 
-  const createMockBlock = (id: string, type: string = 'core/paragraph', children?: BlockConfig[]): BlockConfig => ({
+  const createMockBlock = (id: string, name: string = 'core/paragraph', children?: BlockConfig[]): BlockConfig => ({
     id,
-    type,
-    content: { text: `Content for ${id}` },
+    name,
+    type: children ? 'container' : 'block',
+    parentId: null,
+    label: name === 'core/paragraph' ? 'Paragraph' : name === 'core/group' ? 'Group' : name,
+    content: children ? { kind: 'structured', data: {} } : { kind: 'text', value: `Content for ${id}` },
     styles: {},
     children: children || [],
     settings: {}
@@ -79,7 +93,8 @@ describe('BlockRenderer', () => {
         />
       )
 
-      expect(screen.getByTestId('paragraph-block')).toBeInTheDocument()
+      const renderedParagraph = document.querySelector('.wp-block-paragraph');
+      expect(renderedParagraph).toBeInTheDocument()
       expect(screen.getByText('Content for test-block')).toBeInTheDocument()
     })
 
@@ -118,8 +133,9 @@ describe('BlockRenderer', () => {
         />
       )
 
-      // Container should be rendered
-      expect(screen.getByTestId('group-block')).toBeInTheDocument()
+      // Container should be rendered with the actual wp-block-group class
+      const groupBlock = document.querySelector('.wp-block-group')
+      expect(groupBlock).toBeInTheDocument()
       
       // Children should be rendered
       expect(screen.getByText('Content for child-1')).toBeInTheDocument()
@@ -173,7 +189,8 @@ describe('BlockRenderer', () => {
         />
       )
 
-      const blockElement = screen.getByTestId('paragraph-block').closest('.relative.group')
+      const paragraphElement = document.querySelector('.wp-block-paragraph')
+      const blockElement = paragraphElement?.closest('.relative.group')
       expect(blockElement).toBeInTheDocument()
       
       // Hover to show controls
@@ -196,7 +213,8 @@ describe('BlockRenderer', () => {
         />
       )
 
-      const blockElement = screen.getByTestId('paragraph-block').closest('.relative.group')
+      const paragraphElement = document.querySelector('.wp-block-paragraph')
+      const blockElement = paragraphElement?.closest('.relative.group')
       fireEvent.click(blockElement!)
       
       expect(mockActions.onSelect).toHaveBeenCalledWith('test-block')
@@ -215,7 +233,8 @@ describe('BlockRenderer', () => {
         />
       )
 
-      const highlight = screen.getByTestId('paragraph-block').parentElement!
+      const paragraphElement = document.querySelector('.wp-block-paragraph')
+      const highlight = paragraphElement?.parentElement!
       expect(highlight).toHaveClass('ring-2', 'ring-blue-500')
     })
 
@@ -232,7 +251,8 @@ describe('BlockRenderer', () => {
         />
       )
 
-      const blockElement = screen.getByTestId('paragraph-block').closest('.relative.group')
+      const paragraphElement = document.querySelector('.wp-block-paragraph')
+      const blockElement = paragraphElement?.closest('.relative.group')
       fireEvent.mouseEnter(blockElement!)
       
       // Controls should not be visible in preview mode
@@ -253,7 +273,8 @@ describe('BlockRenderer', () => {
         />
       )
 
-      const wrapper = screen.getByTestId('paragraph-block').closest('.relative.group')!
+      const paragraphElement = document.querySelector('.wp-block-paragraph')
+      const wrapper = paragraphElement?.closest('.relative.group')!
       fireEvent.mouseEnter(wrapper)
       const buttons = within(wrapper as HTMLElement).getAllByRole('button')
       fireEvent.click(buttons[0])
@@ -275,7 +296,8 @@ describe('BlockRenderer', () => {
         />
       )
 
-      const wrapper = screen.getByTestId('paragraph-block').closest('.relative.group')!
+      const paragraphElement = document.querySelector('.wp-block-paragraph')
+      const wrapper = paragraphElement?.closest('.relative.group')!
       fireEvent.mouseEnter(wrapper)
       const buttons = within(wrapper as HTMLElement).getAllByRole('button')
       fireEvent.click(buttons[1])
@@ -353,7 +375,7 @@ describe('BlockRenderer', () => {
         />
       )
 
-      const blockElement = screen.getByTestId('paragraph-block')
+      const blockElement = document.querySelector('.wp-block-paragraph') as HTMLElement
       expect(blockElement).toHaveStyle({ 
         padding: '20px'
       })
@@ -375,7 +397,8 @@ describe('BlockRenderer', () => {
 
       // This would test the hover highlight functionality
       // The exact implementation depends on how the highlight is applied
-      const blockElement = screen.getByTestId('paragraph-block').closest('.relative.group')
+      const paragraphElement = document.querySelector('.wp-block-paragraph')
+      const blockElement = paragraphElement?.closest('.relative.group')
       expect(blockElement).toBeInTheDocument()
     })
   })

@@ -5,21 +5,27 @@ const { execSync } = require('child_process');
 const testBlocks = [
   {
     id: 'heading-1',
-    type: 'core/heading',
+    name: 'core/heading',
+    type: 'block',
+    parentId: null,
     content: { text: 'Main Heading' },
     styles: {},
     settings: {},
   },
   {
     id: 'group-1',
-    type: 'core/group',
+    name: 'core/group',
+    type: 'container',
+    parentId: null,
     content: {},
     styles: {},
     settings: {},
     children: [
       {
         id: 'para-1',
-        type: 'core/paragraph',
+        name: 'core/paragraph',
+        type: 'block',
+        parentId: 'group-1',
         content: { text: 'First paragraph' },
         styles: {},
         settings: {},

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,12 @@ import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { AudioLines as AudioIcon, Settings, Wrench } from "lucide-react";
 
 function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+  // Extract audio URL using discriminated union pattern with defensive checks
+  const audioUrl = block.content?.kind === 'media' && block.content.mediaType === 'audio' 
+    ? block.content.url 
+    : '';
+  
   const {
-    src,
     controls = true,
     autoplay = false,
     loop = false,
@@ -29,7 +33,7 @@ function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
     className || '',
   ].filter(Boolean).join(' ');
 
-  if (!src) {
+  if (!audioUrl) {
     return (
       <div className="p-4 border border-dashed border-gray-300 rounded text-gray-500">
         Add an audio source URL to preview the player.
@@ -40,7 +44,7 @@ function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   return (
     <figure id={anchor} className={classes} style={{ ...block.styles }}>
       <audio
-        src={src}
+        src={audioUrl}
         controls={controls}
         autoPlay={autoplay}
         loop={loop}
@@ -79,8 +83,8 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <div className="flex items-center gap-2 mt-1">
               <Input
                 id="audio-src"
-                value={(block.content as any)?.src || ''}
-                onChange={(e) => updateContent({ src: e.target.value })}
+                value={(block.content as any)?.kind === 'media' ? (block.content as any).url : ''}
+                onChange={(e) => updateContent({ kind: 'media', mediaType: 'audio', url: e.target.value })}
                 placeholder="https://example.com/audio.mp3"
                 className="h-9"
               />
@@ -90,7 +94,7 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               open={isPickerOpen}
               onOpenChange={setPickerOpen}
               kind="audio"
-              onSelect={(m) => updateContent({ id: m.id, src: m.url })}
+              onSelect={(m) => updateContent({ kind: 'media', mediaType: 'audio', id: m.id, url: m.url })}
             />
           </div>
           
@@ -204,12 +208,14 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
 
 const AudioBlock: BlockDefinition = {
   id: 'core/audio',
-  name: 'Audio',
+  label: 'Audio',
   icon: AudioIcon,
   description: 'Add an audio player',
   category: 'media',
   defaultContent: {
-    src: '',
+    kind: 'media',
+    url: '',
+    mediaType: 'audio',
     id: undefined,
     autoplay: false,
     controls: true,

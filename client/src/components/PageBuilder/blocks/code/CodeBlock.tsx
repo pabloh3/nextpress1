@@ -1,5 +1,5 @@
 import React from "react";
-import type { BlockConfig } from "@shared/schema";
+import type { BlockConfig } from "@shared/schema-types";
 import type { BlockDefinition } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -108,7 +108,7 @@ function CodeSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
 
 const CodeBlock: BlockDefinition = {
   id: 'core/code',
-  name: 'Code',
+  label: 'Code',
   icon: CodeIcon,
   description: 'Display code with syntax highlighting',
   category: 'advanced',

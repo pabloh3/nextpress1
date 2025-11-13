@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Loader2, AlertCircle } from "lucide-react";
-import type { Post, Template, BlockConfig } from "@shared/schema";
+import type { Post, Template } from "@shared/schema-types";
+import type { BlockConfig } from "@shared/schema-types";
 import BlockRenderer from "@/components/PageBuilder/BlockRenderer";
 
 interface PreviewPageProps {

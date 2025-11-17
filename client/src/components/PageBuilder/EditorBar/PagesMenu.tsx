@@ -72,7 +72,8 @@ export function PagesMenu({ children, currentPageId }: PagesMenuProps) {
               <CommandItem
                 key={page.id}
                 onSelect={() => handlePageSelect(page.id)}
-                className={currentPageId === page.id ? 'bg-accent' : ''}>
+                className={currentPageId === page.id ? 'bg-accent' : ''}
+                {...(currentPageId === page.id ? { 'aria-current': 'page' } : {})}>
                 <FileText className="w-4 h-4" />
                 <span>{page.title}</span>
                 {page.status && (

@@ -17,10 +17,10 @@ export const getZodSchema = (table: string) => {
 
 	// don't include relations
 	const _tables: Record<string, any> = {};
-	Object.values(tables).forEach((t) => {
+	Object.entries(tables).forEach(([name, t]) => {
 		const isRelation = Object.hasOwn(t, "config") && Object.hasOwn(t, "table");
 		if (!isRelation) {
-			_tables[table as string] = t;
+			_tables[name] = t;
 		}
 	});
 

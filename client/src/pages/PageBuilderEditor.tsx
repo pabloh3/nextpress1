@@ -4,12 +4,13 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Edit, Eye, Settings, Save } from 'lucide-react';
+import { ArrowLeft, Edit, Eye, Settings, Save, Settings as SettingsIcon, FileText, Pen, Palette } from 'lucide-react';
 import AdminTopBar from '@/components/AdminTopBar';
 import AdminSidebar from '@/components/AdminSidebar';
 import PageBuilder from '@/components/PageBuilder/PageBuilder';
 import PostEditor from '@/components/PostEditor';
 import PublishDialog from '@/components/PageBuilder/PublishDialog';
+import { SiteMenu, PagesMenu, BlogMenu, DesignMenu } from '@/components/PageBuilder/EditorBar';
 import { useToast } from '@/hooks/use-toast';
 import type { Post, Template, BlockConfig } from '@shared/schema-types';
 
@@ -274,6 +275,7 @@ export default function PageBuilderEditor({
                 <Eye className="w-4 h-4" />
                 {type === 'template' ? 'Settings' : 'Preview'}
               </Button>
+
               <Button
                 size="sm"
                 onClick={handlePageBuilderSave}

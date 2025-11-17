@@ -1,7 +1,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Smartphone, Tablet, Monitor, Sidebar } from 'lucide-react';
+import { Smartphone, Tablet, Monitor, Sidebar, Settings as SettingsIcon, FileText, Pen, Palette } from 'lucide-react';
+import { SiteMenu, PagesMenu, BlogMenu, DesignMenu } from '@/components/PageBuilder/EditorBar';
 
 export function BuilderTopBar({
   data,
@@ -73,6 +74,36 @@ export function BuilderTopBar({
         </div>
         <div className="flex items-center gap-4">
           <div className="text-sm text-gray-500">{blocks.length} blocks</div>
+
+          {/* Menus moved here next to the inner Save */}
+          <SiteMenu>
+            <Button variant="outline" size="sm" className="gap-2">
+              <SettingsIcon className="w-4 h-4" />
+              Site
+            </Button>
+          </SiteMenu>
+
+          <PagesMenu currentPageId={data?.id}>
+            <Button variant="outline" size="sm" className="gap-2">
+              <FileText className="w-4 h-4" />
+              Pages
+            </Button>
+          </PagesMenu>
+
+          <BlogMenu currentPostId={data?.id} blogId={data?.blogId ?? undefined}>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Pen className="w-4 h-4" />
+              Blog
+            </Button>
+          </BlogMenu>
+
+          <DesignMenu currentPostId={data?.id} currentType={isTemplate ? 'template' : 'post'}>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Palette className="w-4 h-4" />
+              Design
+            </Button>
+          </DesignMenu>
+
           {onSaveClick && (
             <Button size="sm" onClick={onSaveClick}>Save</Button>
           )}

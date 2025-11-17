@@ -1,3 +1,0 @@
-// Backup of useDragAndDropHandler.test.ts before BlockContent union migration
-// Date: 2025-11-12
-// Purpose: Preserve original legacy content shape tests (content: { text: ... } and {}) prior to updating to new union BlockContent format.

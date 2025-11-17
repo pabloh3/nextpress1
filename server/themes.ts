@@ -1,6 +1,9 @@
 import { models } from "./storage.js";
 import hooks from "./hooks.js";
 
+// Flag to ensure renderer warning is logged only once
+let rendererWarningLogged = false;
+
 class ThemeManager {
 	private renderers: Map<string, any>;
 
@@ -567,13 +570,20 @@ class ThemeManager {
 			throw new Error("No active theme found");
 		}
 
-		if (!activeTheme.renderer) {
-			throw new Error("Active theme has no renderer specified");
+		// Runtime fallback for missing renderer field with one-time warning
+		const rendererName = activeTheme.renderer ?? activeTheme.other?.renderer ?? 'custom-ssr';
+		
+		if (!activeTheme.renderer && !rendererWarningLogged) {
+			console.warn(
+				`[ThemeManager] Active theme '${activeTheme.name}' has no renderer field. ` +
+				`Falling back to '${rendererName}'. Consider adding a renderer field to the theme.`
+			);
+			rendererWarningLogged = true;
 		}
 
-		const renderer = this.renderers.get(activeTheme.renderer);
+		const renderer = this.renderers.get(rendererName);
 		if (!renderer) {
-			throw new Error(`Renderer '${activeTheme.renderer}' not found`);
+			throw new Error(`Renderer '${rendererName}' not found`);
 		}
 
 		// Apply theme filters

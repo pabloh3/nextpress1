@@ -422,6 +422,70 @@ export function createSiteModel(dbInstance: DatabaseInstance = db) {
 		async findByOwner(ownerId: string) {
 			return baseModel.findManyWhere([{ where: "ownerId", equals: ownerId }]);
 		},
+		
+		/**
+		 * Get site settings merged with defaults
+		 * 
+		 * Loads settings from default site's settings jsonb column,
+		 * deep-merges with default settings to ensure all keys exist.
+		 * 
+		 * @returns Full settings object
+		 * @example
+		 * const settings = await siteModel.getSettings();
+		 * console.log(settings.general.siteName);
+		 */
+		async getSettings() {
+			const { DEFAULT_SETTINGS } = await import("@shared/settings-default");
+			const { deepMerge } = await import("./utils/deep-merge");
+			
+			const site = await this.findDefaultSite();
+			if (!site) {
+				return DEFAULT_SETTINGS;
+			}
+
+			const storedSettings = site.settings || {};
+			return deepMerge(DEFAULT_SETTINGS, storedSettings as any);
+		},
+
+		/**
+		 * Update site settings with partial changes
+		 * 
+		 * Loads existing settings, deep-merges partial update,
+		 * validates result, and persists to default site.
+		 * 
+		 * @param partial - Partial settings to merge
+		 * @returns Updated full settings object
+		 * @example
+		 * await siteModel.updateSettings({
+		 *   general: { siteName: 'My New Site' }
+		 * });
+		 */
+		async updateSettings(partial: any) {
+			const { DEFAULT_SETTINGS } = await import("@shared/settings-default");
+			const { deepMerge } = await import("./utils/deep-merge");
+			const { settingsSchema } = await import("@shared/settings-schema");
+
+			const site = await this.findDefaultSite();
+			if (!site) {
+				throw new Error("Default site not found");
+			}
+
+			const currentSettings = site.settings || {};
+			const merged = deepMerge(
+				deepMerge(DEFAULT_SETTINGS, currentSettings as any),
+				partial
+			);
+
+			// Validate merged result
+			const validated = settingsSchema.parse(merged);
+
+			await baseModel.update(site.id, {
+				settings: validated as any,
+				updatedAt: new Date(),
+			});
+
+			return validated;
+		},
 	};
 }
 

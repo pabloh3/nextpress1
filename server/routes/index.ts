@@ -14,6 +14,8 @@ import { createMediaRoutes } from './media.routes';
 import { createTemplatesRoutes } from './templates.routes';
 import { createThemesRoutes } from './themes.routes';
 import { createOptionsRoutes } from './options.routes';
+import { createSettingsRoutes } from './settings.routes';
+import { createSiteRoutes } from './site.routes';
 import { createDashboardRoutes } from './dashboard.routes';
 import { createPreviewRoutes } from './preview.routes';
 import { createPublicRoutes } from './public.routes';
@@ -66,6 +68,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api', createThemesRoutes(deps));
 
   app.use('/api/options', createOptionsRoutes(deps));
+  app.use('/api/settings', createSettingsRoutes(deps));
+  app.use('/api/site', createSiteRoutes(deps));
   app.use('/api/dashboard', createDashboardRoutes(deps));
 
   app.use('/api/preview', createPreviewRoutes(deps));

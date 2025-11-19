@@ -46,19 +46,21 @@ export default function Themes() {
     activateMutation.mutate(themeId);
   };
 
-  const getRendererBadge = (renderer: string) => {
-    const colors: Record<string, string> = {
-      nextjs: "bg-black text-white",
-      react: "bg-blue-500 text-white",
-      custom: "bg-purple-500 text-white"
-    };
-    
-    return (
-      <Badge className={colors[renderer] || "bg-gray-500 text-white"}>
-        {renderer.toUpperCase()}
-      </Badge>
-    );
+  const getRendererBadge = (renderer: string | undefined | null) => {
+  const colors: Record<string, string> = {
+    nextjs: "bg-black text-white",
+    react: "bg-blue-500 text-white",
+    custom: "bg-purple-500 text-white"
   };
+  const label = typeof renderer === "string" && renderer.length > 0
+    ? renderer.toUpperCase()
+    : "UNKNOWN";
+  return (
+    <Badge className={colors[renderer as string] || "bg-gray-500 text-white"}>
+      {label}
+    </Badge>
+  );
+};
 
   return (
     <div className="min-h-screen bg-wp-gray-light">

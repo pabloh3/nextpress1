@@ -1,6 +1,5 @@
 import { relations } from 'drizzle-orm';
 import {
-  index,
   jsonb,
   pgTable,
   timestamp,
@@ -8,9 +7,7 @@ import {
   text,
   integer,
   boolean,
-  serial,
   uuid,
-  numeric,
   bigint,
 } from 'drizzle-orm/pg-core';
 
@@ -76,7 +73,6 @@ export const userRoles = pgTable('user_roles', {
 export const pages = pgTable('pages', {
   id: uuid('id').primaryKey().defaultRandom(),
   title: varchar('title').notNull(),
-  content: text('content').notNull(),
   slug: varchar('slug').notNull(),
   status: varchar('status').default('draft'), // publish, draft, private, trash
   authorId: uuid('author_id')

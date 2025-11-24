@@ -71,13 +71,21 @@ export function createPagesRoutes(deps: Deps): Router {
   );
 
   /**
-   * GET /api/pages/:id - Get single page by ID
+   * GET /api/pages/:id - Get single page by ID or slug
+   * Supports both UUID and slug for flexibility
    */
   router.get(
     '/:id',
     asyncHandler(async (req, res) => {
       try {
-        const page = await models.pages.findById(req.params.id);
+        const { id } = req.params;
+        // Check if id is a UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        
+        const page = isUUID 
+          ? await models.pages.findById(id)
+          : await models.pages.findBySlug(id);
+        
         if (!page) {
           return res.status(404).json({ message: 'Page not found' });
         }

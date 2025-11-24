@@ -14,22 +14,39 @@ export function usePageSave({ isTemplate, data, onSave }: { isTemplate: boolean,
         const response = await apiRequest('PUT', `/api/templates/${data.id}`, { blocks: builderData });
         return await response.json();
       } else {
-        const response = await apiRequest('PUT', `/api/posts/${data.id}`, { builderData, usePageBuilder: true });
+        // Check if it's a page (has menuOrder property) or a post
+        const isPage = 'menuOrder' in data;
+        const endpoint = isPage ? `/api/pages/${data.id}` : `/api/posts/${data.id}`;
+        const payload = isPage 
+          ? { blocks: builderData }  // Pages use blocks field
+          : { builderData, usePageBuilder: true };  // Posts use builderData
+        
+        const response = await apiRequest('PUT', endpoint, payload);
         return await response.json();
       }
     },
     onSuccess: (updatedData) => {
+      const isPage = !isTemplate && data && 'menuOrder' in data;
       toast.toast({
         title: 'Success',
-        description: `${isTemplate ? 'Template' : 'Page'} saved successfully`,
+        description: `${isTemplate ? 'Template' : isPage ? 'Page' : 'Post'} saved successfully`,
       });
       onSave?.(updatedData);
-      queryClient.invalidateQueries({ queryKey: isTemplate ? ['/api/templates'] : ['/api/posts'] });
+      
+      // Invalidate appropriate queries
+      if (isTemplate) {
+        queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+      } else if (isPage) {
+        queryClient.invalidateQueries({ queryKey: ['/api/pages'] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
+      }
     },
     onError: () => {
+      const isPage = !isTemplate && data && 'menuOrder' in data;
       toast.toast({
         title: 'Error',
-        description: `Failed to save ${isTemplate ? 'template' : 'page'}`,
+        description: `Failed to save ${isTemplate ? 'template' : isPage ? 'page' : 'post'}`,
         variant: 'destructive',
       });
     },

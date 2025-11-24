@@ -3,46 +3,67 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Edit, Eye, Settings, Save, Settings as SettingsIcon, FileText, Pen, Palette } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Eye, Save } from 'lucide-react';
 import AdminTopBar from '@/components/AdminTopBar';
 import AdminSidebar from '@/components/AdminSidebar';
 import PageBuilder from '@/components/PageBuilder/PageBuilder';
-import PostEditor from '@/components/PostEditor';
 import PublishDialog from '@/components/PageBuilder/PublishDialog';
-import { SiteMenu, PagesMenu, BlogMenu, DesignMenu } from '@/components/PageBuilder/EditorBar';
 import { useToast } from '@/hooks/use-toast';
-import type { Post, Template, BlockConfig } from '@shared/schema-types';
+import type { Post, Template, BlockConfig, Page } from '@shared/schema-types';
+import { saveEditorState, loadEditorState, clearEditorState, storeSlugToIdMapping, getPageIdFromSlug } from '@/lib/editorStorage';
 
 interface PageBuilderEditorProps {
   postId?: string;
   templateId?: string;
   type?: 'post' | 'page' | 'template';
+  isSlug?: boolean; // Whether postId is a slug (for pages) or an id
 }
 
 export default function PageBuilderEditor({
   postId,
   templateId,
   type = 'page',
+  isSlug = false,
 }: PageBuilderEditorProps) {
   const [, setLocation] = useLocation();
-  const [editorMode, setEditorMode] = useState<'builder' | 'classic'>(
-    'builder'
-  );
   const [blocks, setBlocks] = useState<BlockConfig[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [pageTitle, setPageTitle] = useState<string>('');
+  const [settingsView, setSettingsView] = useState<'page' | 'block'>('page');
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [pageSlug, setPageSlug] = useState<string>('');
+  const [pageStatus, setPageStatus] = useState<string>('draft');
   const pageBuilderRef = useRef<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Resolve page ID from slug if needed
+  const [resolvedPageId, setResolvedPageId] = useState<string | undefined>(postId);
+  
+  useEffect(() => {
+    if (type === 'page' && isSlug && postId) {
+      // Try to get ID from localStorage first
+      const mappingResult = getPageIdFromSlug(postId);
+      if (mappingResult.status && mappingResult.data) {
+        setResolvedPageId(mappingResult.data);
+      } else {
+        // If not in localStorage, we'll fetch by slug and store the mapping
+        setResolvedPageId(postId); // Will be resolved when data loads
+      }
+    } else {
+      setResolvedPageId(postId);
+    }
+  }, [postId, type, isSlug]);
 
   // Fetch the post/page or template data
   const {
     data: post,
     isLoading: postLoading,
     error: postError,
-  } = useQuery<Post>({
-    queryKey: [`/api/posts/${postId}`],
-    enabled: !!postId && type !== 'template',
+  } = useQuery<Post | Page>({
+    queryKey: type === 'page' ? [`/api/pages/${resolvedPageId || postId}`] : [`/api/posts/${postId}`],
+    enabled: !!(resolvedPageId || postId) && type !== 'template',
   });
 
   const {
@@ -58,33 +79,91 @@ export default function PageBuilderEditor({
   const error = postError || templateError;
   const data = type === 'template' ? template : post;
 
-  useEffect(() => {
-    // Check URL parameters for explicit mode override
-    const urlParams = new URLSearchParams(window.location.search);
-    const modeParam = urlParams.get('mode');
-
-    if (modeParam === 'builder' || modeParam === 'classic') {
-      // Override mode if explicitly specified in URL
-      setEditorMode(modeParam);
-    } else if (type === 'template') {
-      // Templates always use the page builder
-      setEditorMode('builder');
-    } else if (post) {
-      // Set editor mode based on whether the post uses page builder
-      setEditorMode(post.usePageBuilder ? 'builder' : 'classic');
-    }
-  }, [post, template, type]);
-
   // Initialize blocks when data is loaded
   useEffect(() => {
     if (data) {
       if (type === 'template') {
         setBlocks(((data as Template).blocks as BlockConfig[]) || []);
+      } else if (type === 'page') {
+        // Pages have blocks field directly
+        const page = data as Page;
+        setBlocks((page.blocks as BlockConfig[]) || []);
+        setPageTitle(page.title || 'Untitled');
+        setPageSlug(page.slug || '');
+        setPageStatus(page.status || 'draft');
+        
+        // Store slug-to-id mapping for future reloads
+        if (page.id && page.slug) {
+          storeSlugToIdMapping(page.slug, page.id);
+        }
       } else {
-        setBlocks(((data as Post).builderData as BlockConfig[]) || []);
+        // Posts use builderData
+        const post = data as Post;
+        setBlocks((post.builderData as BlockConfig[]) || []);
+        setPageTitle(post.title || 'Untitled');
+        setPageSlug(post.slug || '');
+        setPageStatus(post.status || 'draft');
+      }
+      
+      // Set initial page title from data
+      if (type === 'template') {
+        setPageTitle((data as Template).name || 'Untitled');
       }
     }
   }, [data, type]);
+
+  // Update URL to show slug after data loads (but keep redirects using id)
+  useEffect(() => {
+    if (data && type === 'page' && postId && !isSlug) {
+      const page = data as Page;
+      if (page.slug) {
+        // Only update URL if slug exists and we're on an id-based URL
+        const currentPath = window.location.pathname;
+        const slugPath = `/page-builder/page/${page.slug}`;
+        // Check if current path uses UUID format (id-based)
+        const isUUIDPath = /^\/page-builder\/page\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentPath);
+        // Only update if we're on id-based URL and slug is different
+        if (isUUIDPath && currentPath !== slugPath) {
+          // Use replace to avoid adding to history
+          window.history.replaceState({}, '', slugPath);
+        }
+      }
+    }
+  }, [data, type, postId, isSlug]);
+
+  // Load editor state from localStorage on mount
+  useEffect(() => {
+    if (data?.id) {
+      const savedState = loadEditorState(data.id);
+      if (savedState.status && savedState.data) {
+        // Restore blocks if they exist and are more recent
+        if (savedState.data.blocks?.length > 0) {
+          setBlocks(savedState.data.blocks);
+        }
+        
+        // Restore page title
+        if (savedState.data.pageTitle) {
+          setPageTitle(savedState.data.pageTitle);
+        }
+        
+        // Restore settings view
+        if (savedState.data.settingsView) {
+          setSettingsView(savedState.data.settingsView);
+        }
+      }
+    }
+  }, [data?.id]);
+
+  // Auto-save to localStorage when state changes
+  useEffect(() => {
+    if (data?.id && (blocks.length > 0 || pageTitle)) {
+      saveEditorState(data.id, {
+        blocks,
+        pageTitle,
+        settingsView,
+      });
+    }
+  }, [blocks, pageTitle, settingsView, data?.id]);
 
   if (isLoading) {
     return (
@@ -150,8 +229,19 @@ export default function PageBuilderEditor({
       title: 'Success',
       description: `${entityName} saved successfully`,
     });
+    
+    // Clear localStorage after successful save
+    if (data?.id) {
+      clearEditorState(data.id);
+    }
+    
     // Force query refresh to get latest data
-    queryClient.invalidateQueries({ queryKey: [`/api/posts/${postId}`] });
+    if (type === 'page') {
+      queryClient.invalidateQueries({ queryKey: [`/api/pages/${postId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/pages'] });
+    } else if (type === 'post') {
+      queryClient.invalidateQueries({ queryKey: [`/api/posts/${postId}`] });
+    }
     queryClient.invalidateQueries({
       queryKey: [`/api/templates/${templateId}`],
     });
@@ -166,12 +256,23 @@ export default function PageBuilderEditor({
 
       if (type === 'template') {
         const response = await apiRequest('PUT', `/api/templates/${data.id}`, {
+          name: pageTitle,
           blocks: blocks,
         });
         const updatedTemplate = await response.json();
         handleSave(updatedTemplate);
+      } else if (type === 'page') {
+        // Pages use /api/pages and blocks field
+        const response = await apiRequest('PUT', `/api/pages/${data.id}`, {
+          title: pageTitle,
+          blocks: blocks,
+        });
+        const updatedPage = await response.json();
+        handleSave(updatedPage);
       } else {
+        // Posts use /api/posts and builderData
         const response = await apiRequest('PUT', `/api/posts/${data.id}`, {
+          title: pageTitle,
           builderData: blocks,
           usePageBuilder: true,
         });
@@ -218,240 +319,105 @@ export default function PageBuilderEditor({
     setLocation(backPath);
   };
 
-  const handleModeSwitch = (newMode: 'builder' | 'classic') => {
-    if (newMode !== editorMode) {
-      const confirmMessage =
-        newMode === 'builder'
-          ? 'Switch to Page Builder? This will enable visual editing but may affect how your content is displayed.'
-          : 'Switch to Classic Editor? You may lose some visual formatting from the page builder.';
+  const handlePageSettingsSave = async () => {
+    if (!data || type === 'template') return;
 
-      if (confirm(confirmMessage)) {
-        setEditorMode(newMode);
-      }
+    setIsSaving(true);
+    try {
+      const { apiRequest } = await import('@/lib/queryClient');
+      
+      const endpoint = type === 'page' 
+        ? `/api/pages/${data.id}` 
+        : `/api/posts/${data.id}`;
+      
+      const response = await apiRequest('PUT', endpoint, {
+        title: pageTitle,
+        slug: pageSlug,
+        status: pageStatus,
+      });
+      
+      const updatedData = await response.json();
+      handleSave(updatedData);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to save page settings',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {editorMode === 'builder' ? (
-        // Full-screen page builder
-        <div className="w-full h-full flex flex-col">
-          {/* Top navigation for page builder */}
-          <div className="bg-wp-gray text-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-none">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBackToList}
-                className="flex items-center gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </Button>
-              <div className="text-sm text-gray-400">
-                Editing:{' '}
-                {type === 'template'
-                  ? (data as Template)?.name
-                  : (data as Post)?.title || 'Untitled'}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {type !== 'template' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleModeSwitch('classic')}
-                  className="flex items-center gap-2 text-gray-800">
-                  <Edit className="w-4 h-4" />
-                  Classic Editor
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePreview}
-                className="flex items-center gap-2 text-gray-800"
-                data-testid="button-preview">
-                <Eye className="w-4 h-4" />
-                {type === 'template' ? 'Settings' : 'Preview'}
-              </Button>
-
-              <Button
-                size="sm"
-                onClick={handlePageBuilderSave}
-                disabled={isSaving}
-                className="flex items-center gap-2"
-                data-testid="button-save">
-                <Save className="w-4 h-4" />
-                {isSaving ? 'Saving...' : 'Save'}
-              </Button>
-              {type !== 'template' && data && (
-                <PublishDialog
-                  post={data as Post}
-                  blocks={blocks}
-                  onPublished={handleSave}
-                  disabled={isSaving}
-                />
-              )}
+      {/* Full-screen page builder */}
+      <div className="w-full h-full flex flex-col">
+        {/* Top navigation for page builder */}
+        <div className="bg-wp-gray text-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-none">
+          <div className="flex items-center gap-4 flex-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBackToList}
+              className="flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            <div className="flex items-center gap-2 flex-1 max-w-md">
+              <span className="text-sm text-gray-400">Editing:</span>
+              <Input
+                value={pageTitle}
+                onChange={(e) => setPageTitle(e.target.value)}
+                className="bg-wp-gray border-gray-600 text-white text-sm h-8 focus:border-wp-blue"
+                placeholder="Enter title..."
+              />
             </div>
           </div>
 
-          {/* Page Builder Component */}
-          <div className="flex-1 min-h-0">
-            <PageBuilder
-              post={data}
-              template={type === 'template' ? (data as Template) : undefined}
-              blocks={blocks}
-              onBlocksChange={setBlocks}
-              onSave={handleSave}
-              onPreview={handlePreview}
-            />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePreview}
+              className="flex items-center gap-2 text-gray-800"
+              data-testid="button-preview">
+              <Eye className="w-4 h-4" />
+              {type === 'template' ? 'Settings' : 'Preview'}
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={handlePageBuilderSave}
+              disabled={isSaving}
+              className="flex items-center gap-2"
+              data-testid="button-save">
+              <Save className="w-4 h-4" />
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+            {type !== 'template' && data && (
+              <PublishDialog
+                post={data as Post}
+                blocks={blocks}
+                onPublished={handleSave}
+                disabled={isSaving}
+              />
+            )}
           </div>
         </div>
-      ) : (
-        // Classic editor with sidebar
-        <>
-          <AdminSidebar />
-          <div className="flex-1 ml-40">
-            <AdminTopBar />
 
-            <div className="px-6 pt-8 pb-6">
-              <div className="max-w-4xl mx-auto">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6 py-4">
-                  <div className="flex items-center gap-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleBackToList}
-                      className="flex items-center gap-2">
-                      <ArrowLeft className="w-4 h-4" />
-                      Back
-                    </Button>
-                    <h1 className="text-2xl font-bold text-wp-gray">
-                      Edit{' '}
-                      {type === 'template'
-                        ? 'Template'
-                        : type === 'page'
-                        ? 'Page'
-                        : 'Post'}
-                    </h1>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleModeSwitch('builder')}
-                      className="flex items-center gap-2">
-                      <Settings className="w-4 h-4" />
-                      Page Builder
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePreview}
-                      className="flex items-center gap-2">
-                      <Eye className="w-4 h-4" />
-                      Preview
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Editor Tabs */}
-                <Tabs defaultValue="editor" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="editor">Content Editor</TabsTrigger>
-                    <TabsTrigger value="settings">Page Settings</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="editor" className="mt-6">
-                    {type !== 'template' && (
-                      <PostEditor
-                        postId={parseInt(postId!)}
-                        type={type}
-                        onSave={handleSave}
-                        noContainer={true}
-                      />
-                    )}
-                    {type === 'template' && (
-                      <div className="text-center py-8 text-gray-500">
-                        Templates use the Page Builder exclusively. Switch to
-                        Page Builder mode to edit this template.
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="settings" className="mt-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Page Settings</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {type === 'template' ? (
-                            <>
-                              <div>
-                                <label className="text-sm font-medium">
-                                  Name: {(data as Template)?.name}
-                                </label>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">
-                                  Type: {(data as Template)?.type}
-                                </label>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">
-                                  Status:{' '}
-                                  {(data as Template)?.isActive
-                                    ? 'Active'
-                                    : 'Inactive'}
-                                </label>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">
-                                  Priority: {(data as Template)?.priority || 0}
-                                </label>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <div>
-                                <label className="text-sm font-medium">
-                                  Status: {(data as Post)?.status}
-                                </label>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">
-                                  Type: {(data as Post)?.type}
-                                </label>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">
-                                  Slug: {(data as Post)?.slug}
-                                </label>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">
-                                  Editor Mode:{' '}
-                                  {(data as Post)?.usePageBuilder
-                                    ? 'Page Builder'
-                                    : 'Classic'}
-                                </label>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+        {/* Page Builder Component */}
+        <div className="flex-1 min-h-0">
+          <PageBuilder
+            post={data}
+            template={type === 'template' ? (data as Template) : undefined}
+            blocks={blocks}
+            onBlocksChange={setBlocks}
+            onSave={handleSave}
+            onPreview={handlePreview}
+          />
+        </div>
+      </div>
     </div>
   );
 }

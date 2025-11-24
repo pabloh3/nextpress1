@@ -1,14 +1,20 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import type { Post, InsertPost } from "@shared/schema";
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import type { Post, InsertPost } from '@shared/schema';
 
 interface PostEditorProps {
   postId?: number;
@@ -18,14 +24,20 @@ interface PostEditorProps {
   noContainer?: boolean;
 }
 
-export default function PostEditor({ postId, type = 'post', onSave, onCancel, noContainer = false }: PostEditorProps) {
+export default function PostEditor({
+  postId,
+  type = 'post',
+  onSave,
+  onCancel,
+  noContainer = false,
+}: PostEditorProps) {
   const [formData, setFormData] = useState<Partial<InsertPost>>({
-    title: "",
-    content: "",
-    excerpt: "",
-    slug: "",
-    status: "draft",
-    type
+    title: '',
+    content: '',
+    excerpt: '',
+    slug: '',
+    status: 'draft',
+    type,
   });
 
   const { toast } = useToast();
@@ -40,12 +52,12 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel, no
   useEffect(() => {
     if (post) {
       setFormData({
-        title: post.title ?? "",
-        content: post.content ?? "",
-        excerpt: post.excerpt ?? "",
-        slug: post.slug ?? "",
-        status: post.status ?? "draft",
-        type: post.type ?? type
+        title: post.title ?? '',
+        content: post.content ?? '',
+        excerpt: post.excerpt ?? '',
+        slug: post.slug ?? '',
+        status: post.status ?? 'draft',
+        type: post.type ?? type,
       });
     }
   }, [post, type]);
@@ -61,30 +73,30 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel, no
     onSuccess: async (response) => {
       const savedPost = await response.json();
       toast({
-        title: "Success",
+        title: 'Success',
         description: `${type} ${postId ? 'updated' : 'created'} successfully`,
       });
-      
+
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
       if (postId) {
         queryClient.invalidateQueries({ queryKey: [`/api/posts/${postId}`] });
       }
-      
+
       onSave?.(savedPost);
     },
     onError: (error) => {
       toast({
-        title: "Error",
+        title: 'Error',
         description: `Failed to ${postId ? 'update' : 'create'} ${type}`,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
 
   const handleSave = (status: string) => {
     const dataToSave = { ...formData, status };
-    
+
     // Auto-generate slug if not provided
     if (!dataToSave.slug && dataToSave.title) {
       dataToSave.slug = dataToSave.title
@@ -116,18 +128,16 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel, no
               Cancel
             </Button>
           )}
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => handleSave('draft')}
-            disabled={saveMutation.isPending}
-          >
+            disabled={saveMutation.isPending}>
             Save Draft
           </Button>
-          <Button 
+          <Button
             className="bg-wp-blue hover:bg-wp-blue-dark"
             onClick={() => handleSave('publish')}
-            disabled={saveMutation.isPending}
-          >
+            disabled={saveMutation.isPending}>
             {postId ? 'Update' : 'Publish'}
           </Button>
         </div>
@@ -142,16 +152,20 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel, no
                 <Input
                   placeholder={`Enter ${type} title here`}
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
                   className="text-lg font-medium border-none shadow-none p-0 focus-visible:ring-0"
                 />
               </div>
-              
+
               <div>
                 <Textarea
                   placeholder={`Write your ${type} content here...`}
-                  value={formData.content || ""}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  value={formData.content || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, content: e.target.value })
+                  }
                   className="min-h-[400px] border-none shadow-none p-0 focus-visible:ring-0 resize-none"
                 />
               </div>
@@ -166,8 +180,10 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel, no
             <CardContent className="space-y-4">
               <Textarea
                 placeholder="Optional. Add a brief description..."
-                value={formData.excerpt || ""}
-                onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                value={formData.excerpt || ''}
+                onChange={(e) =>
+                  setFormData({ ...formData, excerpt: e.target.value })
+                }
                 rows={3}
               />
             </CardContent>
@@ -184,10 +200,11 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel, no
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="status">Status</Label>
-                <Select 
-                  value={formData.status || "draft"} 
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
-                >
+                <Select
+                  value={formData.status || 'draft'}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, status: value })
+                  }>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -211,8 +228,10 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel, no
                 <Label htmlFor="slug">Slug</Label>
                 <Input
                   id="slug"
-                  value={formData.slug || ""}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                  value={formData.slug || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, slug: e.target.value })
+                  }
                   placeholder="url-slug"
                 />
               </div>
@@ -227,9 +246,5 @@ export default function PostEditor({ postId, type = 'post', onSave, onCancel, no
     return content;
   }
 
-  return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      {content}
-    </div>
-  );
+  return <div className="max-w-4xl mx-auto p-6 space-y-6">{content}</div>;
 }

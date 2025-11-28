@@ -44,14 +44,20 @@ export default function Login() {
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     try {
-      await apiRequest('POST', '/api/auth/login', data);
+      const response = await apiRequest('POST', '/api/auth/login', data);
+      const user = await response.json();
+      
+      // Immediately set the user data in the query cache to update auth state
+      queryClient.setQueryData(['/api/auth/user'], user);
+      
       toast({
         title: 'Success',
         description: 'Logged in successfully',
       });
 
-      // Invalidate and refetch the user query, then navigate
-      await queryClient.refetchQueries({ queryKey: ['/api/auth/user'] });
+      // Small delay to ensure state updates before navigation
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       setLocation('/dashboard');
     } catch (error) {
       toast({

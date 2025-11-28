@@ -34,4 +34,7 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
+  optimizeDeps: {
+    force: true, // Force re-optimization when cache is cleared
+  },
 });

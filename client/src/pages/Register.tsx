@@ -22,6 +22,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { getZodSchema } from "@shared/zod-schema";
 import type { CreateUser } from "@shared/schema";
 import { Eye, EyeOff } from "lucide-react";
@@ -30,6 +31,7 @@ const userSchemas = getZodSchema("users");
 
 export default function Register() {
 	const [, setLocation] = useLocation();
+	const queryClient = useQueryClient();
 	const [isLoading, setIsLoading] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
 	const { toast } = useToast();
@@ -50,15 +52,21 @@ export default function Register() {
 	const onSubmit = async (data: CreateUser) => {
 		setIsLoading(true);
 		try {
-			await apiRequest("POST", "/api/auth/register", data);
+			const response = await apiRequest("POST", "/api/auth/register", data);
+			const user = await response.json();
+			
+			// Immediately set the user data in the query cache to update auth state
+			queryClient.setQueryData(['/api/auth/user'], user);
+			
 			toast({
 				title: "Success",
 				description: "Account created successfully",
 			});
-			// Small delay to ensure session is saved, then redirect
-			setTimeout(() => {
-				window.location.href = "/";
-			}, 100);
+			
+			// Small delay to ensure state updates before navigation
+			await new Promise(resolve => setTimeout(resolve, 100));
+			
+			setLocation("/dashboard");
 		} catch (error) {
 			toast({
 				title: "Error",

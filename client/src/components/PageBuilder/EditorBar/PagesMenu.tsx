@@ -17,7 +17,6 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { useContentLists } from '@/hooks/useContentLists';
-import { CreateContentDialog } from './CreateContentDialog';
 
 interface PagesMenuProps {
   children: ReactNode;
@@ -31,7 +30,6 @@ interface PagesMenuProps {
 export function PagesMenu({ children, currentPageId }: PagesMenuProps) {
   const [, setLocation] = useLocation();
   const [showCommand, setShowCommand] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
   const { pages, pagesLoading } = useContentLists();
 
   const handlePageSelect = (pageId: string) => {
@@ -40,7 +38,7 @@ export function PagesMenu({ children, currentPageId }: PagesMenuProps) {
   };
 
   const handleCreateNew = () => {
-    setShowCreate(true);
+    setLocation('/pages?create=true');
   };
 
   return (
@@ -86,13 +84,6 @@ export function PagesMenu({ children, currentPageId }: PagesMenuProps) {
           </CommandGroup>
         </CommandList>
       </CommandDialog>
-
-      {/* Create Page Dialog */}
-      <CreateContentDialog
-        open={showCreate}
-        onOpenChange={setShowCreate}
-        type="page"
-      />
     </>
   );
 }

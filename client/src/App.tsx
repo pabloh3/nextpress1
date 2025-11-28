@@ -97,12 +97,18 @@ function Router() {
            <Route path="/" component={Home} />
           <Route
             path="/page-builder/:type/:id"
-            component={({ params }: any) => (
-              <PageBuilderEditor
-                postId={params.id}
-                type={params.type as 'post' | 'page'}
-              />
-            )}
+            component={({ params }: any) => {
+              // Check if id is a UUID (for pages) or slug
+              // UUIDs have format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+              const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
+              return (
+                <PageBuilderEditor
+                  postId={params.id}
+                  type={params.type as 'post' | 'page'}
+                  isSlug={params.type === 'page' && !isUUID}
+                />
+              );
+            }}
           />
           <Route
             path="/page-builder/template/:id"

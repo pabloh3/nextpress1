@@ -1,21 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Eye, Paintbrush } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Search, Trash2, Eye, Paintbrush } from "lucide-react";
 import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
-import PostEditor from "@/components/PostEditor";
+import { CreatePageModal } from "@/components/Pages/CreatePageModal";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Post } from "@shared/schema";
+import type { Page } from "@shared/schema-types";
 
-interface PostsApiResponse {
-  posts: Post[];
+interface PagesApiResponse {
+  pages: Page[];
   total: number;
   page: number;
   per_page: number;
@@ -24,27 +34,45 @@ interface PostsApiResponse {
 
 export default function Pages() {
   const [search, setSearch] = useState("");
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingPage, setEditingPage] = useState<number | undefined>();
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [location, setLocation] = useLocation();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pageToDelete, setPageToDelete] = useState<string | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: pagesData, isLoading } = useQuery<PostsApiResponse>({
-    queryKey: ['/api/posts', { status: 'any', type: 'page', page, per_page: 10 }],
+  // Check URL param for create modal
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const createParam = urlParams.get('create');
+    const titleParam = urlParams.get('title');
+    
+    if (createParam === 'true') {
+      setCreateModalOpen(true);
+      // Clean up URL
+      const newUrl = titleParam 
+        ? `/pages?title=${encodeURIComponent(titleParam)}`
+        : '/pages';
+      setLocation(newUrl, { replace: true });
+    }
+  }, [location, setLocation]);
+
+  const { data: pagesData, isLoading } = useQuery<PagesApiResponse>({
+    queryKey: ['/api/pages', { status: 'any', page, per_page: 10 }],
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return await apiRequest('DELETE', `/api/posts/${id}`);
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/pages/${id}`);
     },
     onSuccess: () => {
       toast({
         title: "Success",
         description: "Page deleted successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/pages'] });
     },
     onError: () => {
       toast({
@@ -55,38 +83,29 @@ export default function Pages() {
     },
   });
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this page?")) {
-      deleteMutation.mutate(id);
+  const handleDelete = (id: string) => {
+    setPageToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (pageToDelete) {
+      deleteMutation.mutate(pageToDelete);
+      setDeleteDialogOpen(false);
+      setPageToDelete(null);
     }
   };
 
-  const handleEdit = (pageId: number) => {
-    setEditingPage(pageId);
-    setIsEditorOpen(true);
-  };
-
   const handleNewPage = () => {
-    setEditingPage(undefined);
-    setIsEditorOpen(true);
+    setCreateModalOpen(true);
   };
 
-  const handleEditorSave = (page: Post) => {
-    setIsEditorOpen(false);
-    setEditingPage(undefined);
-  };
-
-  const handleEditorCancel = () => {
-    setIsEditorOpen(false);
-    setEditingPage(undefined);
-  };
-
-  const handleView = (pageId: number) => {
+  const handleView = (pageId: string) => {
     window.open(`/pages/${pageId}`, '_blank');
   };
 
-  const handlePageBuilder = (pageId: number) => {
-    window.location.href = `/page-builder/page/${pageId}?mode=builder`;
+  const handlePageBuilder = (pageId: string) => {
+    setLocation(`/page-builder/page/${pageId}`);
   };
 
   const getStatusBadge = (status: string) => {
@@ -99,7 +118,7 @@ export default function Pages() {
     return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
   };
 
-  const filteredPages = pagesData?.posts?.filter((page: Post) =>
+  const filteredPages = pagesData?.pages?.filter((page: Page) =>
     page.title.toLowerCase().includes(search.toLowerCase())
   ) || [];
 
@@ -160,16 +179,11 @@ export default function Pages() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredPages.map((page: Post) => (
+                    {filteredPages.map((page: Page) => (
                       <TableRow key={page.id}>
                         <TableCell>
                           <div>
                             <div className="font-medium text-wp-gray">{page.title}</div>
-                            {page.excerpt && (
-                              <div className="text-sm text-gray-500 mt-1">
-                                {page.excerpt.substring(0, 100)}...
-                              </div>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -190,16 +204,9 @@ export default function Pages() {
                               size="sm"
                               onClick={() => handleView(page.id)}
                               title="View Page"
+                              disabled
                             >
                               <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleEdit(page.id)}
-                              title="Edit with Classic Editor"
-                            >
-                              <Edit className="w-4 h-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
@@ -256,22 +263,38 @@ export default function Pages() {
         </div>
       </div>
 
-      {/* Page Editor Dialog */}
-      <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingPage ? 'Edit Page' : 'Add New Page'}
-            </DialogTitle>
-          </DialogHeader>
-          <PostEditor
-            postId={editingPage}
-            type="page"
-            onSave={handleEditorSave}
-            onCancel={handleEditorCancel}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Create Page Modal */}
+      <CreatePageModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        initialTitle={new URLSearchParams(window.location.search).get('title') || ''}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Page</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this page? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteDialogOpen(false);
+              setPageToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

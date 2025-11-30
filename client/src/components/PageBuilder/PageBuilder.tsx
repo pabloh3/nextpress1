@@ -88,6 +88,12 @@ export default function PageBuilder({
 		return result;
 	}, [updateBlockInternal]);
 
+	// Handler for component pattern onChange - converts full BlockConfig to updates
+	const handleBlockChange = useCallback((blockId: string, updated: BlockConfig) => {
+		// updateBlockDeep does deep merge, so we can pass the full updated block
+		updateBlock(blockId, updated);
+	}, [updateBlock]);
+
 	const duplicateBlock = useCallback((blockId: string, generateBlockId: () => string) => {
 		const result = duplicateBlockInternal(blockId, generateBlockId);
 		// State will be pushed via useEffect watching blocks
@@ -288,6 +294,7 @@ export default function PageBuilder({
 							duplicateBlock={handleDuplicate}
 							deleteBlock={handleDelete}
 							hoverHighlight={hoverHighlight}
+							onBlockChange={handleBlockChange}
 						/>
 					</div>
 				</DragDropContext>

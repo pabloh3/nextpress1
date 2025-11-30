@@ -1,20 +1,60 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Quote as QuoteIcon } from "lucide-react";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Quote as QuoteIcon, Settings, Wrench } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function QuoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  const valueHtmlRaw: string | undefined = block.content?.value;
-  const legacyText: string | undefined = block.content?.text;
-  const citation: string | undefined = block.content?.citation ?? block.content?.author;
-  const anchor: string | undefined = block.content?.anchor;
-  const className: string | undefined = block.content?.className;
-  const textAlign: 'left' | 'center' | 'right' | undefined = block.content?.textAlign;
-  const align: 'wide' | 'full' | undefined = block.content?.align;
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type QuoteContent = {
+  value?: string;
+  text?: string;
+  citation?: string;
+  author?: string;
+  anchor?: string;
+  className?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  align?: 'wide' | 'full';
+};
+
+const DEFAULT_CONTENT: QuoteContent = {
+  value: '<p>Add a quote</p>',
+  citation: '',
+  textAlign: undefined,
+  align: undefined,
+  anchor: '',
+  className: '',
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface QuoteRendererProps {
+  content: QuoteContent;
+  styles?: React.CSSProperties;
+}
+
+function QuoteRenderer({ content, styles }: QuoteRendererProps) {
+  const valueHtmlRaw: string | undefined = content?.value;
+  const legacyText: string | undefined = content?.text;
+  const citation: string | undefined = content?.citation ?? content?.author;
+  const anchor: string | undefined = content?.anchor;
+  const className: string | undefined = content?.className;
+  const textAlign: 'left' | 'center' | 'right' | undefined = content?.textAlign;
+  const align: 'wide' | 'full' | undefined = content?.align;
 
   const valueHtml = (valueHtmlRaw && valueHtmlRaw.trim().length > 0)
     ? valueHtmlRaw
@@ -42,7 +82,7 @@ function QuoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
         fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif',
         fontSize: '1.125rem',
         lineHeight: 1.7,
-        ...block.styles,
+        ...styles,
       }}
     >
       <div style={{ whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: valueHtml }} />
@@ -55,19 +95,94 @@ function QuoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Settings, Wrench } from "lucide-react";
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
-function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  
+export function QuoteBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<QuoteContent>(() => {
+    return (value.content as QuoteContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
 
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
+  // Sync with props only when block ID changes
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastSyncedBlockIdRef.current !== value.id) {
+      lastSyncedBlockIdRef.current = value.id;
+      const newContent = (value.content as QuoteContent) || DEFAULT_CONTENT;
+      setContent(newContent);
+      setStyles(value.styles);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  useEffect(() => {
+    onChange({
+      ...value,
+      content: content as BlockContent,
+      styles,
     });
+  }, [content, styles, value, onChange]);
+
+  return <QuoteRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface QuoteSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function QuoteSettings({ block, onUpdate }: QuoteSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as QuoteContent)
+    : (block.content as QuoteContent) || DEFAULT_CONTENT;
+
+  // Update handlers
+  const updateContent = (updates: Partial<QuoteContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as QuoteContent;
+      accessor.setContent({ ...current, ...updates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
 
   return (
@@ -80,7 +195,7 @@ function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Textarea
               id="quote-text"
               value={(() => {
-                const v: string | undefined = block.content?.value;
+                const v: string | undefined = content?.value;
                 if (v && v.includes('<p')) {
                   // Convert HTML paragraphs to newline-separated text for editing UX
                   return v
@@ -89,7 +204,7 @@ function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
                     .filter((line) => line !== '')
                     .join('\n');
                 }
-                return block.content?.text || '';
+                return content?.text || '';
               })()}
               onChange={(e) => {
                 const lines = e.target.value.split('\n');
@@ -106,7 +221,7 @@ function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="quote-author" className="text-sm font-medium text-gray-700">Citation</Label>
             <Input
               id="quote-author"
-              value={block.content?.citation ?? block.content?.author ?? ''}
+              value={content?.citation ?? content?.author ?? ''}
               onChange={(e) => updateContent({ citation: e.target.value })}
               placeholder="Who said this (optional)"
               className="h-9"
@@ -122,7 +237,7 @@ function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
           <div>
             <Label htmlFor="quote-text-align" className="text-sm font-medium text-gray-700">Text Align</Label>
             <Select
-              value={block.content?.textAlign ?? 'default'}
+              value={content?.textAlign ?? 'default'}
               onValueChange={(value) => updateContent({ textAlign: value === 'default' ? undefined : (value as 'left' | 'center' | 'right') })}
             >
               <SelectTrigger id="quote-text-align" className="h-9 mt-1">
@@ -139,7 +254,7 @@ function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
           <div>
             <Label htmlFor="quote-align" className="text-sm font-medium text-gray-700">Width</Label>
             <Select
-              value={block.content?.align ?? 'default'}
+              value={content?.align ?? 'default'}
               onValueChange={(value) => updateContent({ align: value === 'default' ? undefined : (value as 'wide' | 'full') })}
             >
               <SelectTrigger id="quote-align" className="h-9">
@@ -162,7 +277,7 @@ function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="quote-anchor" className="text-sm font-medium text-gray-700">Anchor</Label>
             <Input
               id="quote-anchor"
-              value={block.content?.anchor ?? ''}
+              value={content?.anchor ?? ''}
               onChange={(e) => updateContent({ anchor: e.target.value })}
               placeholder="section-id"
               className="h-9"
@@ -173,7 +288,7 @@ function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="quote-class" className="text-sm font-medium text-gray-700">CSS Class</Label>
             <Input
               id="quote-class"
-              value={block.content?.className ?? ''}
+              value={content?.className ?? ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="custom-class"
               className="h-9"
@@ -185,6 +300,28 @@ function QuoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyQuoteRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <QuoteRenderer
+      content={(block.content as QuoteContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const QuoteBlock: BlockDefinition = {
   id: 'core/quote',
@@ -201,10 +338,10 @@ const QuoteBlock: BlockDefinition = {
     className: '',
   },
   defaultStyles: {},
-  renderer: QuoteRenderer,
+  component: QuoteBlockComponent,
+  renderer: LegacyQuoteRenderer,
   settings: QuoteSettings,
   hasSettings: true,
 };
 
 export default QuoteBlock;
-

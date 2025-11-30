@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,75 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { File as FileIcon, Download, Settings, Wrench } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  // Extract data from discriminated union structure with defensive check
-  const blockData = block.content?.kind === 'structured' 
-    ? (block.content.data as any) 
-    : {};
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type FileData = {
+  href?: string;
+  fileName?: string;
+  textLinkHref?: string;
+  textLinkTarget?: '_self' | '_blank';
+  showDownloadButton?: boolean;
+  downloadButtonText?: string;
+  displayPreview?: boolean;
+  fileSize?: string;
+  className?: string;
+};
+
+type FileContent = BlockContent & {
+  data?: FileData;
+};
+
+const DEFAULT_DATA: FileData = {
+  href: '',
+  fileName: '',
+  textLinkHref: '',
+  textLinkTarget: '_self',
+  showDownloadButton: true,
+  downloadButtonText: 'Download',
+  displayPreview: true,
+  fileSize: '',
+  className: '',
+};
+
+const DEFAULT_CONTENT: FileContent = {
+  kind: 'structured',
+  data: DEFAULT_DATA,
+};
+
+// ============================================================================
+// UTILITIES
+// ============================================================================
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface FileRendererProps {
+  content: FileContent;
+  styles?: React.CSSProperties;
+}
+
+function FileRenderer({ content, styles }: FileRendererProps) {
+  const blockData = content?.kind === 'structured' 
+    ? (content.data as FileData) 
+    : DEFAULT_DATA;
     
   const url = blockData?.href || '';
   const fileName = blockData?.fileName || '';
@@ -29,13 +92,12 @@ function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
     blockData?.className || "",
   ].filter(Boolean).join(" ");
 
-  // Extract file extension and size info if available
   const fileExtension = fileName ? fileName.split('.').pop()?.toUpperCase() : '';
   const fileSize = blockData?.fileSize || '';
 
   if (!url) {
     return (
-      <div className={className} style={block.styles}>
+      <div className={className} style={styles}>
         <div className="file-placeholder text-center text-gray-400 p-8 border-2 border-dashed border-gray-300 rounded">
           <FileIcon className="w-12 h-12 mx-auto mb-2" />
           <p>File Block</p>
@@ -46,7 +108,7 @@ function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   }
 
   return (
-    <div className={className} style={block.styles}>
+    <div className={className} style={styles}>
       <div className="wp-block-file__content-wrapper">
         {displayPreview && (
           <div className="wp-block-file__preview">
@@ -103,37 +165,113 @@ function FileRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function FileBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<FileContent>(() => {
+    return (value.content as FileContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props only when block ID changes
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastSyncedBlockIdRef.current !== value.id) {
+      lastSyncedBlockIdRef.current = value.id;
+      const newContent = (value.content as FileContent) || DEFAULT_CONTENT;
+      setContent(newContent);
+      setStyles(value.styles);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  useEffect(() => {
+    onChange({
+      ...value,
+      content: content as BlockContent,
+      styles,
+    });
+  }, [content, styles, value, onChange]);
+
+  return <FileRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface FileSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function FileSettings({ block, onUpdate }: FileSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
   const [isPickerOpen, setPickerOpen] = useState(false);
-  
-  // Helper to update content within discriminated union structure
-  const updateContent = (contentUpdates: any) => {
-    const currentData = block.content?.kind === 'structured' 
-      ? (block.content.data as any) 
-      : {};
-      
-    onUpdate({
-      content: {
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as FileContent)
+    : (block.content as FileContent) || DEFAULT_CONTENT;
+
+  const blockData = content?.kind === 'structured' 
+    ? (content.data as FileData) 
+    : DEFAULT_DATA;
+
+  // Update handlers
+  const updateContent = (updates: Partial<FileData>) => {
+    if (accessor) {
+      const current = accessor.getContent() as FileContent;
+      const currentData = current?.kind === 'structured' ? (current.data as FileData) : DEFAULT_DATA;
+      accessor.setContent({
+        ...current,
         kind: 'structured',
         data: {
           ...currentData,
-          ...contentUpdates,
+          ...updates,
         },
-      },
-    });
-  };
-  
-  // Extract current data for display
-  const blockData = block.content?.kind === 'structured' 
-    ? (block.content.data as any) 
-    : {};
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      } as FileContent);
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      const currentData = block.content?.kind === 'structured' 
+        ? (block.content.data as FileData) 
+        : DEFAULT_DATA;
+      onUpdate({
+        content: {
+          kind: 'structured',
+          data: {
+            ...currentData,
+            ...updates,
+          },
+        } as BlockContent,
+      });
+    }
   };
 
   return (
@@ -237,7 +375,7 @@ function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Label htmlFor="file-link-target" className="text-sm font-medium text-gray-700">Link Target</Label>
             <Select
               value={blockData?.textLinkTarget || '_self'}
-              onValueChange={(value) => updateContent({ textLinkTarget: value })}
+              onValueChange={(value) => updateContent({ textLinkTarget: value as '_self' | '_blank' })}
             >
               <SelectTrigger id="file-link-target" className="h-9">
                 <SelectValue />
@@ -270,6 +408,28 @@ function FileSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
   );
 }
 
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyFileRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <FileRenderer
+      content={(block.content as FileContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
+
 const FileBlock: BlockDefinition = {
   id: 'core/file',
   label: 'File',
@@ -293,7 +453,8 @@ const FileBlock: BlockDefinition = {
   defaultStyles: {
     margin: '1em 0',
   },
-  renderer: FileRenderer,
+  component: FileBlockComponent,
+  renderer: LegacyFileRenderer,
   settings: FileSettings,
   hasSettings: true,
 };

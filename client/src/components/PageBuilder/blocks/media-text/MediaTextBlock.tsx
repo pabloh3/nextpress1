@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,12 +10,77 @@ import { Button } from "@/components/ui/button";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { Image as ImageIcon, Settings, Link, Wrench } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  // Extract data from discriminated union structure with defensive check
-  const blockData = block.content?.kind === 'structured' 
-    ? (block.content.data as any) 
-    : {};
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type MediaTextData = {
+  mediaId?: number;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
+  mediaAlt?: string;
+  mediaPosition?: 'left' | 'right';
+  mediaWidth?: number;
+  isStackedOnMobile?: boolean;
+  imageFill?: boolean;
+  verticalAlignment?: 'top' | 'center' | 'bottom';
+  href?: string;
+  linkTarget?: '_self' | '_blank';
+  rel?: string;
+  title?: string;
+  content?: string;
+  className?: string;
+  anchor?: string;
+};
+
+type MediaTextContent = BlockContent & {
+  data?: MediaTextData;
+};
+
+const DEFAULT_DATA: MediaTextData = {
+  mediaId: undefined,
+  mediaUrl: 'https://via.placeholder.com/800x600?text=Media',
+  mediaType: 'image',
+  mediaAlt: '',
+  mediaPosition: 'left',
+  mediaWidth: 50,
+  isStackedOnMobile: false,
+  imageFill: false,
+  verticalAlignment: 'center',
+  href: '',
+  linkTarget: '_self',
+  rel: '',
+  title: '',
+  content: '<p>Add your content…</p>',
+  anchor: '',
+  className: '',
+};
+
+const DEFAULT_CONTENT: MediaTextContent = {
+  kind: 'structured',
+  data: DEFAULT_DATA,
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface MediaTextRendererProps {
+  content: MediaTextContent;
+  styles?: React.CSSProperties;
+}
+
+function MediaTextRenderer({ content, styles }: MediaTextRendererProps) {
+  const blockData = content?.kind === 'structured' 
+    ? (content.data as MediaTextData) 
+    : DEFAULT_DATA;
     
   const {
     mediaUrl,
@@ -29,7 +94,7 @@ function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }
     linkTarget,
     rel,
     title,
-    content,
+    content: textContent,
     className,
     anchor,
   } = blockData;
@@ -65,15 +130,15 @@ function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }
   );
 
   return (
-    <div id={anchor} className={wrapperClasses} style={{ ...block.styles, display: 'flex', gap: '20px', alignItems }}>
+    <div id={anchor} className={wrapperClasses} style={{ ...styles, display: 'flex', gap: '20px', alignItems }}>
       {mediaPosition === 'left' ? (
         <>
           {mediaContent}
-          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: content || '<p>Add text…</p>' }} />
+          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: textContent || '<p>Add text…</p>' }} />
         </>
       ) : (
         <>
-          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: content || '<p>Add text…</p>' }} />
+          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: textContent || '<p>Add text…</p>' }} />
           {mediaContent}
         </>
       )}
@@ -81,34 +146,116 @@ function MediaTextRenderer({ block }: { block: BlockConfig; isPreview: boolean }
   );
 }
 
-function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function MediaTextBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<MediaTextContent>(() => {
+    return (value.content as MediaTextContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props only when block ID changes
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastSyncedBlockIdRef.current !== value.id) {
+      lastSyncedBlockIdRef.current = value.id;
+      const newContent = (value.content as MediaTextContent) || DEFAULT_CONTENT;
+      setContent(newContent);
+      setStyles(value.styles);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  useEffect(() => {
+    onChange({
+      ...value,
+      content: content as BlockContent,
+      styles,
+    });
+  }, [content, styles, value, onChange]);
+
+  return <MediaTextRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface MediaTextSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function MediaTextSettings({ block, onUpdate }: MediaTextSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
   const [isPickerOpen, setPickerOpen] = useState(false);
-  
-  // Helper to update content within discriminated union structure
-  const updateContent = (contentUpdates: any) => {
-    const currentData = block.content?.kind === 'structured' 
-      ? (block.content.data as any) 
-      : {};
-      
-    onUpdate({
-      content: {
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as MediaTextContent)
+    : (block.content as MediaTextContent) || DEFAULT_CONTENT;
+  const blockData = content?.kind === 'structured' 
+    ? (content.data as MediaTextData) 
+    : DEFAULT_DATA;
+
+  // Update handlers
+  const updateContent = (updates: Partial<MediaTextData>) => {
+    if (accessor) {
+      const current = accessor.getContent() as MediaTextContent;
+      const currentData = current?.kind === 'structured' ? (current.data as MediaTextData) : DEFAULT_DATA;
+      accessor.setContent({
+        ...current,
         kind: 'structured',
         data: {
           ...currentData,
-          ...contentUpdates,
+          ...updates,
         },
-      },
-    });
+      } as MediaTextContent);
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      const currentData = block.content?.kind === 'structured' 
+        ? (block.content.data as MediaTextData) 
+        : DEFAULT_DATA;
+      onUpdate({
+        content: {
+          kind: 'structured',
+          data: {
+            ...currentData,
+            ...updates,
+          },
+        } as BlockContent,
+      });
+    }
   };
-  
-  // Extract current data for display
-  const blockData = block.content?.kind === 'structured' 
-    ? (block.content.data as any) 
-    : {};
 
   return (
     <div className="space-y-4">
-      {/* Content Card */}
       <CollapsibleCard title="Content" icon={ImageIcon} defaultOpen={true}>
         <div className="space-y-4">
           <div>
@@ -162,14 +309,13 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
         </div>
       </CollapsibleCard>
 
-      {/* Settings Card */}
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
         <div className="space-y-4">
           <div>
             <Label htmlFor="media-position" className="text-sm font-medium text-gray-700">Media Position</Label>
             <Select
               value={blockData?.mediaPosition || 'left'}
-              onValueChange={(value) => updateContent({ mediaPosition: value })}
+              onValueChange={(value) => updateContent({ mediaPosition: value as any })}
             >
               <SelectTrigger id="media-position" className="h-9 mt-1">
                 <SelectValue />
@@ -216,7 +362,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="vertical-align" className="text-sm font-medium text-gray-700">Vertical alignment</Label>
             <Select
               value={blockData?.verticalAlignment || 'center'}
-              onValueChange={(value) => updateContent({ verticalAlignment: value })}
+              onValueChange={(value) => updateContent({ verticalAlignment: value as any })}
             >
               <SelectTrigger id="vertical-align" className="h-9 mt-1">
                 <SelectValue />
@@ -231,7 +377,6 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
         </div>
       </CollapsibleCard>
 
-      {/* Link Settings Card */}
       <CollapsibleCard title="Link Settings" icon={Link} defaultOpen={false}>
         <div className="space-y-4">
           <div>
@@ -249,7 +394,7 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="media-target" className="text-sm font-medium text-gray-700">Link Target</Label>
             <Select
               value={blockData?.linkTarget || '_self'}
-              onValueChange={(value) => updateContent({ linkTarget: value })}
+              onValueChange={(value) => updateContent({ linkTarget: value as any })}
             >
               <SelectTrigger id="media-target" className="h-9 mt-1">
                 <SelectValue />
@@ -285,7 +430,6 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
         </div>
       </CollapsibleCard>
 
-      {/* Advanced Card */}
       <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
         <div className="space-y-4">
           <div>
@@ -313,6 +457,28 @@ function MediaTextSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyMediaTextRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <MediaTextRenderer
+      content={(block.content as MediaTextContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const MediaTextBlock: BlockDefinition = {
   id: 'core/media-text',
@@ -342,11 +508,10 @@ const MediaTextBlock: BlockDefinition = {
     },
   },
   defaultStyles: {},
-  renderer: MediaTextRenderer,
+  component: MediaTextBlockComponent,
+  renderer: LegacyMediaTextRenderer,
   settings: MediaTextSettings,
   hasSettings: true,
 };
 
 export default MediaTextBlock;
-
-

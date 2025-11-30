@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import type { BlockConfig, Media } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent, Media } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,6 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Image as ImageIcon } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Settings, Wrench } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 interface GalleryImage {
   id: number;
@@ -17,9 +29,46 @@ interface GalleryImage {
   sizeSlug?: string;
 }
 
-function GalleryRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  // Defensive check for discriminated union
-  const galleryData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
+type GalleryData = {
+  images?: GalleryImage[];
+  columns?: number;
+  imageCrop?: boolean;
+  linkTo?: 'none' | 'media' | 'attachment';
+  sizeSlug?: string;
+  caption?: string;
+  className?: string;
+};
+
+type GalleryContent = BlockContent & {
+  data?: GalleryData;
+};
+
+const DEFAULT_DATA: GalleryData = {
+  images: [],
+  columns: 3,
+  imageCrop: true,
+  linkTo: 'none',
+  sizeSlug: 'large',
+  caption: '',
+  className: '',
+};
+
+const DEFAULT_CONTENT: GalleryContent = {
+  kind: 'structured',
+  data: DEFAULT_DATA,
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface GalleryRendererProps {
+  content: GalleryContent;
+  styles?: React.CSSProperties;
+}
+
+function GalleryRenderer({ content, styles }: GalleryRendererProps) {
+  const galleryData = content?.kind === 'structured' ? (content.data as GalleryData) : DEFAULT_DATA;
   
   const images: GalleryImage[] = Array.isArray(galleryData?.images)
     ? galleryData.images
@@ -41,7 +90,7 @@ function GalleryRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
 
   if (images.length === 0) {
     return (
-      <div className={className} style={block.styles}>
+      <div className={className} style={styles}>
         <div className="gallery-placeholder text-center text-gray-400 p-8 border-2 border-dashed border-gray-300 rounded">
           <ImageIcon className="w-12 h-12 mx-auto mb-2" />
           <p>Gallery</p>
@@ -52,7 +101,7 @@ function GalleryRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
   }
 
   return (
-    <figure className={className} style={block.styles}>
+    <figure className={className} style={styles}>
       <div
         className="blocks-gallery-grid"
         style={{
@@ -103,29 +152,114 @@ function GalleryRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
   );
 }
 
-import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Settings, Wrench } from "lucide-react";
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
-function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+export function GalleryBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<GalleryContent>(() => {
+    return (value.content as GalleryContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props only when block ID changes
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastSyncedBlockIdRef.current !== value.id) {
+      lastSyncedBlockIdRef.current = value.id;
+      const newContent = (value.content as GalleryContent) || DEFAULT_CONTENT;
+      setContent(newContent);
+      setStyles(value.styles);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  useEffect(() => {
+    onChange({
+      ...value,
+      content: content as BlockContent,
+      styles,
+    });
+  }, [content, styles, value, onChange]);
+
+  return <GalleryRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface GallerySettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function GallerySettings({ block, onUpdate }: GallerySettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
   const [isPickerOpen, setPickerOpen] = useState(false);
-  
-  // Defensive check for discriminated union
-  const galleryData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as GalleryContent)
+    : (block.content as GalleryContent) || DEFAULT_CONTENT;
+  const galleryData = content?.kind === 'structured' ? (content.data as GalleryData) : DEFAULT_DATA;
   
   const images: GalleryImage[] = Array.isArray(galleryData?.images)
     ? galleryData.images
     : [];
 
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
+  // Update handlers
+  const updateContent = (updates: Partial<GalleryData>) => {
+    if (accessor) {
+      const current = accessor.getContent() as GalleryContent;
+      const currentData = current?.kind === 'structured' ? (current.data as GalleryData) : DEFAULT_DATA;
+      accessor.setContent({
+        ...current,
         kind: 'structured',
         data: {
-          ...galleryData,
-          ...contentUpdates,
+          ...currentData,
+          ...updates,
         },
-      },
-    });
+      } as GalleryContent);
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      const currentData = block.content?.kind === 'structured' 
+        ? (block.content.data as GalleryData) 
+        : DEFAULT_DATA;
+      onUpdate({
+        content: {
+          kind: 'structured',
+          data: {
+            ...currentData,
+            ...updates,
+          },
+        } as BlockContent,
+      });
+    }
   };
 
   const updateImages = (newImages: GalleryImage[]) => {
@@ -155,7 +289,6 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 
   return (
     <div className="space-y-4">
-      {/* Content Card */}
       <CollapsibleCard title="Content" icon={ImageIcon} defaultOpen={true}>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -209,7 +342,6 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
         </div>
       </CollapsibleCard>
 
-      {/* Settings Card */}
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
         <div className="space-y-4">
           <div>
@@ -245,7 +377,7 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
             <Label htmlFor="gallery-link-to">Link to</Label>
             <Select
               value={galleryData?.linkTo || 'none'}
-              onValueChange={(value) => updateContent({ linkTo: value })}
+              onValueChange={(value) => updateContent({ linkTo: value as any })}
             >
               <SelectTrigger className="h-9">
                 <SelectValue />
@@ -289,7 +421,6 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
         </div>
       </CollapsibleCard>
 
-      {/* Advanced Card */}
       <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
         <div className="space-y-4">
           <div>
@@ -307,6 +438,28 @@ function GallerySettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyGalleryRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <GalleryRenderer
+      content={(block.content as GalleryContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const GalleryBlock: BlockDefinition = {
   id: 'core/gallery',
@@ -327,7 +480,8 @@ const GalleryBlock: BlockDefinition = {
     },
   },
   defaultStyles: {},
-  renderer: GalleryRenderer,
+  component: GalleryBlockComponent,
+  renderer: LegacyGalleryRenderer,
   settings: GallerySettings,
   hasSettings: true,
 };

@@ -1,20 +1,57 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { MousePointer, ExternalLink, Type, Settings, Link } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function ButtonRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
-  // Extract text content safely using discriminated union pattern
-  const textContent = block.content?.kind === 'text' ? block.content.value : '';
-  
-  const url = block.content?.url as string | undefined;
-  const linkTarget = (block.content?.linkTarget as string | undefined) || (block.content?.target as string | undefined);
-  const rel = block.content?.rel as string | undefined;
-  const title = block.content?.title as string | undefined;
-  const extraClass = (block.content?.className as string | undefined) || "";
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type ButtonContent = BlockContent & {
+  url?: string;
+  linkTarget?: '_self' | '_blank';
+  target?: string;
+  rel?: string;
+  title?: string;
+  className?: string;
+};
+
+const DEFAULT_CONTENT: ButtonContent = {
+  kind: 'text',
+  value: 'Click Me',
+  url: '#',
+  linkTarget: '_self',
+  rel: '',
+  title: '',
+  className: '',
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface ButtonRendererProps {
+  content: ButtonContent;
+  styles?: React.CSSProperties;
+  isPreview?: boolean;
+}
+
+function ButtonRenderer({ content, styles, isPreview }: ButtonRendererProps) {
+  const textContent = content?.kind === 'text' ? content.value : '';
+  const url = content?.url as string | undefined;
+  const linkTarget = (content?.linkTarget as string | undefined) || (content?.target as string | undefined);
+  const rel = content?.rel as string | undefined;
+  const title = content?.title as string | undefined;
+  const extraClass = (content?.className as string | undefined) || "";
 
   const wrapperClass = ["wp-block-button", extraClass].filter(Boolean).join(" ");
   const anchorClass = "wp-block-button__link wp-element-button";
@@ -26,7 +63,7 @@ function ButtonRenderer({ block, isPreview }: { block: BlockConfig; isPreview: b
         target={linkTarget}
         rel={rel}
         title={title}
-        style={block.styles}
+        style={styles}
         className={anchorClass}
       >
         {textContent}
@@ -35,14 +72,95 @@ function ButtonRenderer({ block, isPreview }: { block: BlockConfig; isPreview: b
   );
 }
 
-function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function ButtonBlockComponent({
+  value,
+  onChange,
+  isPreview,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<ButtonContent>(() => {
+    return (value.content as ButtonContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props only when block ID changes
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastSyncedBlockIdRef.current !== value.id) {
+      lastSyncedBlockIdRef.current = value.id;
+      const newContent = (value.content as ButtonContent) || DEFAULT_CONTENT;
+      setContent(newContent);
+      setStyles(value.styles);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  useEffect(() => {
+    onChange({
+      ...value,
+      content: content as BlockContent,
+      styles,
     });
+  }, [content, styles, value, onChange]);
+
+  return <ButtonRenderer content={content} styles={styles} isPreview={isPreview} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface ButtonSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function ButtonSettings({ block, onUpdate }: ButtonSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as ButtonContent)
+    : (block.content as ButtonContent) || DEFAULT_CONTENT;
+
+  // Update handlers
+  const updateContent = (updates: Partial<ButtonContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as ButtonContent;
+      accessor.setContent({ ...current, ...updates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
 
   return (
@@ -53,8 +171,8 @@ function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
             <Label htmlFor="button-text" className="text-sm font-medium text-gray-700">Button Text</Label>
             <Input
               id="button-text"
-              value={block.content?.kind === 'text' ? block.content.value : ''}
-              onChange={(e) => updateContent({ kind: 'text', value: e.target.value })}
+              value={content?.kind === 'text' ? content.value : ''}
+              onChange={(e) => updateContent({ kind: 'text', value: e.target.value } as ButtonContent)}
               placeholder="Button text"
               className="mt-1 h-9"
             />
@@ -64,7 +182,7 @@ function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
             <Label htmlFor="button-url" className="text-sm font-medium text-gray-700">Link URL</Label>
             <Input
               id="button-url"
-              value={block.content?.url || ''}
+              value={content?.url || ''}
               onChange={(e) => updateContent({ url: e.target.value })}
               placeholder="https://example.com"
               className="mt-1 h-9"
@@ -83,9 +201,9 @@ function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
             ].map((target) => (
               <button
                 key={target.value}
-                onClick={() => updateContent({ linkTarget: target.value, target: undefined })}
+                onClick={() => updateContent({ linkTarget: target.value as '_self' | '_blank', target: undefined })}
                 className={`h-8 px-3 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${
-                  (block.content?.linkTarget || block.content?.target || '_self') === target.value
+                  (content?.linkTarget || content?.target || '_self') === target.value
                     ? "bg-gray-200 text-gray-800 hover:bg-gray-300" 
                     : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300"
                 }`}
@@ -104,7 +222,7 @@ function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
             <Label htmlFor="button-rel" className="text-sm font-medium text-gray-700">Rel Attribute</Label>
             <Input
               id="button-rel"
-              value={block.content?.rel || ''}
+              value={content?.rel || ''}
               onChange={(e) => updateContent({ rel: e.target.value })}
               placeholder="noopener noreferrer"
               className="mt-1 h-9 text-sm"
@@ -115,7 +233,7 @@ function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
             <Label htmlFor="button-title" className="text-sm font-medium text-gray-700">Title Attribute</Label>
             <Input
               id="button-title"
-              value={block.content?.title || ''}
+              value={content?.title || ''}
               onChange={(e) => updateContent({ title: e.target.value })}
               placeholder="Link title"
               className="mt-1 h-9 text-sm"
@@ -126,7 +244,7 @@ function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
             <Label htmlFor="button-class" className="text-sm font-medium text-gray-700">CSS Classes</Label>
             <Input
               id="button-class"
-              value={block.content?.className || ''}
+              value={content?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. is-style-outline"
               className="mt-1 h-9 text-sm"
@@ -137,6 +255,30 @@ function ButtonSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (up
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyButtonRenderer({
+  block,
+  isPreview,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <ButtonRenderer
+      content={(block.content as ButtonContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+      isPreview={isPreview}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const ButtonBlock: BlockDefinition = {
   id: 'core/button',
@@ -164,9 +306,10 @@ const ButtonBlock: BlockDefinition = {
     display: 'inline-block',
     cursor: 'pointer',
   },
-  renderer: ButtonRenderer,
+  component: ButtonBlockComponent,
+  renderer: LegacyButtonRenderer,
   settings: ButtonSettings,
+  hasSettings: true,
 };
 
 export default ButtonBlock;
-

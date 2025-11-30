@@ -1,6 +1,6 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,14 +8,54 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Settings, Wrench, List as ListIcon } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function ListRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  const isOrdered = !!block.content?.ordered;
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type ListContent = {
+  ordered?: boolean;
+  values?: string;
+  items?: string[];
+  start?: number;
+  reversed?: boolean;
+  type?: string;
+  anchor?: string;
+  className?: string;
+};
+
+const DEFAULT_CONTENT: ListContent = {
+  ordered: false,
+  values: '<li>List item 1</li><li>List item 2</li><li>List item 3</li>',
+  start: undefined,
+  reversed: undefined,
+  type: undefined,
+  anchor: '',
+  className: '',
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface ListRendererProps {
+  content: ListContent;
+  styles?: React.CSSProperties;
+}
+
+function ListRenderer({ content, styles }: ListRendererProps) {
+  const isOrdered = !!content?.ordered;
   const ListTag = (isOrdered ? 'ol' : 'ul') as keyof JSX.IntrinsicElements;
   // Back-compat: if legacy `items` array exists and no `values`, build HTML from it
-  const legacyItems: string[] | undefined = block.content?.items;
+  const legacyItems: string[] | undefined = content?.items;
   const valuesHtml: string =
-    (block.content?.values as string | undefined)?.trim() ||
+    (content?.values as string | undefined)?.trim() ||
     (Array.isArray(legacyItems)
       ? legacyItems
           .filter((it) => typeof it === 'string' && it.trim().length > 0)
@@ -24,14 +64,14 @@ function ListRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
       : '<li>List item 1</li><li>List item 2</li><li>List item 3</li>');
 
   // Map Gutenberg-like attributes
-  const anchor: string | undefined = block.content?.anchor;
-  const className: string | undefined = block.content?.className;
-  const reversed: boolean | undefined = isOrdered ? block.content?.reversed : undefined;
-  const start: number | undefined = isOrdered ? block.content?.start : undefined;
-  const listType: string | undefined = block.content?.type;
+  const anchor: string | undefined = content?.anchor;
+  const className: string | undefined = content?.className;
+  const reversed: boolean | undefined = isOrdered ? content?.reversed : undefined;
+  const start: number | undefined = isOrdered ? content?.start : undefined;
+  const listType: string | undefined = content?.type;
 
   const style: React.CSSProperties = {
-    ...block.styles,
+    ...styles,
     // For unordered lists, map `type` to CSS list-style-type if present
     ...(listType && !isOrdered ? { listStyleType: listType as React.CSSProperties['listStyleType'] } : {}),
   };
@@ -56,20 +96,98 @@ function ListRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   return <ListTag {...commonProps} />;
 }
 
-function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
+export function ListBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<ListContent>(() => {
+    return (value.content as ListContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props only when block ID changes
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastSyncedBlockIdRef.current !== value.id) {
+      lastSyncedBlockIdRef.current = value.id;
+      const newContent = (value.content as ListContent) || DEFAULT_CONTENT;
+      setContent(newContent);
+      setStyles(value.styles);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  useEffect(() => {
+    onChange({
+      ...value,
+      content: content as BlockContent,
+      styles,
     });
+  }, [content, styles, value, onChange]);
+
+  return <ListRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface ListSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function ListSettings({ block, onUpdate }: ListSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as ListContent)
+    : (block.content as ListContent) || DEFAULT_CONTENT;
+
+  // Update handlers
+  const updateContent = (updates: Partial<ListContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as ListContent;
+      accessor.setContent({ ...current, ...updates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
 
-  const isOrdered = !!block.content?.ordered;
-  const values: string = (block.content?.values as string | undefined) || '';
+  const isOrdered = !!content?.ordered;
+  const values: string = content?.values || '';
   // Provide a simple textarea UX: one line per list item
   const itemsText: string = values
     ? values
@@ -77,7 +195,7 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
         .map((chunk) => chunk.replace(/<li>/i, '').trim())
         .filter((line) => line.length > 0)
         .join('\n')
-    : (block.content?.items as string[] | undefined)?.join('\n') || '';
+    : (content?.items as string[] | undefined)?.join('\n') || '';
 
   return (
     <div className="space-y-4">
@@ -122,7 +240,7 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
               <Input
                 type="number"
                 className="h-9"
-                value={block.content?.start ?? ''}
+                value={content?.start ?? ''}
                 onChange={(e) => updateContent({ start: e.target.value === '' ? undefined : Number(e.target.value) })}
                 placeholder="1"
                 id="list-start"
@@ -133,7 +251,7 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <div className="space-y-2">
               <Label htmlFor="list-type-unordered">Bullet Style</Label>
               <Select
-                value={block.content?.type ?? 'default'}
+                value={content?.type ?? 'default'}
                 onValueChange={(value) => updateContent({ type: value === 'default' ? undefined : value })}
               >
                 <SelectTrigger id="list-type-unordered" className="h-9">
@@ -154,7 +272,7 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
               <div className="flex items-center gap-2">
                 <Switch
                   id="list-reversed"
-                  checked={!!block.content?.reversed}
+                  checked={!!content?.reversed}
                   onCheckedChange={(val) => updateContent({ reversed: val })}
                   aria-label="Reverse order"
                 />
@@ -165,7 +283,7 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <div className="space-y-2">
               <Label htmlFor="list-type-ordered">Numbering Type</Label>
               <Select
-                value={block.content?.type ?? 'default'}
+                value={content?.type ?? 'default'}
                 onValueChange={(value) => updateContent({ type: value === 'default' ? undefined : value })}
               >
                 <SelectTrigger id="list-type-ordered" className="h-9">
@@ -191,7 +309,7 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Input
               id="list-anchor"
               className="h-9"
-              value={block.content?.anchor ?? ''}
+              value={content?.anchor ?? ''}
               onChange={(e) => updateContent({ anchor: e.target.value })}
               placeholder="section-id"
               aria-label="Anchor (id attribute)"
@@ -202,7 +320,7 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Input
               id="list-class"
               className="h-9"
-              value={block.content?.className ?? ''}
+              value={content?.className ?? ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="custom-class"
               aria-label="CSS class"
@@ -214,6 +332,28 @@ function ListSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
   );
 }
 
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyListRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <ListRenderer
+      content={(block.content as ListContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
+
 const ListBlock: BlockDefinition = {
   id: 'core/list',
   label: 'List',
@@ -223,7 +363,6 @@ const ListBlock: BlockDefinition = {
   defaultContent: {
     ordered: false,
     values: '<li>List item 1</li><li>List item 2</li><li>List item 3</li>',
-    // Gutenberg-compatible extras
     start: undefined,
     reversed: undefined,
     type: undefined,
@@ -231,10 +370,10 @@ const ListBlock: BlockDefinition = {
     className: '',
   },
   defaultStyles: {},
-  renderer: ListRenderer,
+  component: ListBlockComponent,
+  renderer: LegacyListRenderer,
   settings: ListSettings,
   hasSettings: true,
 };
 
 export default ListBlock;
-

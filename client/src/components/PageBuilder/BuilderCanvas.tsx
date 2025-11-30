@@ -13,6 +13,7 @@ export function BuilderCanvas({
   duplicateBlock,
   deleteBlock,
   hoverHighlight,
+  onBlockChange,
 }: {
   blocks: any[];
   deviceView: 'desktop' | 'tablet' | 'mobile';
@@ -21,6 +22,7 @@ export function BuilderCanvas({
   duplicateBlock: (blockId: string) => void;
   deleteBlock: (blockId: string) => void;
   hoverHighlight: 'padding' | 'margin' | null;
+  onBlockChange?: (blockId: string, updated: any) => void;
 }) {
   const actions = useBlockActions();
   return (
@@ -61,6 +63,7 @@ export function BuilderCanvas({
                              onDelete={() => deleteBlock(block.id)}
                              hoverHighlight={selectedBlockId === block.id ? hoverHighlight : null}
                              dragHandleProps={provided.dragHandleProps}
+                             onBlockChange={onBlockChange}
                            />
                         </div>
                       )}

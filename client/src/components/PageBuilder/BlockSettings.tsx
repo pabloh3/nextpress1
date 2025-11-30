@@ -129,10 +129,20 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
 
   const renderContentSettings = () => {
     const def = blockRegistry[block.name];
+    
+    // For component pattern blocks, use the legacy settings function if available
+    // This allows settings to be shown in sidebar while block manages its own state
+    if (def?.component && def?.settings) {
+      const SettingsComp = def.settings;
+      return <SettingsComp block={block} onUpdate={onUpdate} />;
+    }
+    
+    // Legacy pattern: use block's settings component
     if (def?.settings) {
       const SettingsComp = def.settings;
       return <SettingsComp block={block} onUpdate={onUpdate} />;
     }
+    
     return (
       <div className="text-center text-gray-500 py-8">
         No content settings available for this block type.

@@ -1,7 +1,19 @@
 // client/src/components/PageBuilder/blocks/types.ts
 import type { BlockConfig } from "@shared/schema-types";
+import type React from "react";
 
 export type BlockCategory = 'basic' | 'media' | 'layout' | 'advanced';
+
+/**
+ * Props for block components using the new component pattern.
+ * Components manage their own internal state and sync with parent via value/onChange.
+ */
+export interface BlockComponentProps {
+  value: BlockConfig;
+  onChange: (updated: BlockConfig) => void;
+  isPreview?: boolean;
+  isSelected?: boolean;
+}
 
 export interface BlockDefinition {
   id: string; // Canonical machine key (e.g., 'core/heading', 'core/paragraph')
@@ -14,6 +26,11 @@ export interface BlockDefinition {
   isContainer?: boolean; // identifies blocks that can contain children
   handlesOwnChildren?: boolean; // renderer manages its own children
   hasSettings?: boolean; // indicates if the block has settings UI
-  renderer: (props: { block: BlockConfig; isPreview: boolean }) => JSX.Element;
-  settings: (props: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) => JSX.Element;
+  
+  // New component pattern (preferred)
+  component?: React.ComponentType<BlockComponentProps>;
+  
+  // Legacy pattern (for backward compatibility)
+  renderer?: (props: { block: BlockConfig; isPreview: boolean }) => JSX.Element;
+  settings?: (props: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) => JSX.Element;
 }

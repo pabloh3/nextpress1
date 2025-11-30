@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -9,11 +9,125 @@ import { Button } from "@/components/ui/button";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Video as VideoIcon, AlignCenter, Maximize, Settings, Wrench } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  // Defensive: extract url from discriminated union
-  const url = block.content?.kind === 'media' && block.content.mediaType === 'video'
-    ? block.content.url
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type VideoContent = BlockContent & {
+  poster?: string;
+  controls?: boolean;
+  autoplay?: boolean;
+  loop?: boolean;
+  muted?: boolean;
+  playsInline?: boolean;
+  preload?: string;
+  align?: 'default' | 'wide' | 'full';
+  caption?: string;
+  anchor?: string;
+  className?: string;
+  sources?: Array<{ src: string; type: string }>;
+  id?: number;
+};
+
+const DEFAULT_CONTENT: VideoContent = {
+  kind: 'media',
+  mediaType: 'video',
+  url: '',
+  id: undefined,
+  poster: '',
+  autoplay: false,
+  controls: true,
+  loop: false,
+  muted: false,
+  playsInline: true,
+  preload: 'metadata',
+  align: undefined,
+  caption: '',
+  anchor: '',
+  className: '',
+};
+
+// ============================================================================
+// UTILITIES
+// ============================================================================
+
+function isYouTubeUrl(url?: string): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    return (
+      host === 'www.youtube.com' ||
+      host === 'youtube.com' ||
+      host === 'm.youtube.com' ||
+      host === 'youtu.be'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function extractYouTubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtu.be')) {
+      return u.pathname.split('/').filter(Boolean)[0] || null;
+    }
+    if (u.searchParams.has('v')) {
+      return u.searchParams.get('v');
+    }
+    const m = u.pathname.match(/\/(embed|v)\/([a-zA-Z0-9_-]{6,})/);
+    if (m && m[2]) return m[2];
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function parseStartSeconds(url: string): number | undefined {
+  try {
+    const u = new URL(url);
+    if (u.searchParams.has('start')) {
+      const s = Number(u.searchParams.get('start'));
+      return Number.isFinite(s) ? s : undefined;
+    }
+    if (u.searchParams.has('t')) {
+      const t = u.searchParams.get('t') || '';
+      const re = /(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?|(\d+)/i;
+      const m = t.match(re);
+      if (m) {
+        if (m[4]) return Number(m[4]);
+        const h = Number(m[1] || 0);
+        const min = Number(m[2] || 0);
+        const s = Number(m[3] || 0);
+        return h * 3600 + min * 60 + s;
+      }
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface VideoRendererProps {
+  content: VideoContent;
+  styles?: React.CSSProperties;
+}
+
+function VideoRenderer({ content, styles }: VideoRendererProps) {
+  const url = content?.kind === 'media' && content.mediaType === 'video'
+    ? content.url
     : '';
   
   const {
@@ -29,74 +143,13 @@ function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
     anchor,
     className,
     sources,
-  } = (block.content || {}) as any;
+  } = content || {};
 
   const classes = [
     'wp-block-video',
     align ? `align${align}` : '',
     className || '',
   ].filter(Boolean).join(' ');
-
-  // Detect YouTube URLs and render an iframe embed instead of <video>
-  const isYouTubeUrl = (url?: string): boolean => {
-    if (!url) return false;
-    try {
-      const u = new URL(url);
-      const host = u.hostname.toLowerCase();
-      return (
-        host === 'www.youtube.com' ||
-        host === 'youtube.com' ||
-        host === 'm.youtube.com' ||
-        host === 'youtu.be'
-      );
-    } catch {
-      return false;
-    }
-  };
-
-  const extractYouTubeId = (url: string): string | null => {
-    try {
-      const u = new URL(url);
-      if (u.hostname.includes('youtu.be')) {
-        return u.pathname.split('/').filter(Boolean)[0] || null;
-      }
-      if (u.searchParams.has('v')) {
-        return u.searchParams.get('v');
-      }
-      // Handle /embed/VIDEOID or /v/VIDEOID
-      const m = u.pathname.match(/\/(embed|v)\/([a-zA-Z0-9_-]{6,})/);
-      if (m && m[2]) return m[2];
-      return null;
-    } catch {
-      return null;
-    }
-  };
-
-  const parseStartSeconds = (url: string): number | undefined => {
-    try {
-      const u = new URL(url);
-      if (u.searchParams.has('start')) {
-        const s = Number(u.searchParams.get('start'));
-        return Number.isFinite(s) ? s : undefined;
-      }
-      if (u.searchParams.has('t')) {
-        const t = u.searchParams.get('t') || '';
-        // Parse formats like 90, 1m30s, 2h3m4s
-        const re = /(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?|(\d+)/i;
-        const m = t.match(re);
-        if (m) {
-          if (m[4]) return Number(m[4]);
-          const h = Number(m[1] || 0);
-          const min = Number(m[2] || 0);
-          const s = Number(m[3] || 0);
-          return h * 3600 + min * 60 + s;
-        }
-      }
-      return undefined;
-    } catch {
-      return undefined;
-    }
-  };
 
   const youTubeId = isYouTubeUrl(url) ? extractYouTubeId(url) : null;
   if (youTubeId) {
@@ -123,14 +176,13 @@ function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
       className || '',
     ].filter(Boolean).join(' ');
 
-    // Determine aspect ratio; default 16:9
     const aspectWidth = 16;
     const aspectHeight = 9;
     const paddingBottom = `${(aspectHeight / aspectWidth) * 100}%`;
+    const hasExplicitHeight = typeof styles?.height === 'string' && styles.height !== '';
 
-    const hasExplicitHeight = typeof (block.styles as any)?.height === 'string' && (block.styles as any).height !== '';
     return (
-      <figure id={anchor} className={embedClasses} style={{ ...block.styles }}>
+      <figure id={anchor} className={embedClasses} style={{ ...styles }}>
         <div
           className="wp-block-embed__wrapper"
           style={{
@@ -156,7 +208,7 @@ function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   }
 
   return (
-    <figure id={anchor} className={classes} style={{ ...block.styles }}>
+    <figure id={anchor} className={classes} style={{ ...styles }}>
       <video
         src={url}
         poster={poster}
@@ -166,7 +218,7 @@ function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
         muted={muted}
         playsInline={playsInline}
         preload={preload}
-        style={{ display: 'block', width: '100%', height: (block.styles as any)?.height ? '100%' : 'auto' }}
+        style={{ display: 'block', width: '100%', height: styles?.height ? '100%' : 'auto' }}
       >
         {Array.isArray(sources) && sources.map((s: any, i: number) => (
           <source key={i} src={s.src} type={s.type} />
@@ -180,26 +232,114 @@ function VideoRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function VideoBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<VideoContent>(() => {
+    return (value.content as VideoContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props only when block ID changes
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastSyncedBlockIdRef.current !== value.id) {
+      lastSyncedBlockIdRef.current = value.id;
+      const newContent = (value.content as VideoContent) || DEFAULT_CONTENT;
+      setContent(newContent);
+      setStyles(value.styles);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  useEffect(() => {
+    onChange({
+      ...value,
+      content: content as BlockContent,
+      styles,
+    });
+  }, [content, styles, value, onChange]);
+
+  return <VideoRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface VideoSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function VideoSettings({ block, onUpdate }: VideoSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
   const [isPickerOpen, setPickerOpen] = useState(false);
   const [isPosterPickerOpen, setPosterPickerOpen] = useState(false);
-  
-  
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as VideoContent)
+    : (block.content as VideoContent) || DEFAULT_CONTENT;
+  const styles = accessor
+    ? accessor.getStyles()
+    : block.styles;
+
+  // Update handlers
+  const updateContent = (updates: Partial<VideoContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as VideoContent;
+      accessor.setContent({ ...current, ...updates } as VideoContent);
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
-  const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
-        ...styleUpdates,
-      },
-    });
+
+  const updateStyles = (styleUpdates: Partial<React.CSSProperties>) => {
+    if (accessor) {
+      const current = accessor.getStyles() || {};
+      accessor.setStyles({ ...current, ...styleUpdates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        styles: {
+          ...block.styles,
+          ...styleUpdates,
+        },
+      });
+    }
   };
 
   const alignmentOptions = [
@@ -208,7 +348,8 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
     { value: 'full', label: 'Full', icon: Maximize }
   ];
 
-  const currentAlign = (block.content as any)?.align || 'default';
+  const currentAlign = content?.align || 'default';
+  const videoUrl = content?.kind === 'media' ? content.url : '';
 
   return (
     <div className="space-y-4">
@@ -224,8 +365,8 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <div className="flex items-center gap-2">
               <Input
                 id="video-src"
-                value={(block.content as any)?.url || ''}
-                onChange={(e) => updateContent({ kind: 'media', mediaType: 'video', url: e.target.value })}
+                value={videoUrl}
+                onChange={(e) => updateContent({ kind: 'media', mediaType: 'video', url: e.target.value } as VideoContent)}
                 placeholder="https://example.com/video.mp4 or YouTube URL"
               />
               <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>Choose from library</Button>
@@ -235,7 +376,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               onOpenChange={setPickerOpen}
               kind="video"
               onSelect={(m) => {
-                updateContent({ id: m.id, url: m.url });
+                updateContent({ id: m.id, url: m.url } as VideoContent);
               }}
             />
           </div>
@@ -246,7 +387,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <div className="flex items-center gap-2">
               <Input
                 id="video-poster"
-                value={(block.content as any)?.poster || ''}
+                value={content?.poster || ''}
                 onChange={(e) => updateContent({ poster: e.target.value })}
                 placeholder="https://example.com/poster.jpg"
               />
@@ -265,7 +406,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="video-caption">Caption</Label>
             <Input
               id="video-caption"
-              value={(block.content as any)?.caption || ''}
+              value={content?.caption || ''}
               onChange={(e) => updateContent({ caption: e.target.value })}
               placeholder="Add a caption (optional)"
             />
@@ -288,7 +429,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
                 return (
                   <button
                     key={option.value}
-                    onClick={() => updateContent({ align: option.value === 'default' ? undefined : option.value })}
+                    onClick={() => updateContent({ align: option.value === 'default' ? undefined : option.value as any })}
                     className={`flex items-center gap-2 p-3 text-sm font-medium rounded-lg border transition-colors ${
                       currentAlign === option.value
                         ? 'bg-gray-200 text-gray-800 border-gray-200 hover:bg-gray-300'
@@ -309,7 +450,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               <Label htmlFor="video-controls">Show Controls</Label>
               <Switch
                 id="video-controls"
-                checked={((block.content as any)?.controls ?? true) !== false}
+                checked={(content?.controls ?? true) !== false}
                 onCheckedChange={(checked) => updateContent({ controls: checked })}
               />
             </div>
@@ -317,7 +458,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               <Label htmlFor="video-autoplay">Autoplay</Label>
               <Switch
                 id="video-autoplay"
-                checked={Boolean((block.content as any)?.autoplay)}
+                checked={Boolean(content?.autoplay)}
                 onCheckedChange={(checked) => updateContent({ autoplay: checked })}
               />
             </div>
@@ -328,7 +469,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               <Label htmlFor="video-loop">Loop</Label>
               <Switch
                 id="video-loop"
-                checked={Boolean((block.content as any)?.loop)}
+                checked={Boolean(content?.loop)}
                 onCheckedChange={(checked) => updateContent({ loop: checked })}
               />
             </div>
@@ -336,7 +477,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               <Label htmlFor="video-muted">Muted</Label>
               <Switch
                 id="video-muted"
-                checked={Boolean((block.content as any)?.muted)}
+                checked={Boolean(content?.muted)}
                 onCheckedChange={(checked) => updateContent({ muted: checked })}
               />
             </div>
@@ -347,14 +488,14 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               <Label htmlFor="video-playsinline">Plays Inline</Label>
               <Switch
                 id="video-playsinline"
-                checked={((block.content as any)?.playsInline ?? true) !== false}
+                checked={(content?.playsInline ?? true) !== false}
                 onCheckedChange={(checked) => updateContent({ playsInline: checked })}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="video-preload">Preload</Label>
               <Select
-                value={(block.content as any)?.preload || 'metadata'}
+                value={content?.preload || 'metadata'}
                 onValueChange={(value) => updateContent({ preload: value })}
               >
                 <SelectTrigger id="video-preload">
@@ -377,7 +518,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
                 <Label htmlFor="video-width" className="text-sm text-gray-600">Width</Label>
                 <Input
                   id="video-width"
-                  value={(block.styles as any)?.width || ''}
+                  value={styles?.width || ''}
                   onChange={(e) => updateStyles({ width: e.target.value })}
                   placeholder="e.g. 100% or 640px"
                 />
@@ -386,7 +527,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
                 <Label htmlFor="video-height" className="text-sm text-gray-600">Height</Label>
                 <Input
                   id="video-height"
-                  value={(block.styles as any)?.height || ''}
+                  value={styles?.height || ''}
                   onChange={(e) => updateStyles({ height: e.target.value })}
                   placeholder="e.g. auto or 360px"
                 />
@@ -407,7 +548,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="video-anchor">Anchor</Label>
             <Input
               id="video-anchor"
-              value={(block.content as any)?.anchor || ''}
+              value={content?.anchor || ''}
               onChange={(e) => updateContent({ anchor: e.target.value })}
               placeholder="section-id"
             />
@@ -418,7 +559,7 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="video-class">Additional CSS Class(es)</Label>
             <Input
               id="video-class"
-              value={(block.content as any)?.className || ''}
+              value={content?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="custom-class"
             />
@@ -428,6 +569,28 @@ function VideoSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyVideoRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <VideoRenderer
+      content={(block.content as VideoContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const VideoBlock: BlockDefinition = {
   id: 'core/video',
@@ -453,10 +616,10 @@ const VideoBlock: BlockDefinition = {
     className: '',
   },
   defaultStyles: {},
-  renderer: VideoRenderer,
+  component: VideoBlockComponent,
+  renderer: LegacyVideoRenderer,
   settings: VideoSettings,
   hasSettings: true,
 };
 
 export default VideoBlock;
-

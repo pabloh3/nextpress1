@@ -1,22 +1,55 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Quote as QuoteIcon, Settings, Wrench } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function PullquoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  const value = (block.content as any)?.value || '';
-  const citation = (block.content as any)?.citation || '';
-  const textAlign = (block.content as any)?.textAlign || 'center';
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type PullquoteContent = {
+  value?: string;
+  citation?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  className?: string;
+};
+
+const DEFAULT_CONTENT: PullquoteContent = {
+  value: '<p>Add a quote that stands out from the rest of your content.</p>',
+  citation: '',
+  textAlign: 'center',
+  className: '',
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface PullquoteRendererProps {
+  content: PullquoteContent;
+  styles?: React.CSSProperties;
+}
+
+function PullquoteRenderer({ content, styles }: PullquoteRendererProps) {
+  const value = content?.value || '';
+  const citation = content?.citation || '';
+  const textAlign = content?.textAlign || 'center';
   
   const className = [
     "wp-block-pullquote",
     textAlign ? `has-text-align-${textAlign}` : '',
-    block.content?.className || "",
+    content?.className || "",
   ].filter(Boolean).join(" ");
 
   return (
@@ -29,7 +62,7 @@ function PullquoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }
         borderTop: '4px solid currentColor',
         borderBottom: '4px solid currentColor',
         backgroundColor: '#f8f9fa',
-        ...block.styles,
+        ...styles,
       }}
     >
       <blockquote
@@ -59,25 +92,112 @@ function PullquoteRenderer({ block }: { block: BlockConfig; isPreview: boolean }
   );
 }
 
-function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
+export function PullquoteBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<PullquoteContent>(() => {
+    return (value.content as PullquoteContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props only when block ID changes
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastSyncedBlockIdRef.current !== value.id) {
+      lastSyncedBlockIdRef.current = value.id;
+      const newContent = (value.content as PullquoteContent) || DEFAULT_CONTENT;
+      setContent(newContent);
+      setStyles(value.styles);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  useEffect(() => {
+    onChange({
+      ...value,
+      content: content as BlockContent,
+      styles,
     });
+  }, [content, styles, value, onChange]);
+
+  return <PullquoteRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface PullquoteSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function PullquoteSettings({ block, onUpdate }: PullquoteSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as PullquoteContent)
+    : (block.content as PullquoteContent) || DEFAULT_CONTENT;
+  const styles = accessor
+    ? accessor.getStyles()
+    : block.styles;
+
+  // Update handlers
+  const updateContent = (updates: Partial<PullquoteContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as PullquoteContent;
+      accessor.setContent({ ...current, ...updates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
 
-  const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
-        ...styleUpdates,
-      },
-    });
+  const updateStyles = (styleUpdates: Partial<React.CSSProperties>) => {
+    if (accessor) {
+      const current = accessor.getStyles() || {};
+      accessor.setStyles({ ...current, ...styleUpdates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        styles: {
+          ...block.styles,
+          ...styleUpdates,
+        },
+      });
+    }
   };
 
   return (
@@ -89,7 +209,7 @@ function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="pullquote-content" className="text-sm font-medium text-gray-700">Quote Content</Label>
             <Textarea
               id="pullquote-content"
-              value={(block.content as any)?.value || ''}
+              value={content?.value || ''}
               onChange={(e) => updateContent({ value: e.target.value })}
               placeholder="Enter your quote here..."
               rows={4}
@@ -101,7 +221,7 @@ function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="pullquote-citation" className="text-sm font-medium text-gray-700">Citation</Label>
             <Input
               id="pullquote-citation"
-              value={(block.content as any)?.citation || ''}
+              value={content?.citation || ''}
               onChange={(e) => updateContent({ citation: e.target.value })}
               placeholder="Quote author or source"
               className="mt-1 h-9"
@@ -116,8 +236,8 @@ function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
           <div>
             <Label htmlFor="pullquote-align" className="text-sm font-medium text-gray-700">Text Align</Label>
             <Select
-              value={(block.content as any)?.textAlign || 'center'}
-              onValueChange={(value) => updateContent({ textAlign: value })}
+              value={content?.textAlign || 'center'}
+              onValueChange={(value) => updateContent({ textAlign: value as 'left' | 'center' | 'right' })}
             >
               <SelectTrigger id="pullquote-align" className="h-9">
                 <SelectValue />
@@ -137,12 +257,12 @@ function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
                 <Input
                   id="pullquote-bg-color"
                   type="color"
-                  value={block.styles?.backgroundColor || "#f8f9fa"}
+                  value={styles?.backgroundColor || "#f8f9fa"}
                   onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
                   className="w-12 h-9 p-1 border-gray-200"
                 />
                 <Input
-                  value={block.styles?.backgroundColor || "#f8f9fa"}
+                  value={styles?.backgroundColor || "#f8f9fa"}
                   onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
                   placeholder="#f8f9fa"
                   className="flex-1 h-9 text-sm"
@@ -156,12 +276,12 @@ function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
                 <Input
                   id="pullquote-text-color"
                   type="color"
-                  value={block.styles?.color || "#000000"}
+                  value={styles?.color || "#000000"}
                   onChange={(e) => updateStyles({ color: e.target.value })}
                   className="w-12 h-9 p-1 border-gray-200"
                 />
                 <Input
-                  value={block.styles?.color || "#000000"}
+                  value={styles?.color || "#000000"}
                   onChange={(e) => updateStyles({ color: e.target.value })}
                   placeholder="#000000"
                   className="flex-1 h-9 text-sm"
@@ -179,7 +299,7 @@ function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="pullquote-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="pullquote-class"
-              value={block.content?.className || ''}
+              value={content?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. is-style-solid-color"
               className="mt-1 h-9 text-sm"
@@ -190,6 +310,28 @@ function PullquoteSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyPullquoteRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <PullquoteRenderer
+      content={(block.content as PullquoteContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const PullquoteBlock: BlockDefinition = {
   id: 'core/pullquote',
@@ -207,7 +349,8 @@ const PullquoteBlock: BlockDefinition = {
     backgroundColor: '#f8f9fa',
     color: '#000000',
   },
-  renderer: PullquoteRenderer,
+  component: PullquoteBlockComponent,
+  renderer: LegacyPullquoteRenderer,
   settings: PullquoteSettings,
   hasSettings: true,
 };

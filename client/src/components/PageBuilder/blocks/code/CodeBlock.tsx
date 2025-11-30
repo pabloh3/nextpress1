@@ -1,24 +1,55 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Code as CodeIcon, Settings, Wrench } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function CodeRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  const content = (block.content as any)?.content || '';
-  const language = (block.content as any)?.language || '';
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type CodeContent = {
+  content?: string;
+  language?: string;
+  className?: string;
+};
+
+const DEFAULT_CONTENT: CodeContent = {
+  content: '// Write your code here\nfunction hello() {\n  console.log("Hello, World!");\n}',
+  language: '',
+  className: '',
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface CodeRendererProps {
+  content: CodeContent;
+  styles?: React.CSSProperties;
+}
+
+function CodeRenderer({ content, styles }: CodeRendererProps) {
+  const codeContent = content?.content || '';
+  const language = content?.language || '';
   
   const className = [
     "wp-block-code",
     language ? `language-${language}` : '',
-    block.content?.className || "",
+    content?.className || "",
   ].filter(Boolean).join(" ");
 
   return (
-    <div className={className} style={block.styles}>
+    <div className={className} style={styles}>
       <pre style={{
         backgroundColor: '#f8f9fa',
         padding: '1em',
@@ -30,22 +61,100 @@ function CodeRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
         lineHeight: '1.4',
         margin: 0,
       }}>
-        <code>{content}</code>
+        <code>{codeContent}</code>
       </pre>
     </div>
   );
 }
 
-function CodeSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  
-  
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function CodeBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<CodeContent>(() => {
+    return (value.content as CodeContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props only when block ID changes
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastSyncedBlockIdRef.current !== value.id) {
+      lastSyncedBlockIdRef.current = value.id;
+      const newContent = (value.content as CodeContent) || DEFAULT_CONTENT;
+      setContent(newContent);
+      setStyles(value.styles);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  useEffect(() => {
+    onChange({
+      ...value,
+      content: content as BlockContent,
+      styles,
     });
+  }, [content, styles, value, onChange]);
+
+  return <CodeRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface CodeSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function CodeSettings({ block, onUpdate }: CodeSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as CodeContent)
+    : (block.content as CodeContent) || DEFAULT_CONTENT;
+
+  // Update handlers
+  const updateContent = (updates: Partial<CodeContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as CodeContent;
+      accessor.setContent({ ...current, ...updates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
 
   return (
@@ -57,7 +166,7 @@ function CodeSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Label htmlFor="code-content" className="text-sm font-medium text-gray-700">Code</Label>
             <Textarea
               id="code-content"
-              value={(block.content as any)?.content || ''}
+              value={content?.content || ''}
               onChange={(e) => updateContent({ content: e.target.value })}
               placeholder="Enter your code here..."
               rows={8}
@@ -78,7 +187,7 @@ function CodeSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Label htmlFor="code-language" className="text-sm font-medium text-gray-700">Language (optional)</Label>
             <Input
               id="code-language"
-              value={(block.content as any)?.language || ''}
+              value={content?.language || ''}
               onChange={(e) => updateContent({ language: e.target.value })}
               placeholder="e.g. javascript, python, html"
               className="mt-1 h-9"
@@ -94,7 +203,7 @@ function CodeSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Label htmlFor="code-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="code-class"
-              value={block.content?.className || ''}
+              value={content?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. line-numbers"
               className="mt-1 h-9 text-sm"
@@ -105,6 +214,28 @@ function CodeSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyCodeRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <CodeRenderer
+      content={(block.content as CodeContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const CodeBlock: BlockDefinition = {
   id: 'core/code',
@@ -120,7 +251,8 @@ const CodeBlock: BlockDefinition = {
   defaultStyles: {
     margin: '1em 0',
   },
-  renderer: CodeRenderer,
+  component: CodeBlockComponent,
+  renderer: LegacyCodeRenderer,
   settings: CodeSettings,
   hasSettings: true,
 };

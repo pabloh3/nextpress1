@@ -111,14 +111,44 @@ export function QuoteBlockComponent({
     () => value.styles
   );
 
-  // Sync with props only when block ID changes
+  // Sync with props when block ID changes OR when content/styles change significantly
+  // This prevents syncing to default values when parent state resets
   const lastSyncedBlockIdRef = useRef<string | null>(null);
+  const lastSyncedContentRef = useRef<string | null>(null);
+  const lastSyncedStylesRef = useRef<string | null>(null);
+  const isSyncingFromPropsRef = useRef(false);
+  
   useEffect(() => {
-    if (lastSyncedBlockIdRef.current !== value.id) {
+    const contentKey = JSON.stringify(value.content);
+    const stylesKey = JSON.stringify(value.styles);
+    
+    // Sync if ID changed OR if content/styles changed significantly (not just reference)
+    if (
+      lastSyncedBlockIdRef.current !== value.id ||
+      (lastSyncedBlockIdRef.current === value.id && 
+       (lastSyncedContentRef.current !== contentKey || lastSyncedStylesRef.current !== stylesKey))
+    ) {
       lastSyncedBlockIdRef.current = value.id;
-      const newContent = (value.content as QuoteContent) || DEFAULT_CONTENT;
-      setContent(newContent);
-      setStyles(value.styles);
+      lastSyncedContentRef.current = contentKey;
+      lastSyncedStylesRef.current = stylesKey;
+      
+      // Mark that we're syncing from props to prevent onChange loop
+      isSyncingFromPropsRef.current = true;
+      
+      // Only sync if props have actual content, not defaults
+      // This prevents syncing to defaults when parent state resets
+      if (value.content && Object.keys(value.content).length > 0) {
+        const newContent = (value.content as QuoteContent) || DEFAULT_CONTENT;
+        setContent(newContent);
+      }
+      if (value.styles && Object.keys(value.styles).length > 0) {
+        setStyles(value.styles);
+      }
+      
+      // Reset flag after state updates
+      setTimeout(() => {
+        isSyncingFromPropsRef.current = false;
+      }, 0);
     }
   }, [value.id, value.content, value.styles]);
 
@@ -140,12 +170,15 @@ export function QuoteBlockComponent({
   }, [value.id, content, styles, value]);
 
   // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  // Skip if we're syncing from props to prevent infinite loop
   useEffect(() => {
-    onChange({
-      ...value,
-      content: content as BlockContent,
-      styles,
-    });
+    if (!isSyncingFromPropsRef.current) {
+      onChange({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      });
+    }
   }, [content, styles, value, onChange]);
 
   return <QuoteRenderer content={content} styles={styles} />;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import type { BlockConfig, BlockContent } from "@shared/schema-types";
 import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
@@ -6,12 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, Settings, Wrench } from "lucide-react";
-import {
-  registerBlockState,
-  unregisterBlockState,
-  getBlockStateAccessor,
-  type BlockStateAccessor,
-} from "../blockStateRegistry";
+import { getBlockStateAccessor } from "../blockStateRegistry";
+import { useBlockState } from "../useBlockState";
 
 // ============================================================================
 // TYPES
@@ -74,50 +70,11 @@ export function TextBlockComponent({
   value,
   onChange,
 }: BlockComponentProps) {
-  // State
-  const [content, setContent] = useState<TextBlockContent>(() => {
-    return (value.content as TextBlockContent) || DEFAULT_CONTENT;
+  const { content, setContent, styles } = useBlockState<TextBlockContent>({
+    value,
+    getDefaultContent: () => DEFAULT_CONTENT,
+    onChange,
   });
-  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
-    () => value.styles
-  );
-
-  // Sync with props only when block ID changes
-  const lastSyncedBlockIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (lastSyncedBlockIdRef.current !== value.id) {
-      lastSyncedBlockIdRef.current = value.id;
-      const newContent = (value.content as TextBlockContent) || DEFAULT_CONTENT;
-      setContent(newContent);
-      setStyles(value.styles);
-    }
-  }, [value.id, value.content, value.styles]);
-
-  // Register state accessors for settings
-  useEffect(() => {
-    const accessor: BlockStateAccessor = {
-      getContent: () => content,
-      getStyles: () => styles,
-      setContent: setContent,
-      setStyles: setStyles,
-      getFullState: () => ({
-        ...value,
-        content: content as BlockContent,
-        styles,
-      }),
-    };
-    registerBlockState(value.id, accessor);
-    return () => unregisterBlockState(value.id);
-  }, [value.id, content, styles, value]);
-
-  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
-  useEffect(() => {
-    onChange({
-      ...value,
-      content: content as BlockContent,
-      styles,
-    });
-  }, [content, styles, value, onChange]);
 
   return <TextRenderer content={content} styles={styles} />;
 }

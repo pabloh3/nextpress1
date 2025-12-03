@@ -8,16 +8,20 @@ import type React from "react";
  * without going through parent state updates.
  */
 export interface BlockStateAccessor {
-  /** Get the current content state */
-  getContent: () => any;
-  /** Get the current styles state */
-  getStyles: () => React.CSSProperties | undefined;
-  /** Update the content state */
-  setContent: (content: any) => void;
-  /** Update the styles state */
-  setStyles: (styles: React.CSSProperties | undefined) => void;
-  /** Get the full block state (for saving) */
-  getFullState: () => BlockConfig;
+	/** Get the current content state */
+	getContent: () => any;
+	/** Get the current styles state */
+	getStyles: () => React.CSSProperties | undefined;
+	/** Get the current settings state */
+	getSettings: () => Record<string, any> | undefined;
+	/** Update the content state */
+	setContent: (content: any) => void;
+	/** Update the styles state */
+	setStyles: (styles: React.CSSProperties | undefined) => void;
+	/** Update the settings state */
+	setSettings: (settings: Record<string, any> | undefined) => void;
+	/** Get the full block state (for saving) */
+	getFullState: () => BlockConfig;
 }
 
 /**

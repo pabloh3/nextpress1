@@ -4,6 +4,7 @@ import DevicePreview from './DevicePreview';
 import BlockRenderer from './BlockRenderer';
 import { Layers } from 'lucide-react';
 import { useBlockActions } from './BlockActionsContext';
+import type { BlockConfig } from "@shared/schema-types";
 
 export function BuilderCanvas({
   blocks,
@@ -15,14 +16,14 @@ export function BuilderCanvas({
   hoverHighlight,
   onBlockChange,
 }: {
-  blocks: any[];
+  blocks: BlockConfig[];
   deviceView: 'desktop' | 'tablet' | 'mobile';
   selectedBlockId: string | null;
   isPreviewMode: boolean;
   duplicateBlock: (blockId: string) => void;
   deleteBlock: (blockId: string) => void;
   hoverHighlight: 'padding' | 'margin' | null;
-  onBlockChange?: (blockId: string, updated: any) => void;
+  onBlockChange?: (updated: any) => void;
 }) {
   const actions = useBlockActions();
   return (

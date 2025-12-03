@@ -5,14 +5,9 @@ import type { BlockConfig, BlockContent } from "@shared/schema-types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { useState, useEffect, useRef } from "react";
 import * as React from "react";
-import {
-  registerBlockState,
-  unregisterBlockState,
-  getBlockStateAccessor,
-  type BlockStateAccessor,
-} from "../blockStateRegistry";
+import { getBlockStateAccessor } from "../blockStateRegistry";
+import { useBlockState } from "../useBlockState";
 
 // ============================================================================
 // TYPES
@@ -136,50 +131,11 @@ export function HeadingBlockComponent({
   value,
   onChange,
 }: BlockComponentProps) {
-  // State
-  const [content, setContent] = useState<HeadingContent>(() => {
-    return (value.content as HeadingContent) || DEFAULT_CONTENT;
+  const { content, styles } = useBlockState<HeadingContent>({
+    value,
+    getDefaultContent: () => DEFAULT_CONTENT,
+    onChange,
   });
-  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
-    () => value.styles
-  );
-
-  // Sync with props only when block ID changes
-  const lastSyncedBlockIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (lastSyncedBlockIdRef.current !== value.id) {
-      lastSyncedBlockIdRef.current = value.id;
-      const newContent = (value.content as HeadingContent) || DEFAULT_CONTENT;
-      setContent(newContent);
-      setStyles(value.styles);
-    }
-  }, [value.id, value.content, value.styles]);
-
-  // Register state accessors for settings
-  useEffect(() => {
-    const accessor: BlockStateAccessor = {
-      getContent: () => content,
-      getStyles: () => styles,
-      setContent: setContent,
-      setStyles: setStyles,
-      getFullState: () => ({
-        ...value,
-        content: content as BlockContent,
-        styles,
-      }),
-    };
-    registerBlockState(value.id, accessor);
-    return () => unregisterBlockState(value.id);
-  }, [value.id, content, styles, value]);
-
-  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
-  useEffect(() => {
-    onChange({
-      ...value,
-      content: content as BlockContent,
-      styles,
-    });
-  }, [content, styles, value, onChange]);
 
   return <HeadingRenderer content={content} styles={styles} />;
 }

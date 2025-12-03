@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import type { BlockConfig } from "@shared/schema-types";
 import { blockRegistry } from "./blocks";
+import { getBlockStateAccessor } from "./blocks/blockStateRegistry";
 
 interface BlockSettingsProps {
   block: BlockConfig;
@@ -47,32 +48,57 @@ interface BlockSettingsProps {
 
 export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSettingsProps) {
   const [customCss, setCustomCss] = useState(block.customCss || '');
+  const accessor = getBlockStateAccessor(block.id);
 
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
+    if (accessor) {
+      const current = accessor.getContent();
+      accessor.setContent({
+        ...(typeof current === "object" && current !== null ? current : {}),
         ...contentUpdates,
-      },
-    });
+      });
+    } else {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...contentUpdates,
+        },
+      });
+    }
   };
 
   const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
+    if (accessor) {
+      const current = accessor.getStyles() || {};
+      accessor.setStyles({
+        ...current,
         ...styleUpdates,
-      },
-    });
+      });
+    } else {
+      onUpdate({
+        styles: {
+          ...block.styles,
+          ...styleUpdates,
+        },
+      });
+    }
   };
 
   const updateSettings = (settingUpdates: any) => {
-    onUpdate({
-      settings: {
-        ...block.settings,
+    if (accessor) {
+      const current = accessor.getSettings() || {};
+      accessor.setSettings({
+        ...current,
         ...settingUpdates,
-      },
-    });
+      });
+    } else {
+      onUpdate({
+        settings: {
+          ...block.settings,
+          ...settingUpdates,
+        },
+      });
+    }
   };
 
   const handleCustomCssChange = (css: string) => {

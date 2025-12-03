@@ -6,7 +6,7 @@ import { blockRegistry } from "./blocks";
 import { Droppable, Draggable } from "@/lib/dnd";
 import { useBlockActions } from "./BlockActionsContext";
 
-export function ContainerChildren({ block, isPreview, onBlockChange }: { block: BlockConfig; isPreview: boolean; onBlockChange?: (blockId: string, updated: BlockConfig) => void }) {
+export function ContainerChildren({ block, isPreview, onBlockChange }: { block: BlockConfig; isPreview: boolean; onBlockChange?: (updated: BlockConfig) => void }) {
   const children = Array.isArray(block.children) ? block.children : [];
   const isContainer = !!blockRegistry[block.name]?.isContainer;
   const actions = useBlockActions();
@@ -109,7 +109,7 @@ interface BlockRendererProps {
   onDelete: () => void;
   hoverHighlight?: 'padding' | 'margin' | null;
   dragHandleProps?: any;
-  onBlockChange?: (blockId: string, updated: BlockConfig) => void;
+  onBlockChange?: (updated: BlockConfig) => void;
 }
 
 export default function BlockRenderer({ 
@@ -158,9 +158,7 @@ export default function BlockRenderer({
         <BlockComponent
           value={block}
           onChange={(updated) => {
-            if (onBlockChange) {
-              onBlockChange(block.id, updated);
-            }
+            onBlockChange?.(updated);
           }}
           isPreview={isPreview}
           isSelected={effectiveSelected}

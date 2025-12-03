@@ -123,21 +123,6 @@ export default function PageBuilder({
 		[commitBlocks],
 	);
 
-	// Keyboard shortcuts for undo/redo
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-				e.preventDefault();
-				undo();
-			} else if ((e.ctrlKey || e.metaKey) && (e.shiftKey && e.key === 'Z')) {
-				e.preventDefault();
-				redo();
-			}
-		};
-		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [undo, redo]);
-
 	const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
 	const [deviceView, setDeviceView] = useState<"desktop" | "tablet" | "mobile">(
 		"desktop",
@@ -156,6 +141,31 @@ export default function PageBuilder({
 	const selectedBlock = selectedBlockId ? findBlock(blocks, selectedBlockId) : null;
 
 	const saveMutation = usePageSave({ isTemplate, data, onSave });
+
+	const handleSave = useCallback(() => {
+		saveMutation.mutate(blocks);
+		onSave?.(data as any);
+	}, [blocks, saveMutation, onSave, data]);
+
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			const isMod = e.ctrlKey || e.metaKey;
+			const key = e.key.toLowerCase();
+
+			if (isMod && key === "z" && !e.shiftKey) {
+				e.preventDefault();
+				undo();
+			} else if (isMod && ((e.shiftKey && key === "z") || key === "y")) {
+				e.preventDefault();
+				redo();
+			} else if (isMod && key === "s") {
+				e.preventDefault();
+				handleSave();
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [undo, redo, handleSave]);
 
 	const setBlocksFromDnD = useCallback(
 		(next: BlockConfig[]) => {
@@ -284,10 +294,11 @@ export default function PageBuilder({
 							blocks={blocks}
 							sidebarVisible={sidebarVisible}
 							onToggleSidebar={toggleSidebar}
-							onSaveClick={() => {
-								saveMutation.mutate(blocks);
-								onSave?.(data as any);
-							}}
+							onSaveClick={handleSave}
+							onUndo={undo}
+							onRedo={redo}
+							canUndo={canUndo}
+							canRedo={canRedo}
 						/>
 						<BuilderCanvas
 							blocks={blocks}

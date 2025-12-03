@@ -1,7 +1,18 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Smartphone, Tablet, Monitor, Sidebar, Settings as SettingsIcon, FileText, Pen, Palette } from 'lucide-react';
+import {
+  Smartphone,
+  Tablet,
+  Monitor,
+  Sidebar,
+  Settings as SettingsIcon,
+  FileText,
+  Pen,
+  Palette,
+  RotateCcw,
+  RotateCw,
+} from 'lucide-react';
 import { SiteMenu, PagesMenu, BlogMenu, DesignMenu } from '@/components/PageBuilder/EditorBar';
 
 export function BuilderTopBar({
@@ -13,6 +24,10 @@ export function BuilderTopBar({
   sidebarVisible,
   onToggleSidebar,
   onSaveClick,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }: {
   data: any;
   isTemplate: boolean;
@@ -22,6 +37,10 @@ export function BuilderTopBar({
   sidebarVisible: boolean;
   onToggleSidebar: () => void;
   onSaveClick?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }) {
   return (
     <div className="bg-white border-b border-gray-200 p-4">
@@ -104,9 +123,35 @@ export function BuilderTopBar({
             </Button>
           </DesignMenu>
 
-          {onSaveClick && (
-            <Button size="sm" onClick={onSaveClick}>Save</Button>
-          )}
+          <div className="flex items-center gap-2">
+            {onUndo && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onUndo}
+                disabled={canUndo === false}
+                title="Undo (Ctrl+Z)"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </Button>
+            )}
+            {onRedo && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onRedo}
+                disabled={canRedo === false}
+                title="Redo (Ctrl+Shift+Z)"
+              >
+                <RotateCw className="w-4 h-4" />
+              </Button>
+            )}
+            {onSaveClick && (
+              <Button size="sm" onClick={onSaveClick} title="Save (Ctrl+S)">
+                Save
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

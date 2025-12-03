@@ -40,8 +40,11 @@ interface TextRendererProps {
 }
 
 function TextRenderer({ content, styles }: TextRendererProps) {
-  const textContent = content?.kind === 'text' ? content.value : '';
-  const align = (content?.textAlign as string) || (content?.align as string) || (styles?.textAlign as string | undefined);
+  const textContent = content?.kind === "text" ? content.value : "";
+  const align =
+    (content?.textAlign as string) ||
+    (content?.align as string) ||
+    (styles?.textAlign as string | undefined);
   const anchor = content?.anchor as string | undefined;
   const extraClass = (content?.className as string | undefined) || "";
   const dropCap = Boolean(content?.dropCap);
@@ -55,8 +58,13 @@ function TextRenderer({ content, styles }: TextRendererProps) {
     .filter(Boolean)
     .join(" ");
 
+  const mergedStyles: React.CSSProperties = {
+    ...styles,
+    ...(align ? { textAlign: align as React.CSSProperties["textAlign"] } : {}),
+  };
+
   return (
-    <p id={anchor} className={className} style={styles}>
+    <p id={anchor} className={className} style={mergedStyles}>
       {textContent}
     </p>
   );

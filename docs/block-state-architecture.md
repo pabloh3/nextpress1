@@ -35,8 +35,12 @@ PageBuilder.commitBlocks(updateBlockDeep) ----
 ## Rationale
 The previous architecture attempted to keep block state only in the parent, forcing each block to "sync" props back into its own local state on every change. That bi-directional sync made undo/redo brittle and created infinite update loops. The new model embraces component-local state, treating the parent as a canonical log of block snapshots.
 
+## Operational Notes
+- **Block examples**: `text/TextBlock.tsx` and `heading/HeadingBlock.tsx` served as the initial reference implementations; every other block (gallery, media-text, tables, video, etc.) now follows the exact same `useBlockState` pattern with no legacy sync refs or manual registry wiring.
+- **Settings access**: Because the hook registers `getContent/getStyles/getSettings`, sidebar components continue to work without change; see `BlockSettings.tsx` for the preferred accessor usage.
+- **Shortcuts/controls**: Undo/Redo buttons live in the builder top bar with tooltips (`Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`), and `Ctrl/Cmd+S` triggers the save mutation alongside the explicit Save button.
+
 ## Future Work
-- **Full Migration**: Move every remaining block to `useBlockState` (some still use legacy hooks).
 - **Async Persistence**: Surface status indicators (saving, failed save, etc.) now that block updates are deterministic.
 - **Collaboration Hooks**: Emit granular block events for multi-user editing and comments.
 - **Schema Validation**: Layer Zod/io-ts validation on block payloads before committing to prevent malformed data.

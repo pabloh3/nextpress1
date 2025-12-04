@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import type { BlockConfig, BlockContent } from "@shared/schema-types";
 import type { BlockDefinition, BlockComponentProps } from "../types";
 import {
@@ -23,12 +23,8 @@ import { Droppable, Draggable } from "@/lib/dnd";
 import { useBlockActions } from "../../BlockActionsContext";
 import BlockRenderer from "../../BlockRenderer";
 import { generateBlockId } from "../../utils";
-import {
-  registerBlockState,
-  unregisterBlockState,
-  getBlockStateAccessor,
-  type BlockStateAccessor,
-} from "../blockStateRegistry";
+import { getBlockStateAccessor } from "../blockStateRegistry";
+import { useBlockState } from "../useBlockState";
 
 // ============================================================================
 // TYPES
@@ -238,87 +234,16 @@ export function ColumnsBlockComponent({
   onChange,
   isPreview,
 }: BlockComponentProps) {
-  // State
-  const [content, setContent] = useState<ColumnsContent>(() => {
-    return (value.content as ColumnsContent) || DEFAULT_CONTENT;
+  const { content, styles, settings } = useBlockState<ColumnsContent>({
+    value,
+    getDefaultContent: () => DEFAULT_CONTENT,
+    onChange,
   });
-  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
-    () => value.styles
-  );
 
-  // Sync with props when block ID changes OR when content/styles change significantly
-  // This prevents syncing to default values when parent state resets
-  const lastSyncedBlockIdRef = useRef<string | null>(null);
-  const lastSyncedContentRef = useRef<string | null>(null);
-  const lastSyncedStylesRef = useRef<string | null>(null);
-  const isSyncingFromPropsRef = useRef(false);
-  
-  useEffect(() => {
-    const contentKey = JSON.stringify(value.content);
-    const stylesKey = JSON.stringify(value.styles);
-    
-    // Sync if ID changed OR if content/styles changed significantly (not just reference)
-    if (
-      lastSyncedBlockIdRef.current !== value.id ||
-      (lastSyncedBlockIdRef.current === value.id && 
-       (lastSyncedContentRef.current !== contentKey || lastSyncedStylesRef.current !== stylesKey))
-    ) {
-      lastSyncedBlockIdRef.current = value.id;
-      lastSyncedContentRef.current = contentKey;
-      lastSyncedStylesRef.current = stylesKey;
-      
-      // Mark that we're syncing from props to prevent onChange loop
-      isSyncingFromPropsRef.current = true;
-      
-      // Only sync if props have actual content, not defaults
-      // This prevents syncing to defaults when parent state resets
-      if (value.content && Object.keys(value.content).length > 0) {
-        const newContent = (value.content as ColumnsContent) || DEFAULT_CONTENT;
-        setContent(newContent);
-      }
-      if (value.styles && Object.keys(value.styles).length > 0) {
-        setStyles(value.styles);
-      }
-      
-      // Reset flag after state updates
-      setTimeout(() => {
-        isSyncingFromPropsRef.current = false;
-      }, 0);
-    }
-  }, [value.id, value.content, value.styles]);
-
-  // Register state accessors for settings
-  useEffect(() => {
-    const accessor: BlockStateAccessor = {
-      getContent: () => content,
-      getStyles: () => styles,
-      setContent: setContent,
-      setStyles: setStyles,
-      getFullState: () => ({
-        ...value,
-        content: content as BlockContent,
-        styles,
-      }),
-    };
-    registerBlockState(value.id, accessor);
-    return () => unregisterBlockState(value.id);
-  }, [value.id, content, styles, value]);
-
-  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
-  // Skip if we're syncing from props to prevent infinite loop
-  useEffect(() => {
-    if (!isSyncingFromPropsRef.current) {
-      onChange({
-        ...value,
-        content: content as BlockContent,
-        styles,
-      });
-    }
-  }, [content, styles, value, onChange]);
-
-  const columnLayout = (value.settings?.columnLayout as ColumnLayout[] | undefined) || [
-    { columnId: "default-col-1", width: "100%", blockIds: [] },
-  ];
+  const columnLayout =
+    (settings?.columnLayout as ColumnLayout[] | undefined) || [
+      { columnId: "default-col-1", width: "100%", blockIds: [] },
+    ];
 
   return (
     <ColumnsRenderer
@@ -349,7 +274,8 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
     ? (accessor.getContent() as ColumnsContent)
     : (block.content as ColumnsContent) || DEFAULT_CONTENT;
 
-  const columnLayout = (block.settings?.columnLayout as ColumnLayout[] | undefined) || [
+  const currentSettings = accessor?.getSettings ? accessor.getSettings() : block.settings;
+  const columnLayout = (currentSettings?.columnLayout as ColumnLayout[] | undefined) || [
     { columnId: "default-col-1", width: "100%", blockIds: [] },
   ];
 
@@ -368,7 +294,14 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
   };
 
   const updateSettings = (settingsUpdates: Partial<{ columnLayout: ColumnLayout[] }>) => {
-    if (onUpdate) {
+    if (accessor?.setSettings) {
+      const existing = accessor.getSettings?.() || {};
+      accessor.setSettings({
+        ...existing,
+        ...settingsUpdates,
+      });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
       onUpdate({
         settings: {
           ...(block.settings || {}),

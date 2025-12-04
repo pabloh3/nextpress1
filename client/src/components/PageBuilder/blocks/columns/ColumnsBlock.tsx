@@ -1,5 +1,6 @@
+import React, { useState, useEffect, useRef } from "react";
 import type { BlockConfig, BlockContent } from "@shared/schema-types";
-import type { BlockDefinition } from "../types";
+import type { BlockDefinition, BlockComponentProps } from "../types";
 import {
   Grid3x3 as GridIcon,
   Plus,
@@ -22,14 +23,23 @@ import { Droppable, Draggable } from "@/lib/dnd";
 import { useBlockActions } from "../../BlockActionsContext";
 import BlockRenderer from "../../BlockRenderer";
 import { generateBlockId } from "../../utils";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 interface ColumnLayout {
   columnId: string;
-  width?: string; // CSS width value like '33.33%', '200px', 'auto', '1fr'
-  blockIds: string[]; // IDs of blocks assigned to this column
+  width?: string;
+  blockIds: string[];
 }
 
-// Structured data shape stored under content: { kind: 'structured', data }
 interface ColumnsData extends Record<string, unknown> {
   gap?: string;
   verticalAlignment?: "top" | "center" | "bottom" | "stretch";
@@ -37,12 +47,10 @@ interface ColumnsData extends Record<string, unknown> {
   direction?: "row" | "column";
 }
 
-/**
- * Extracts ColumnsData from a BlockContent which may be:
- * - structured: { kind: 'structured', data }
- * - legacy plain object (pre-union)
- * - undefined
- */
+type ColumnsContent = BlockContent & {
+  data?: ColumnsData;
+};
+
 function readColumnsData(content: BlockContent): ColumnsData {
   if (!content) return {};
   if (typeof content === "object" && "kind" in content) {
@@ -55,10 +63,8 @@ function readColumnsData(content: BlockContent): ColumnsData {
         direction: typeof data.direction === "string" ? (data.direction as ColumnsData["direction"]) : undefined,
       };
     }
-    // non-structured kinds are not expected for this container
     return {};
   }
-  // Legacy plain object: content may directly have keys
   const legacy = content as unknown as Record<string, unknown>;
   return {
     gap: typeof legacy.gap === "string" ? legacy.gap : undefined,
@@ -68,34 +74,41 @@ function readColumnsData(content: BlockContent): ColumnsData {
   };
 }
 
-/**
- * Produces a structured BlockContent with merged updates for ColumnsData.
- * Always writes back as { kind: 'structured', data }
- */
 function writeColumnsData(prev: BlockContent, updates: Partial<ColumnsData>): BlockContent {
   const current = readColumnsData(prev);
   const next: ColumnsData = { ...current, ...updates };
   return { kind: "structured", data: next as Record<string, unknown> };
 }
 
-function ColumnsRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  const data = readColumnsData(block.content);
+const DEFAULT_CONTENT: ColumnsContent = {
+  kind: "structured",
+  data: { gap: "20px", verticalAlignment: "top", horizontalAlignment: "left", direction: "row" },
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface ColumnsRendererProps {
+  content: ColumnsContent;
+  styles?: React.CSSProperties;
+  children?: BlockConfig[];
+  columnLayout?: ColumnLayout[];
+  isPreview?: boolean;
+}
+
+function ColumnsRenderer({ content, styles, children, columnLayout, isPreview }: ColumnsRendererProps) {
+  const data = readColumnsData(content);
   const gap = data.gap || "20px";
   const verticalAlignment = data.verticalAlignment || "top";
   const horizontalAlignment = data.horizontalAlignment || "left";
   const direction = data.direction || "row";
 
-  const columnLayout = (block.settings?.columnLayout as ColumnLayout[] | undefined) || [
+  const layout = columnLayout || [
     { columnId: "default-col-1", width: "100%", blockIds: [] },
   ];
 
-  const children = block.children || [];
+  const childBlocks = children || [];
 
   const alignItems = {
     top: "flex-start",
@@ -125,11 +138,11 @@ function ColumnsRenderer({
         width: "100%",
         alignItems,
         justifyContent,
-        ...block.styles,
+        ...styles,
       }}
     >
-      {columnLayout.map((column) => {
-        const columnChildren = children.filter((child) =>
+      {layout.map((column) => {
+        const columnChildren = childBlocks.filter((child) =>
           column.blockIds.includes(child.id)
         );
 
@@ -216,28 +229,153 @@ function ColumnsRenderer({
   );
 }
 
-function ColumnsSettings({
-  block,
-  onUpdate,
-}: {
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function ColumnsBlockComponent({
+  value,
+  onChange,
+  isPreview,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<ColumnsContent>(() => {
+    return (value.content as ColumnsContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props when block ID changes OR when content/styles change significantly
+  // This prevents syncing to default values when parent state resets
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  const lastSyncedContentRef = useRef<string | null>(null);
+  const lastSyncedStylesRef = useRef<string | null>(null);
+  const isSyncingFromPropsRef = useRef(false);
+  
+  useEffect(() => {
+    const contentKey = JSON.stringify(value.content);
+    const stylesKey = JSON.stringify(value.styles);
+    
+    // Sync if ID changed OR if content/styles changed significantly (not just reference)
+    if (
+      lastSyncedBlockIdRef.current !== value.id ||
+      (lastSyncedBlockIdRef.current === value.id && 
+       (lastSyncedContentRef.current !== contentKey || lastSyncedStylesRef.current !== stylesKey))
+    ) {
+      lastSyncedBlockIdRef.current = value.id;
+      lastSyncedContentRef.current = contentKey;
+      lastSyncedStylesRef.current = stylesKey;
+      
+      // Mark that we're syncing from props to prevent onChange loop
+      isSyncingFromPropsRef.current = true;
+      
+      // Only sync if props have actual content, not defaults
+      // This prevents syncing to defaults when parent state resets
+      if (value.content && Object.keys(value.content).length > 0) {
+        const newContent = (value.content as ColumnsContent) || DEFAULT_CONTENT;
+        setContent(newContent);
+      }
+      if (value.styles && Object.keys(value.styles).length > 0) {
+        setStyles(value.styles);
+      }
+      
+      // Reset flag after state updates
+      setTimeout(() => {
+        isSyncingFromPropsRef.current = false;
+      }, 0);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  // Skip if we're syncing from props to prevent infinite loop
+  useEffect(() => {
+    if (!isSyncingFromPropsRef.current) {
+      onChange({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      });
+    }
+  }, [content, styles, value, onChange]);
+
+  const columnLayout = (value.settings?.columnLayout as ColumnLayout[] | undefined) || [
+    { columnId: "default-col-1", width: "100%", blockIds: [] },
+  ];
+
+  return (
+    <ColumnsRenderer
+      content={content}
+      styles={styles}
+      children={value.children}
+      columnLayout={columnLayout}
+      isPreview={isPreview}
+    />
+  );
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface ColumnsSettingsProps {
   block: BlockConfig;
-  onUpdate: (updates: Partial<BlockConfig>) => void;
-}) {
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as ColumnsContent)
+    : (block.content as ColumnsContent) || DEFAULT_CONTENT;
+
   const columnLayout = (block.settings?.columnLayout as ColumnLayout[] | undefined) || [
     { columnId: "default-col-1", width: "100%", blockIds: [] },
   ];
 
+  const data = readColumnsData(content);
+
+  // Update handlers
   const updateContent = (contentUpdates: Partial<ColumnsData>) => {
-    onUpdate({ content: writeColumnsData(block.content, contentUpdates) });
+    if (accessor) {
+      const current = accessor.getContent() as ColumnsContent;
+      const currentData = readColumnsData(current);
+      accessor.setContent(writeColumnsData(current, { ...currentData, ...contentUpdates }) as ColumnsContent);
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({ content: writeColumnsData(block.content, contentUpdates) });
+    }
   };
 
   const updateSettings = (settingsUpdates: Partial<{ columnLayout: ColumnLayout[] }>) => {
-    onUpdate({
-      settings: {
-        ...(block.settings || {}),
-        ...settingsUpdates,
-      },
-    });
+    if (onUpdate) {
+      onUpdate({
+        settings: {
+          ...(block.settings || {}),
+          ...settingsUpdates,
+        },
+      });
+    }
   };
 
   const updateColumnLayout = (newColumnLayout: ColumnLayout[]) => {
@@ -273,8 +411,6 @@ function ColumnsSettings({
     }));
     updateColumnLayout(newColumnLayout);
   };
-
-  const data = readColumnsData(block.content);
 
   return (
     <div className="space-y-4">
@@ -417,6 +553,35 @@ function ColumnsSettings({
   );
 }
 
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyColumnsRenderer({
+  block,
+  isPreview,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  const columnLayout = (block.settings?.columnLayout as ColumnLayout[] | undefined) || [
+    { columnId: "default-col-1", width: "100%", blockIds: [] },
+  ];
+  return (
+    <ColumnsRenderer
+      content={(block.content as ColumnsContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+      children={block.children}
+      columnLayout={columnLayout}
+      isPreview={isPreview}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
+
 const ColumnsBlock: BlockDefinition = {
   id: "core/columns",
   label: "Columns",
@@ -427,8 +592,10 @@ const ColumnsBlock: BlockDefinition = {
   handlesOwnChildren: true,
   defaultContent: { kind: "structured", data: { gap: "20px", verticalAlignment: "top", horizontalAlignment: "left", direction: "row" } },
   defaultStyles: {},
-  renderer: ColumnsRenderer,
+  component: ColumnsBlockComponent,
+  renderer: LegacyColumnsRenderer,
   settings: ColumnsSettings,
+  hasSettings: true,
 };
 
 export default ColumnsBlock;

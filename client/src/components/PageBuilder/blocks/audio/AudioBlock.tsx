@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -9,11 +9,56 @@ import { Button } from "@/components/ui/button";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { AudioLines as AudioIcon, Settings, Wrench } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  // Extract audio URL using discriminated union pattern with defensive checks
-  const audioUrl = block.content?.kind === 'media' && block.content.mediaType === 'audio' 
-    ? block.content.url 
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type AudioContent = BlockContent & {
+  controls?: boolean;
+  autoplay?: boolean;
+  loop?: boolean;
+  preload?: string;
+  align?: 'default' | 'wide' | 'full';
+  caption?: string;
+  anchor?: string;
+  className?: string;
+  id?: number;
+};
+
+const DEFAULT_CONTENT: AudioContent = {
+  kind: 'media',
+  url: '',
+  mediaType: 'audio',
+  id: undefined,
+  autoplay: false,
+  controls: true,
+  loop: false,
+  preload: 'none',
+  align: undefined,
+  caption: '',
+  anchor: '',
+  className: '',
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface AudioRendererProps {
+  content: AudioContent;
+  styles?: React.CSSProperties;
+}
+
+function AudioRenderer({ content, styles }: AudioRendererProps) {
+  const audioUrl = content?.kind === 'media' && content.mediaType === 'audio' 
+    ? content.url 
     : '';
   
   const {
@@ -25,7 +70,7 @@ function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
     caption,
     anchor,
     className,
-  } = (block.content || {}) as any;
+  } = content || {};
 
   const classes = [
     'wp-block-audio',
@@ -42,7 +87,7 @@ function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   }
 
   return (
-    <figure id={anchor} className={classes} style={{ ...block.styles }}>
+    <figure id={anchor} className={classes} style={{ ...styles }}>
       <audio
         src={audioUrl}
         controls={controls}
@@ -60,18 +105,131 @@ function AudioRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function AudioBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<AudioContent>(() => {
+    return (value.content as AudioContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props when block ID changes OR when content/styles change significantly
+  // This prevents syncing to default values when parent state resets
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  const lastSyncedContentRef = useRef<string | null>(null);
+  const lastSyncedStylesRef = useRef<string | null>(null);
+  const isSyncingFromPropsRef = useRef(false);
   
+  useEffect(() => {
+    const contentKey = JSON.stringify(value.content);
+    const stylesKey = JSON.stringify(value.styles);
+    
+    // Sync if ID changed OR if content/styles changed significantly (not just reference)
+    if (
+      lastSyncedBlockIdRef.current !== value.id ||
+      (lastSyncedBlockIdRef.current === value.id && 
+       (lastSyncedContentRef.current !== contentKey || lastSyncedStylesRef.current !== stylesKey))
+    ) {
+      lastSyncedBlockIdRef.current = value.id;
+      lastSyncedContentRef.current = contentKey;
+      lastSyncedStylesRef.current = stylesKey;
+      
+      // Mark that we're syncing from props to prevent onChange loop
+      isSyncingFromPropsRef.current = true;
+      
+      // Only sync if props have actual content, not defaults
+      // This prevents syncing to defaults when parent state resets
+      if (value.content && Object.keys(value.content).length > 0) {
+        const newContent = (value.content as AudioContent) || DEFAULT_CONTENT;
+        setContent(newContent);
+      }
+      if (value.styles && Object.keys(value.styles).length > 0) {
+        setStyles(value.styles);
+      }
+      
+      // Reset flag after state updates
+      setTimeout(() => {
+        isSyncingFromPropsRef.current = false;
+      }, 0);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  // Skip if we're syncing from props to prevent infinite loop
+  useEffect(() => {
+    if (!isSyncingFromPropsRef.current) {
+      onChange({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      });
+    }
+  }, [content, styles, value, onChange]);
+
+  return <AudioRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface AudioSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function AudioSettings({ block, onUpdate }: AudioSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
   const [isPickerOpen, setPickerOpen] = useState(false);
-  
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as AudioContent)
+    : (block.content as AudioContent) || DEFAULT_CONTENT;
+
+  // Update handlers
+  const updateContent = (updates: Partial<AudioContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as AudioContent;
+      accessor.setContent({ ...current, ...updates } as AudioContent);
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
+
+  const audioUrl = content?.kind === 'media' ? content.url : '';
 
   return (
     <div className="space-y-4">
@@ -83,8 +241,8 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <div className="flex items-center gap-2 mt-1">
               <Input
                 id="audio-src"
-                value={(block.content as any)?.kind === 'media' ? (block.content as any).url : ''}
-                onChange={(e) => updateContent({ kind: 'media', mediaType: 'audio', url: e.target.value })}
+                value={audioUrl}
+                onChange={(e) => updateContent({ kind: 'media', mediaType: 'audio', url: e.target.value } as AudioContent)}
                 placeholder="https://example.com/audio.mp3"
                 className="h-9"
               />
@@ -94,7 +252,7 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
               open={isPickerOpen}
               onOpenChange={setPickerOpen}
               kind="audio"
-              onSelect={(m) => updateContent({ kind: 'media', mediaType: 'audio', id: m.id, url: m.url })}
+              onSelect={(m) => updateContent({ kind: 'media', mediaType: 'audio', id: m.id, url: m.url } as AudioContent)}
             />
           </div>
           
@@ -102,7 +260,7 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="audio-caption" className="text-sm font-medium text-gray-700">Caption</Label>
             <Input
               id="audio-caption"
-              value={(block.content as any)?.caption || ''}
+              value={content?.caption || ''}
               onChange={(e) => updateContent({ caption: e.target.value })}
               placeholder="Add a caption (optional)"
               className="mt-1 h-9"
@@ -118,7 +276,7 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="audio-controls" className="text-sm font-medium text-gray-700">Show Controls</Label>
             <Switch
               id="audio-controls"
-              checked={((block.content as any)?.controls ?? true) !== false}
+              checked={(content?.controls ?? true) !== false}
               onCheckedChange={(checked) => updateContent({ controls: checked })}
             />
           </div>
@@ -127,7 +285,7 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="audio-autoplay" className="text-sm font-medium text-gray-700">Autoplay</Label>
             <Switch
               id="audio-autoplay"
-              checked={Boolean((block.content as any)?.autoplay)}
+              checked={Boolean(content?.autoplay)}
               onCheckedChange={(checked) => updateContent({ autoplay: checked })}
             />
           </div>
@@ -136,7 +294,7 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="audio-loop" className="text-sm font-medium text-gray-700">Loop</Label>
             <Switch
               id="audio-loop"
-              checked={Boolean((block.content as any)?.loop)}
+              checked={Boolean(content?.loop)}
               onCheckedChange={(checked) => updateContent({ loop: checked })}
             />
           </div>
@@ -144,7 +302,7 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
           <div>
             <Label htmlFor="audio-preload" className="text-sm font-medium text-gray-700">Preload</Label>
             <Select
-              value={(block.content as any)?.preload || 'none'}
+              value={content?.preload || 'none'}
               onValueChange={(value) => updateContent({ preload: value })}
               >
                 <SelectTrigger id="audio-preload" className="h-9 mt-1">
@@ -161,8 +319,8 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
           <div>
             <Label htmlFor="audio-align" className="text-sm font-medium text-gray-700">Alignment</Label>
             <Select
-              value={(block.content as any)?.align || 'default'}
-              onValueChange={(value) => updateContent({ align: value === 'default' ? undefined : value })}
+              value={content?.align || 'default'}
+              onValueChange={(value) => updateContent({ align: value === 'default' ? undefined : value as any })}
             >
               <SelectTrigger id="audio-align" className="h-9">
                 <SelectValue />
@@ -184,7 +342,7 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="audio-anchor" className="text-sm font-medium text-gray-700">Anchor ID</Label>
             <Input
               id="audio-anchor"
-              value={(block.content as any)?.anchor || ''}
+              value={content?.anchor || ''}
               onChange={(e) => updateContent({ anchor: e.target.value })}
               placeholder="section-id"
               className="mt-1 h-9 text-sm"
@@ -194,7 +352,7 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="audio-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="audio-class"
-              value={(block.content as any)?.className || ''}
+              value={content?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="custom-class"
               className="mt-1 h-9 text-sm"
@@ -205,6 +363,28 @@ function AudioSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyAudioRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <AudioRenderer
+      content={(block.content as AudioContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const AudioBlock: BlockDefinition = {
   id: 'core/audio',
@@ -227,10 +407,10 @@ const AudioBlock: BlockDefinition = {
     className: '',
   },
   defaultStyles: {},
-  renderer: AudioRenderer,
+  component: AudioBlockComponent,
+  renderer: LegacyAudioRenderer,
   settings: AudioSettings,
+  hasSettings: true,
 };
 
 export default AudioBlock;
-
-

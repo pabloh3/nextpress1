@@ -1,34 +1,64 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Code2 as HtmlIcon, Wrench } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function HtmlRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
-  const content = (block.content as any)?.content || '';
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type HtmlContent = {
+  content?: string;
+  className?: string;
+};
+
+const DEFAULT_CONTENT: HtmlContent = {
+  content: '',
+  className: '',
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface HtmlRendererProps {
+  content: HtmlContent;
+  styles?: React.CSSProperties;
+  isPreview?: boolean;
+}
+
+function HtmlRenderer({ content, styles, isPreview }: HtmlRendererProps) {
+  const htmlContent = content?.content || '';
   
   const className = [
     "wp-block-html",
-    block.content?.className || "",
+    content?.className || "",
   ].filter(Boolean).join(" ");
 
   // In preview mode, render the HTML directly
   // In edit mode, show it as code
-  if (isPreview && content) {
+  if (isPreview && htmlContent) {
     return (
       <div
         className={className}
-        style={block.styles}
-        dangerouslySetInnerHTML={{ __html: content }}
+        style={styles}
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     );
   }
 
   return (
-    <div className={className} style={block.styles}>
+    <div className={className} style={styles}>
       <div style={{
         backgroundColor: '#f8f9fa',
         padding: '1em',
@@ -40,22 +70,134 @@ function HtmlRenderer({ block, isPreview }: { block: BlockConfig; isPreview: boo
         whiteSpace: 'pre-wrap',
         color: '#6c757d',
       }}>
-        {content || 'Enter custom HTML...'}
+        {htmlContent || 'Enter custom HTML...'}
       </div>
     </div>
   );
 }
 
-function HtmlSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function HtmlBlockComponent({
+  value,
+  onChange,
+  isPreview,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<HtmlContent>(() => {
+    return (value.content as HtmlContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props when block ID changes OR when content/styles change significantly
+  // This prevents syncing to default values when parent state resets
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  const lastSyncedContentRef = useRef<string | null>(null);
+  const lastSyncedStylesRef = useRef<string | null>(null);
+  const isSyncingFromPropsRef = useRef(false);
   
-  
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+  useEffect(() => {
+    const contentKey = JSON.stringify(value.content);
+    const stylesKey = JSON.stringify(value.styles);
+    
+    // Sync if ID changed OR if content/styles changed significantly (not just reference)
+    if (
+      lastSyncedBlockIdRef.current !== value.id ||
+      (lastSyncedBlockIdRef.current === value.id && 
+       (lastSyncedContentRef.current !== contentKey || lastSyncedStylesRef.current !== stylesKey))
+    ) {
+      lastSyncedBlockIdRef.current = value.id;
+      lastSyncedContentRef.current = contentKey;
+      lastSyncedStylesRef.current = stylesKey;
+      
+      // Mark that we're syncing from props to prevent onChange loop
+      isSyncingFromPropsRef.current = true;
+      
+      // Only sync if props have actual content, not defaults
+      // This prevents syncing to defaults when parent state resets
+      if (value.content && Object.keys(value.content).length > 0) {
+        const newContent = (value.content as HtmlContent) || DEFAULT_CONTENT;
+        setContent(newContent);
+      }
+      if (value.styles && Object.keys(value.styles).length > 0) {
+        setStyles(value.styles);
+      }
+      
+      // Reset flag after state updates
+      setTimeout(() => {
+        isSyncingFromPropsRef.current = false;
+      }, 0);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  // Skip if we're syncing from props to prevent infinite loop
+  useEffect(() => {
+    if (!isSyncingFromPropsRef.current) {
+      onChange({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      });
+    }
+  }, [content, styles, value, onChange]);
+
+  return <HtmlRenderer content={content} styles={styles} isPreview={isPreview} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface HtmlSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function HtmlSettings({ block, onUpdate }: HtmlSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as HtmlContent)
+    : (block.content as HtmlContent) || DEFAULT_CONTENT;
+
+  // Update handlers
+  const updateContent = (updates: Partial<HtmlContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as HtmlContent;
+      accessor.setContent({ ...current, ...updates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
 
   return (
@@ -67,7 +209,7 @@ function HtmlSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Label htmlFor="html-content" className="text-sm font-medium text-gray-700">Custom HTML</Label>
             <Textarea
               id="html-content"
-              value={(block.content as any)?.content || ''}
+              value={content?.content || ''}
               onChange={(e) => updateContent({ content: e.target.value })}
               placeholder="<p>Enter your custom HTML here...</p>"
               rows={10}
@@ -91,7 +233,7 @@ function HtmlSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
             <Label htmlFor="html-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="html-class"
-              value={block.content?.className || ''}
+              value={content?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. custom-widget"
               className="mt-1 h-9 text-sm"
@@ -102,6 +244,30 @@ function HtmlSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upda
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyHtmlRenderer({
+  block,
+  isPreview,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <HtmlRenderer
+      content={(block.content as HtmlContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+      isPreview={isPreview}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const HtmlBlock: BlockDefinition = {
   id: 'core/html',
@@ -116,7 +282,8 @@ const HtmlBlock: BlockDefinition = {
   defaultStyles: {
     margin: '1em 0',
   },
-  renderer: HtmlRenderer,
+  component: HtmlBlockComponent,
+  renderer: LegacyHtmlRenderer,
   settings: HtmlSettings,
   hasSettings: true,
 };

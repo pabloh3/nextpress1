@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,12 +11,68 @@ import { Textarea } from "@/components/ui/textarea";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Square as CoverIcon, Settings, Wrench } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  // Extract data from discriminated union structure with defensive check
-  const blockData = block.content?.kind === 'structured' 
-    ? (block.content.data as any) 
-    : {};
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type CoverData = {
+  url?: string;
+  alt?: string;
+  hasParallax?: boolean;
+  dimRatio?: number;
+  overlayColor?: string;
+  minHeight?: number;
+  contentPosition?: string;
+  customOverlayColor?: string;
+  backgroundType?: 'image' | 'video';
+  focalPoint?: { x: number; y: number };
+  innerContent?: string;
+  className?: string;
+};
+
+type CoverContent = BlockContent & {
+  data?: CoverData;
+};
+
+const DEFAULT_DATA: CoverData = {
+  url: '',
+  alt: '',
+  hasParallax: false,
+  dimRatio: 50,
+  minHeight: 400,
+  contentPosition: 'center center',
+  customOverlayColor: '#000000',
+  backgroundType: 'image',
+  focalPoint: { x: 0.5, y: 0.5 },
+  innerContent: '<p style="font-size: 2.5em; font-weight: bold;">Write title…</p>',
+  className: '',
+};
+
+const DEFAULT_CONTENT: CoverContent = {
+  kind: 'structured',
+  data: DEFAULT_DATA,
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface CoverRendererProps {
+  content: CoverContent;
+  styles?: React.CSSProperties;
+}
+
+function CoverRenderer({ content, styles }: CoverRendererProps) {
+  const blockData = content?.kind === 'structured' 
+    ? (content.data as CoverData) 
+    : DEFAULT_DATA;
     
   const url = blockData?.url || '';
   const alt = blockData?.alt || '';
@@ -28,8 +84,6 @@ function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   const customOverlayColor = blockData?.customOverlayColor || '';
   const backgroundType = blockData?.backgroundType || 'image';
   const focalPoint = blockData?.focalPoint || { x: 0.5, y: 0.5 };
-  
-  // Inner content
   const innerContent = blockData?.innerContent || '<p>Write title…</p>';
 
   const className = [
@@ -69,10 +123,9 @@ function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
         minHeight: `${minHeight}px`,
         overflow: 'hidden',
         ...backgroundImageStyle,
-        ...block.styles,
+        ...styles,
       }}
     >
-      {/* Background Video (if applicable) */}
       {backgroundType === 'video' && url && (
         <video
           autoPlay
@@ -92,7 +145,6 @@ function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
         </video>
       )}
 
-      {/* Overlay */}
       <div
         className="wp-block-cover__background"
         style={{
@@ -106,7 +158,6 @@ function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
         }}
       />
 
-      {/* Content */}
       <div
         className="wp-block-cover__inner-container"
         style={{
@@ -132,43 +183,168 @@ function CoverRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  const [isPickerOpen, setPickerOpen] = useState(false);
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function CoverBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<CoverContent>(() => {
+    return (value.content as CoverContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props when block ID changes OR when content/styles change significantly
+  // This prevents syncing to default values when parent state resets
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  const lastSyncedContentRef = useRef<string | null>(null);
+  const lastSyncedStylesRef = useRef<string | null>(null);
+  const isSyncingFromPropsRef = useRef(false);
   
-  // Helper to update content within discriminated union structure
-  const updateContent = (contentUpdates: any) => {
-    const currentData = block.content?.kind === 'structured' 
-      ? (block.content.data as any) 
-      : {};
+  useEffect(() => {
+    const contentKey = JSON.stringify(value.content);
+    const stylesKey = JSON.stringify(value.styles);
+    
+    // Sync if ID changed OR if content/styles changed significantly (not just reference)
+    if (
+      lastSyncedBlockIdRef.current !== value.id ||
+      (lastSyncedBlockIdRef.current === value.id && 
+       (lastSyncedContentRef.current !== contentKey || lastSyncedStylesRef.current !== stylesKey))
+    ) {
+      lastSyncedBlockIdRef.current = value.id;
+      lastSyncedContentRef.current = contentKey;
+      lastSyncedStylesRef.current = stylesKey;
       
-    onUpdate({
-      content: {
+      // Mark that we're syncing from props to prevent onChange loop
+      isSyncingFromPropsRef.current = true;
+      
+      // Only sync if props have actual content, not defaults
+      // This prevents syncing to defaults when parent state resets
+      if (value.content && Object.keys(value.content).length > 0) {
+        const newContent = (value.content as CoverContent) || DEFAULT_CONTENT;
+        setContent(newContent);
+      }
+      if (value.styles && Object.keys(value.styles).length > 0) {
+        setStyles(value.styles);
+      }
+      
+      // Reset flag after state updates
+      setTimeout(() => {
+        isSyncingFromPropsRef.current = false;
+      }, 0);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  // Skip if we're syncing from props to prevent infinite loop
+  useEffect(() => {
+    if (!isSyncingFromPropsRef.current) {
+      onChange({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      });
+    }
+  }, [content, styles, value, onChange]);
+
+  return <CoverRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface CoverSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function CoverSettings({ block, onUpdate }: CoverSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+  const [isPickerOpen, setPickerOpen] = useState(false);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as CoverContent)
+    : (block.content as CoverContent) || DEFAULT_CONTENT;
+  const styles = accessor
+    ? accessor.getStyles()
+    : block.styles;
+
+  const blockData = content?.kind === 'structured' 
+    ? (content.data as CoverData) 
+    : DEFAULT_DATA;
+
+  // Update handlers
+  const updateContent = (updates: Partial<CoverData>) => {
+    if (accessor) {
+      const current = accessor.getContent() as CoverContent;
+      const currentData = current?.kind === 'structured' ? (current.data as CoverData) : DEFAULT_DATA;
+      accessor.setContent({
+        ...current,
         kind: 'structured',
         data: {
           ...currentData,
-          ...contentUpdates,
+          ...updates,
         },
-      },
-    });
+      } as CoverContent);
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      const currentData = block.content?.kind === 'structured' 
+        ? (block.content.data as CoverData) 
+        : DEFAULT_DATA;
+      onUpdate({
+        content: {
+          kind: 'structured',
+          data: {
+            ...currentData,
+            ...updates,
+          },
+        } as BlockContent,
+      });
+    }
   };
-  
-  // Extract current data for display
-  const blockData = block.content?.kind === 'structured' 
-    ? (block.content.data as any) 
-    : {};
 
-  const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
-        ...styleUpdates,
-      },
-    });
+  const updateStyles = (styleUpdates: Partial<React.CSSProperties>) => {
+    if (accessor) {
+      const current = accessor.getStyles() || {};
+      accessor.setStyles({ ...current, ...styleUpdates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        styles: {
+          ...block.styles,
+          ...styleUpdates,
+        },
+      });
+    }
   };
 
   return (
     <div className="space-y-4">
-      {/* Content Card */}
       <CollapsibleCard title="Content" icon={CoverIcon} defaultOpen={true}>
         <div className="space-y-4">
           <div>
@@ -187,7 +363,7 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
             <Label htmlFor="cover-background-type" className="text-sm font-medium text-gray-700">Background Type</Label>
             <Select
               value={blockData?.backgroundType || 'image'}
-              onValueChange={(value) => updateContent({ backgroundType: value })}
+              onValueChange={(value) => updateContent({ backgroundType: value as any })}
             >
               <SelectTrigger id="cover-background-type" className="h-9">
                 <SelectValue />
@@ -246,7 +422,6 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
         </div>
       </CollapsibleCard>
 
-      {/* Settings Card */}
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
         <div className="space-y-4">
           {blockData?.backgroundType === 'image' && (
@@ -339,7 +514,6 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
         </div>
       </CollapsibleCard>
 
-      {/* Advanced Card */}
       <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
         <div className="space-y-4">
           <div>
@@ -357,6 +531,28 @@ function CoverSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyCoverRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <CoverRenderer
+      content={(block.content as CoverContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const CoverBlock: BlockDefinition = {
   id: 'core/cover',
@@ -381,7 +577,8 @@ const CoverBlock: BlockDefinition = {
     },
   },
   defaultStyles: {},
-  renderer: CoverRenderer,
+  component: CoverBlockComponent,
+  renderer: LegacyCoverRenderer,
   settings: CoverSettings,
   hasSettings: true,
 };

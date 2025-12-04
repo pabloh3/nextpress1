@@ -1,33 +1,53 @@
 import React from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, Settings, Wrench } from "lucide-react";
+import { getBlockStateAccessor } from "../blockStateRegistry";
+import { useBlockState } from "../useBlockState";
 
-interface TextBlockContent {
-  content?: string;
-  text?: string;
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type TextBlockContent = BlockContent & {
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
   align?: 'left' | 'center' | 'right' | 'justify';
   anchor?: string;
   className?: string;
   dropCap?: boolean;
+};
+
+const DEFAULT_CONTENT: TextBlockContent = {
+  kind: 'text',
+  value: 'Add your text content here. You can edit this text and customize its appearance.',
+  textAlign: 'left',
+  dropCap: false,
+  anchor: '',
+  className: '',
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface TextRendererProps {
+  content: TextBlockContent;
+  styles?: React.CSSProperties;
 }
 
-interface TextBlockConfig extends Omit<BlockConfig, 'content'> {
-  content?: TextBlockContent;
-}
-
-function TextRenderer({ block }: { block: TextBlockConfig; isPreview: boolean }) {
-  // Extract text content safely using discriminated union pattern
-  const textContent = block.content?.kind === 'text' ? block.content.value : '';
-  
-  const align = (block.content?.textAlign as string) || (block.content?.align as string) || (block.styles?.textAlign as string | undefined);
-  const anchor = block.content?.anchor as string | undefined;
-  const extraClass = (block.content?.className as string | undefined) || "";
-  const dropCap = Boolean(block.content?.dropCap);
+function TextRenderer({ content, styles }: TextRendererProps) {
+  const textContent = content?.kind === "text" ? content.value : "";
+  const align =
+    (content?.textAlign as string) ||
+    (content?.align as string) ||
+    (styles?.textAlign as string | undefined);
+  const anchor = content?.anchor as string | undefined;
+  const extraClass = (content?.className as string | undefined) || "";
+  const dropCap = Boolean(content?.dropCap);
 
   const className = [
     "wp-block-paragraph",
@@ -38,21 +58,67 @@ function TextRenderer({ block }: { block: TextBlockConfig; isPreview: boolean })
     .filter(Boolean)
     .join(" ");
 
+  const mergedStyles: React.CSSProperties = {
+    ...styles,
+    ...(align ? { textAlign: align as React.CSSProperties["textAlign"] } : {}),
+  };
+
   return (
-    <p id={anchor} className={className} style={block.styles}>
+    <p id={anchor} className={className} style={mergedStyles}>
       {textContent}
     </p>
   );
 }
 
-function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function TextBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  const { content, setContent, styles } = useBlockState<TextBlockContent>({
+    value,
+    getDefaultContent: () => DEFAULT_CONTENT,
+    onChange,
+  });
+
+  return <TextRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface TextSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function TextSettings({ block, onUpdate }: TextSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as TextBlockContent)
+    : (block.content as TextBlockContent) || DEFAULT_CONTENT;
+
+  // Update handlers
+  const updateContent = (updates: Partial<TextBlockContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as TextBlockContent;
+      accessor.setContent({ ...current, ...updates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
 
   const alignmentOptions = [
@@ -78,7 +144,7 @@ function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (
     }
   ];
 
-  const currentAlign = block.content?.textAlign || block.content?.align || 'left';
+  const currentAlign = content?.textAlign || content?.align || 'left';
 
   return (
     <div className="space-y-4">
@@ -94,8 +160,8 @@ function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (
               id="text-content"
               aria-label="Text content"
               className="h-36"
-              value={block.content?.kind === 'text' ? block.content.value : ''}
-              onChange={(e) => updateContent({ kind: 'text', value: e.target.value })}
+              value={content?.kind === 'text' ? content.value : ''}
+              onChange={(e) => updateContent({ kind: 'text', value: e.target.value } as TextBlockContent)}
               placeholder="Enter your text content"
               rows={4}
             />
@@ -117,7 +183,7 @@ function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (
                 return (
                   <button
                     key={option.value}
-                    onClick={() => updateContent({ textAlign: option.value })}
+                    onClick={() => updateContent({ textAlign: option.value as any })}
                     className={`flex items-center gap-2 p-3 text-sm font-medium rounded-lg border transition-colors ${
                       currentAlign === option.value
                         ? 'bg-gray-200 text-gray-800 border-gray-200 hover:bg-gray-300'
@@ -136,7 +202,7 @@ function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (
             <Label htmlFor="paragraph-dropcap">Drop cap</Label>
             <Switch
               id="paragraph-dropcap"
-              checked={Boolean(block.content?.dropCap)}
+              checked={Boolean(content?.dropCap)}
               onCheckedChange={(checked) => updateContent({ dropCap: checked })}
             />
           </div>
@@ -153,7 +219,7 @@ function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (
             <Label htmlFor="paragraph-anchor">Anchor</Label>
             <Textarea
               id="paragraph-anchor"
-              value={block.content?.anchor || ''}
+              value={content?.anchor || ''}
               onChange={(e) => updateContent({ anchor: e.target.value })}
               placeholder="Add an anchor (without #)"
               rows={1}
@@ -161,20 +227,42 @@ function TextSettings({ block, onUpdate }: { block: TextBlockConfig; onUpdate: (
           </div>
           <div>
             <Label htmlFor="paragraph-class">Additional CSS Class(es)</Label>
-<Textarea
-                id="paragraph-class"
-                aria-label="Additional CSS classes"
-                value={block.content?.className || ''}
-                onChange={(e) => updateContent({ className: e.target.value })}
-                placeholder="e.g. custom-class is-style-outline"
-                rows={1}
-              />
+            <Textarea
+              id="paragraph-class"
+              aria-label="Additional CSS classes"
+              value={content?.className || ''}
+              onChange={(e) => updateContent({ className: e.target.value })}
+              placeholder="e.g. custom-class is-style-outline"
+              rows={1}
+            />
           </div>
         </div>
       </CollapsibleCard>
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyTextRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <TextRenderer
+      content={(block.content as TextBlockContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const TextBlock: BlockDefinition = {
   id: 'core/paragraph',
@@ -195,10 +283,10 @@ const TextBlock: BlockDefinition = {
     lineHeight: '1.6',
     color: '#333333',
   },
-  renderer: TextRenderer,
+  component: TextBlockComponent,
+  renderer: LegacyTextRenderer,
   settings: TextSettings,
   hasSettings: true,
 };
 
 export default TextBlock;
-

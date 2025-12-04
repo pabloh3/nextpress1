@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import type { BlockConfig } from "@shared/schema-types";
 import { blockRegistry } from "./blocks";
+import { getBlockStateAccessor } from "./blocks/blockStateRegistry";
 
 interface BlockSettingsProps {
   block: BlockConfig;
@@ -47,32 +48,57 @@ interface BlockSettingsProps {
 
 export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSettingsProps) {
   const [customCss, setCustomCss] = useState(block.customCss || '');
+  const accessor = getBlockStateAccessor(block.id);
 
   const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
+    if (accessor) {
+      const current = accessor.getContent();
+      accessor.setContent({
+        ...(typeof current === "object" && current !== null ? current : {}),
         ...contentUpdates,
-      },
-    });
+      });
+    } else {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...contentUpdates,
+        },
+      });
+    }
   };
 
   const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
+    if (accessor) {
+      const current = accessor.getStyles() || {};
+      accessor.setStyles({
+        ...current,
         ...styleUpdates,
-      },
-    });
+      });
+    } else {
+      onUpdate({
+        styles: {
+          ...block.styles,
+          ...styleUpdates,
+        },
+      });
+    }
   };
 
   const updateSettings = (settingUpdates: any) => {
-    onUpdate({
-      settings: {
-        ...block.settings,
+    if (accessor) {
+      const current = accessor.getSettings() || {};
+      accessor.setSettings({
+        ...current,
         ...settingUpdates,
-      },
-    });
+      });
+    } else {
+      onUpdate({
+        settings: {
+          ...block.settings,
+          ...settingUpdates,
+        },
+      });
+    }
   };
 
   const handleCustomCssChange = (css: string) => {
@@ -129,10 +155,20 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
 
   const renderContentSettings = () => {
     const def = blockRegistry[block.name];
+    
+    // For component pattern blocks, use the legacy settings function if available
+    // This allows settings to be shown in sidebar while block manages its own state
+    if (def?.component && def?.settings) {
+      const SettingsComp = def.settings;
+      return <SettingsComp block={block} onUpdate={onUpdate} />;
+    }
+    
+    // Legacy pattern: use block's settings component
     if (def?.settings) {
       const SettingsComp = def.settings;
       return <SettingsComp block={block} onUpdate={onUpdate} />;
     }
+    
     return (
       <div className="text-center text-gray-500 py-8">
         No content settings available for this block type.

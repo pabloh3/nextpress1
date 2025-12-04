@@ -6,7 +6,7 @@ import { blockRegistry } from "./blocks";
 import { Droppable, Draggable } from "@/lib/dnd";
 import { useBlockActions } from "./BlockActionsContext";
 
-export function ContainerChildren({ block, isPreview }: { block: BlockConfig; isPreview: boolean }) {
+export function ContainerChildren({ block, isPreview, onBlockChange }: { block: BlockConfig; isPreview: boolean; onBlockChange?: (updated: BlockConfig) => void }) {
   const children = Array.isArray(block.children) ? block.children : [];
   const isContainer = !!blockRegistry[block.name]?.isContainer;
   const actions = useBlockActions();
@@ -25,6 +25,7 @@ export function ContainerChildren({ block, isPreview }: { block: BlockConfig; is
              isPreview={true}
              onDuplicate={() => actions?.onDuplicate(child.id)}
              onDelete={() => actions?.onDelete(child.id)}
+             onBlockChange={onBlockChange}
            />
         ))}
       </div>
@@ -62,6 +63,7 @@ export function ContainerChildren({ block, isPreview }: { block: BlockConfig; is
                         onDuplicate={() => actions?.onDuplicate(child.id)}
                         onDelete={() => actions?.onDelete(child.id)}
                         dragHandleProps={dragProvided.dragHandleProps}
+                        onBlockChange={onBlockChange}
                       />
                   </div>
                 )}
@@ -107,6 +109,7 @@ interface BlockRendererProps {
   onDelete: () => void;
   hoverHighlight?: 'padding' | 'margin' | null;
   dragHandleProps?: any;
+  onBlockChange?: (updated: BlockConfig) => void;
 }
 
 export default function BlockRenderer({ 
@@ -117,6 +120,7 @@ export default function BlockRenderer({
   onDelete,
   hoverHighlight = null,
   dragHandleProps,
+  onBlockChange,
 }: BlockRendererProps) {
   const [isHovered, setIsHovered] = useState(false);
   const actions = useBlockActions();
@@ -146,10 +150,29 @@ export default function BlockRenderer({
       console.debug('Rendering block:', block.name);
     }
     const def = blockRegistry[block.name];
+    
+    // New component pattern (preferred)
+    if (def?.component) {
+      const BlockComponent = def.component;
+      return (
+        <BlockComponent
+          value={block}
+          onChange={(updated) => {
+            onBlockChange?.(updated);
+          }}
+          isPreview={isPreview}
+          isSelected={effectiveSelected}
+        />
+      );
+    }
+    
+    // Legacy renderer pattern (backward compatibility)
     if (def?.renderer) {
       const Renderer = def.renderer;
       return <Renderer block={block} isPreview={isPreview} />;
     }
+    
+    // Fallback
     return (
       <div style={block.styles} className="p-4 border border-dashed border-gray-300 rounded">
         <div className="text-center text-gray-400">
@@ -260,7 +283,7 @@ export default function BlockRenderer({
           {contentEl}
         </div>
         {isContainer && !childrenHandledInRenderer && (
-          <ContainerChildren block={block} isPreview={isPreview} />
+          <ContainerChildren block={block} isPreview={isPreview} onBlockChange={onBlockChange} />
         )}
       </div>
     </div>

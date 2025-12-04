@@ -1,12 +1,22 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Plus, Trash2, Table as TableIcon, Settings, Wrench } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 interface TableCell {
   content: string;
@@ -17,9 +27,44 @@ interface TableRow {
   cells: TableCell[];
 }
 
-function TableRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  // Defensive check for discriminated union
-  const tableData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
+type TableData = {
+  body?: TableRow[];
+  head?: TableRow[];
+  foot?: TableRow[];
+  hasFixedLayout?: boolean;
+  caption?: string;
+  className?: string;
+};
+
+type TableContent = BlockContent & {
+  data?: TableData;
+};
+
+const DEFAULT_DATA: TableData = {
+  body: [],
+  head: [],
+  foot: [],
+  hasFixedLayout: false,
+  caption: '',
+  className: '',
+};
+
+const DEFAULT_CONTENT: TableContent = {
+  kind: 'structured',
+  data: DEFAULT_DATA,
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface TableRendererProps {
+  content: TableContent;
+  styles?: React.CSSProperties;
+}
+
+function TableRenderer({ content, styles }: TableRendererProps) {
+  const tableData = content?.kind === 'structured' ? (content.data as TableData) : DEFAULT_DATA;
   
   const body: TableRow[] = tableData?.body || [];
   const head: TableRow[] = tableData?.head || [];
@@ -35,7 +80,7 @@ function TableRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
 
   if (body.length === 0) {
     return (
-      <div className={className} style={block.styles}>
+      <div className={className} style={styles}>
         <div className="table-placeholder text-center text-gray-400 p-8 border-2 border-dashed border-gray-300 rounded">
           <TableIcon className="w-12 h-12 mx-auto mb-2" />
           <p>Table</p>
@@ -46,7 +91,7 @@ function TableRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   }
 
   return (
-    <figure className={className} style={block.styles}>
+    <figure className={className} style={styles}>
       <table style={{
         borderCollapse: 'collapse',
         width: '100%',
@@ -119,24 +164,146 @@ function TableRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
   );
 }
 
-function TableSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  // Defensive check for discriminated union
-  const tableData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function TableBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<TableContent>(() => {
+    return (value.content as TableContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props when block ID changes OR when content/styles change significantly
+  // This prevents syncing to default values when parent state resets
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  const lastSyncedContentRef = useRef<string | null>(null);
+  const lastSyncedStylesRef = useRef<string | null>(null);
+  const isSyncingFromPropsRef = useRef(false);
+  
+  useEffect(() => {
+    const contentKey = JSON.stringify(value.content);
+    const stylesKey = JSON.stringify(value.styles);
+    
+    // Sync if ID changed OR if content/styles changed significantly (not just reference)
+    if (
+      lastSyncedBlockIdRef.current !== value.id ||
+      (lastSyncedBlockIdRef.current === value.id && 
+       (lastSyncedContentRef.current !== contentKey || lastSyncedStylesRef.current !== stylesKey))
+    ) {
+      lastSyncedBlockIdRef.current = value.id;
+      lastSyncedContentRef.current = contentKey;
+      lastSyncedStylesRef.current = stylesKey;
+      
+      // Mark that we're syncing from props to prevent onChange loop
+      isSyncingFromPropsRef.current = true;
+      
+      // Only sync if props have actual content, not defaults
+      // This prevents syncing to defaults when parent state resets
+      if (value.content && Object.keys(value.content).length > 0) {
+        const newContent = (value.content as TableContent) || DEFAULT_CONTENT;
+        setContent(newContent);
+      }
+      if (value.styles && Object.keys(value.styles).length > 0) {
+        setStyles(value.styles);
+      }
+      
+      // Reset flag after state updates
+      setTimeout(() => {
+        isSyncingFromPropsRef.current = false;
+      }, 0);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  // Skip if we're syncing from props to prevent infinite loop
+  useEffect(() => {
+    if (!isSyncingFromPropsRef.current) {
+      onChange({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      });
+    }
+  }, [content, styles, value, onChange]);
+
+  return <TableRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface TableSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function TableSettings({ block, onUpdate }: TableSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as TableContent)
+    : (block.content as TableContent) || DEFAULT_CONTENT;
+
+  const tableData = content?.kind === 'structured' 
+    ? (content.data as TableData) 
+    : DEFAULT_DATA;
   
   const body: TableRow[] = tableData?.body || [];
   const head: TableRow[] = tableData?.head || [];
   const foot: TableRow[] = tableData?.foot || [];
 
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
+  // Update handlers
+  const updateContent = (updates: Partial<TableData>) => {
+    if (accessor) {
+      const current = accessor.getContent() as TableContent;
+      const currentData = current?.kind === 'structured' ? (current.data as TableData) : DEFAULT_DATA;
+      accessor.setContent({
+        ...current,
         kind: 'structured',
         data: {
-          ...tableData,
-          ...contentUpdates,
+          ...currentData,
+          ...updates,
         },
-      },
-    });
+      } as TableContent);
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          kind: 'structured',
+          data: {
+            ...tableData,
+            ...updates,
+          },
+        } as BlockContent,
+      });
+    }
   };
 
   const updateTableData = (section: 'body' | 'head' | 'foot', newData: TableRow[]) => {
@@ -386,6 +553,28 @@ function TableSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (upd
   );
 }
 
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyTableRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <TableRenderer
+      content={(block.content as TableContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
+
 const TableBlock: BlockDefinition = {
   id: 'core/table',
   label: 'Table',
@@ -406,7 +595,8 @@ const TableBlock: BlockDefinition = {
   defaultStyles: {
     margin: '1em 0',
   },
-  renderer: TableRenderer,
+  component: TableBlockComponent,
+  renderer: LegacyTableRenderer,
   settings: TableSettings,
   hasSettings: true,
 };

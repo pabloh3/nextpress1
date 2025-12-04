@@ -1,18 +1,47 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { FileText as PreformattedIcon, Settings, Wrench } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function PreformattedRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  const content = (block.content as any)?.content || '';
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type PreformattedContent = {
+  content?: string;
+  className?: string;
+};
+
+const DEFAULT_CONTENT: PreformattedContent = {
+  content: 'This is preformatted text.\nIt preserves    spacing   and\n\teven\ttabs!',
+  className: '',
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface PreformattedRendererProps {
+  content: PreformattedContent;
+  styles?: React.CSSProperties;
+}
+
+function PreformattedRenderer({ content, styles }: PreformattedRendererProps) {
+  const textContent = content?.content || '';
   
   const className = [
     "wp-block-preformatted",
-    block.content?.className || "",
+    content?.className || "",
   ].filter(Boolean).join(" ");
 
   return (
@@ -29,33 +58,153 @@ function PreformattedRenderer({ block }: { block: BlockConfig; isPreview: boolea
         border: '1px solid #e9ecef',
         borderRadius: '4px',
         margin: '1em 0',
-        ...block.styles,
+        ...styles,
       }}
     >
-      {content}
+      {textContent}
     </pre>
   );
 }
 
-function PreformattedSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function PreformattedBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<PreformattedContent>(() => {
+    return (value.content as PreformattedContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props when block ID changes OR when content/styles change significantly
+  // This prevents syncing to default values when parent state resets
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  const lastSyncedContentRef = useRef<string | null>(null);
+  const lastSyncedStylesRef = useRef<string | null>(null);
+  const isSyncingFromPropsRef = useRef(false);
   
-  
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+  useEffect(() => {
+    const contentKey = JSON.stringify(value.content);
+    const stylesKey = JSON.stringify(value.styles);
+    
+    // Sync if ID changed OR if content/styles changed significantly (not just reference)
+    if (
+      lastSyncedBlockIdRef.current !== value.id ||
+      (lastSyncedBlockIdRef.current === value.id && 
+       (lastSyncedContentRef.current !== contentKey || lastSyncedStylesRef.current !== stylesKey))
+    ) {
+      lastSyncedBlockIdRef.current = value.id;
+      lastSyncedContentRef.current = contentKey;
+      lastSyncedStylesRef.current = stylesKey;
+      
+      // Mark that we're syncing from props to prevent onChange loop
+      isSyncingFromPropsRef.current = true;
+      
+      // Only sync if props have actual content, not defaults
+      // This prevents syncing to defaults when parent state resets
+      if (value.content && Object.keys(value.content).length > 0) {
+        const newContent = (value.content as PreformattedContent) || DEFAULT_CONTENT;
+        setContent(newContent);
+      }
+      if (value.styles && Object.keys(value.styles).length > 0) {
+        setStyles(value.styles);
+      }
+      
+      // Reset flag after state updates
+      setTimeout(() => {
+        isSyncingFromPropsRef.current = false;
+      }, 0);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  // Skip if we're syncing from props to prevent infinite loop
+  useEffect(() => {
+    if (!isSyncingFromPropsRef.current) {
+      onChange({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      });
+    }
+  }, [content, styles, value, onChange]);
+
+  return <PreformattedRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface PreformattedSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function PreformattedSettings({ block, onUpdate }: PreformattedSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as PreformattedContent)
+    : (block.content as PreformattedContent) || DEFAULT_CONTENT;
+  const styles = accessor
+    ? accessor.getStyles()
+    : block.styles;
+
+  // Update handlers
+  const updateContent = (updates: Partial<PreformattedContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as PreformattedContent;
+      accessor.setContent({ ...current, ...updates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
 
-  const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
-        ...styleUpdates,
-      },
-    });
+  const updateStyles = (styleUpdates: Partial<React.CSSProperties>) => {
+    if (accessor) {
+      const current = accessor.getStyles() || {};
+      accessor.setStyles({ ...current, ...styleUpdates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        styles: {
+          ...block.styles,
+          ...styleUpdates,
+        },
+      });
+    }
   };
 
   return (
@@ -67,7 +216,7 @@ function PreformattedSettings({ block, onUpdate }: { block: BlockConfig; onUpdat
             <Label htmlFor="preformatted-content" className="text-sm font-medium text-gray-700">Preformatted Text</Label>
             <Textarea
               id="preformatted-content"
-              value={(block.content as any)?.content || ''}
+              value={content?.content || ''}
               onChange={(e) => updateContent({ content: e.target.value })}
               placeholder="Enter your preformatted text here..."
               rows={8}
@@ -93,12 +242,12 @@ function PreformattedSettings({ block, onUpdate }: { block: BlockConfig; onUpdat
               <Input
                 id="preformatted-bg-color"
                 type="color"
-                value={block.styles?.backgroundColor || "#f8f9fa"}
+                value={styles?.backgroundColor || "#f8f9fa"}
                 onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
                 className="w-12 h-9 p-1 border-gray-200"
               />
               <Input
-                value={block.styles?.backgroundColor || "#f8f9fa"}
+                value={styles?.backgroundColor || "#f8f9fa"}
                 onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
                 placeholder="#f8f9fa"
                 className="flex-1 h-9 text-sm"
@@ -112,24 +261,24 @@ function PreformattedSettings({ block, onUpdate }: { block: BlockConfig; onUpdat
               <Input
                 id="preformatted-text-color"
                 type="color"
-                value={block.styles?.color || "#000000"}
+                value={styles?.color || "#000000"}
                 onChange={(e) => updateStyles({ color: e.target.value })}
                 className="w-12 h-9 p-1 border-gray-200"
               />
               <Input
-                  value={block.styles?.color || "#000000"}
-                  onChange={(e) => updateStyles({ color: e.target.value })}
-                  placeholder="#000000"
-                  className="flex-1 h-9 text-sm"
-                />
-              </div>
+                value={styles?.color || "#000000"}
+                onChange={(e) => updateStyles({ color: e.target.value })}
+                placeholder="#000000"
+                className="flex-1 h-9 text-sm"
+              />
             </div>
+          </div>
 
           <div>
             <Label htmlFor="preformatted-font-size" className="text-sm font-medium text-gray-700">Font Size</Label>
             <Input
               id="preformatted-font-size"
-              value={block.styles?.fontSize || "14px"}
+              value={styles?.fontSize || "14px"}
               onChange={(e) => updateStyles({ fontSize: e.target.value })}
               placeholder="14px"
               className="mt-1 h-9"
@@ -145,7 +294,7 @@ function PreformattedSettings({ block, onUpdate }: { block: BlockConfig; onUpdat
             <Label htmlFor="preformatted-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="preformatted-class"
-              value={block.content?.className || ''}
+              value={content?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. custom-preformatted"
               className="mt-1 h-9 text-sm"
@@ -156,6 +305,28 @@ function PreformattedSettings({ block, onUpdate }: { block: BlockConfig; onUpdat
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyPreformattedRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <PreformattedRenderer
+      content={(block.content as PreformattedContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const PreformattedBlock: BlockDefinition = {
   id: 'core/preformatted',
@@ -172,8 +343,10 @@ const PreformattedBlock: BlockDefinition = {
     color: '#000000',
     fontSize: '14px',
   },
-  renderer: PreformattedRenderer,
+  component: PreformattedBlockComponent,
+  renderer: LegacyPreformattedRenderer,
   settings: PreformattedSettings,
+  hasSettings: true,
 };
 
 export default PreformattedBlock;

@@ -1,22 +1,49 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Minus as SeparatorIcon, Settings, Wrench } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function SeparatorRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type SeparatorContent = {
+  className?: string;
+};
+
+const DEFAULT_CONTENT: SeparatorContent = {
+  className: '',
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface SeparatorRendererProps {
+  content: SeparatorContent;
+  styles?: React.CSSProperties;
+}
+
+function SeparatorRenderer({ content, styles }: SeparatorRendererProps) {
   const className = [
     "wp-block-separator",
-    block.content?.className || "",
+    content?.className || "",
   ].filter(Boolean).join(" ");
 
   return (
     <hr
       className={className}
       style={{
-        ...block.styles,
+        ...styles,
         border: "none",
         borderTop: "1px solid currentColor",
         backgroundColor: "currentColor",
@@ -29,25 +56,145 @@ function SeparatorRenderer({ block }: { block: BlockConfig; isPreview: boolean }
   );
 }
 
-function SeparatorSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+export function SeparatorBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<SeparatorContent>(() => {
+    return (value.content as SeparatorContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props when block ID changes OR when content/styles change significantly
+  // This prevents syncing to default values when parent state resets
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  const lastSyncedContentRef = useRef<string | null>(null);
+  const lastSyncedStylesRef = useRef<string | null>(null);
+  const isSyncingFromPropsRef = useRef(false);
+  
+  useEffect(() => {
+    const contentKey = JSON.stringify(value.content);
+    const stylesKey = JSON.stringify(value.styles);
+    
+    // Sync if ID changed OR if content/styles changed significantly (not just reference)
+    if (
+      lastSyncedBlockIdRef.current !== value.id ||
+      (lastSyncedBlockIdRef.current === value.id && 
+       (lastSyncedContentRef.current !== contentKey || lastSyncedStylesRef.current !== stylesKey))
+    ) {
+      lastSyncedBlockIdRef.current = value.id;
+      lastSyncedContentRef.current = contentKey;
+      lastSyncedStylesRef.current = stylesKey;
+      
+      // Mark that we're syncing from props to prevent onChange loop
+      isSyncingFromPropsRef.current = true;
+      
+      // Only sync if props have actual content, not defaults
+      // This prevents syncing to defaults when parent state resets
+      if (value.content && Object.keys(value.content).length > 0) {
+        const newContent = (value.content as SeparatorContent) || DEFAULT_CONTENT;
+        setContent(newContent);
+      }
+      if (value.styles && Object.keys(value.styles).length > 0) {
+        setStyles(value.styles);
+      }
+      
+      // Reset flag after state updates
+      setTimeout(() => {
+        isSyncingFromPropsRef.current = false;
+      }, 0);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  // Skip if we're syncing from props to prevent infinite loop
+  useEffect(() => {
+    if (!isSyncingFromPropsRef.current) {
+      onChange({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      });
+    }
+  }, [content, styles, value, onChange]);
+
+  return <SeparatorRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface SeparatorSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function SeparatorSettings({ block, onUpdate }: SeparatorSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as SeparatorContent)
+    : (block.content as SeparatorContent) || DEFAULT_CONTENT;
+  const styles = accessor
+    ? accessor.getStyles()
+    : block.styles;
+
+  // Update handlers
+  const updateContent = (updates: Partial<SeparatorContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as SeparatorContent;
+      accessor.setContent({ ...current, ...updates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
 
-  const updateStyles = (styleUpdates: any) => {
-    onUpdate({
-      styles: {
-        ...block.styles,
-        ...styleUpdates,
-      },
-    });
+  const updateStyles = (styleUpdates: Partial<React.CSSProperties>) => {
+    if (accessor) {
+      const current = accessor.getStyles() || {};
+      accessor.setStyles({ ...current, ...styleUpdates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        styles: {
+          ...block.styles,
+          ...styleUpdates,
+        },
+      });
+    }
   };
 
   return (
@@ -61,12 +208,12 @@ function SeparatorSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
               <Input
                 id="separator-color"
                 type="color"
-                value={block.styles?.color || "#000000"}
+                value={styles?.color || "#000000"}
                 onChange={(e) => updateStyles({ color: e.target.value })}
                 className="w-12 h-9 p-1 border-gray-200"
               />
               <Input
-                value={block.styles?.color || "#000000"}
+                value={styles?.color || "#000000"}
                 onChange={(e) => updateStyles({ color: e.target.value })}
                 placeholder="#000000"
                 className="flex-1 h-9 text-sm"
@@ -83,7 +230,7 @@ function SeparatorSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="separator-width" className="text-sm font-medium text-gray-700">Width</Label>
             <Input
               id="separator-width"
-              value={block.styles?.width || "100px"}
+              value={styles?.width || "100px"}
               onChange={(e) => updateStyles({ width: e.target.value })}
               placeholder="e.g. 100px, 50%, auto"
               className="mt-1 h-9"
@@ -99,7 +246,7 @@ function SeparatorSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
             <Label htmlFor="separator-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
             <Input
               id="separator-class"
-              value={block.content?.className || ''}
+              value={content?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. is-style-wide is-style-dots"
               className="mt-1 h-9 text-sm"
@@ -110,6 +257,28 @@ function SeparatorSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: 
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacySeparatorRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <SeparatorRenderer
+      content={(block.content as SeparatorContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const SeparatorBlock: BlockDefinition = {
   id: 'core/separator',
@@ -125,7 +294,8 @@ const SeparatorBlock: BlockDefinition = {
     width: '100px',
     margin: '2.5em auto',
   },
-  renderer: SeparatorRenderer,
+  component: SeparatorBlockComponent,
+  renderer: LegacySeparatorRenderer,
   settings: SeparatorSettings,
   hasSettings: true,
 };

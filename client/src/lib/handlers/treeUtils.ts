@@ -186,6 +186,33 @@ export function findBlockDeep(rootBlocks: BlockConfig[], targetId: string): { fo
   return { found: true, block: found.block, path: found.path };
 }
 
+/**
+ * Deep merge helper for nested objects
+ */
+function deepMerge<T extends Record<string, any>>(target: T, source: Partial<T>): T {
+  const result = { ...target };
+  
+  for (const key in source) {
+    if (source[key] !== undefined) {
+      // Handle nested objects (styles, content, settings)
+      if (
+        typeof source[key] === 'object' &&
+        source[key] !== null &&
+        !Array.isArray(source[key]) &&
+        typeof target[key] === 'object' &&
+        target[key] !== null &&
+        !Array.isArray(target[key])
+      ) {
+        result[key] = deepMerge(target[key] as Record<string, any>, source[key] as Record<string, any>) as T[Extract<keyof T, string>];
+      } else {
+        result[key] = source[key] as T[Extract<keyof T, string>];
+      }
+    }
+  }
+  
+  return result;
+}
+
 export function updateBlockDeep(rootBlocks: BlockConfig[], targetId: string, updates: Partial<BlockConfig>): { found: boolean; next: BlockConfig[] } {
   let found = false;
   function walk(list: BlockConfig[]): BlockConfig[] {
@@ -194,7 +221,8 @@ export function updateBlockDeep(rootBlocks: BlockConfig[], targetId: string, upd
       if (b.id === targetId) {
         found = true;
         mutated = true;
-        return { ...b, ...updates };
+        // Use deep merge to properly handle nested objects like styles, content, settings
+        return deepMerge(b, updates);
       }
 
       let updatedChild = b.children;

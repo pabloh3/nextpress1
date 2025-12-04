@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Post, Template, BlockConfig } from "@shared/schema-types";
 import { DragDropContext } from "@/lib/dnd";
 import type { DropResult as DndDropResult } from "@/lib/dnd";
 import { generateBlockId } from "./utils";
-import { useBlockManager } from "../../hooks/useBlockManager";
 import { useDragAndDropHandler } from "../../hooks/useDragAndDropHandler";
 import { usePageSave } from "../../hooks/usePageSave";
 import { useUndoRedo } from "../../hooks/useUndoRedo";
@@ -12,6 +11,39 @@ import { BuilderTopBar } from "./BuilderTopBar";
 import { BuilderCanvas } from "./BuilderCanvas";
 import { blockRegistry } from "./blocks";
 import { BlockActionsProvider } from "./BlockActionsContext";
+import {
+	findBlock,
+	updateBlockDeep,
+	deleteBlockDeep,
+	duplicateBlockDeep,
+} from "@/lib/handlers/treeUtils";
+
+function isDescendant(
+	blocks: BlockConfig[],
+	ancestorId: string,
+	candidateId: string,
+): boolean {
+	const queue = [...blocks];
+	while (queue.length) {
+		const current = queue.shift()!;
+		if (current.id === ancestorId) {
+			return containsChild(current, candidateId);
+		}
+		if (Array.isArray(current.children)) {
+			queue.push(...current.children);
+		}
+	}
+	return false;
+}
+
+function containsChild(block: BlockConfig, targetId: string): boolean {
+	if (!Array.isArray(block.children)) return false;
+	for (const child of block.children) {
+		if (child.id === targetId) return true;
+		if (containsChild(child, targetId)) return true;
+	}
+	return false;
+}
 
 interface PageBuilderProps {
 	post?: Post | Template;
@@ -42,92 +74,54 @@ export default function PageBuilder({
 			: []);
 
 	// Use undo/redo for blocks state
-	const { currentState: blocks, pushState, undo, redo, canUndo, canRedo } = useUndoRedo<BlockConfig[]>(initialBlocks);
-
-	// Block manager - sync with undo/redo state
 	const {
-		blocks: managerBlocks,
-		setBlocks: setManagerBlocks,
-		updateBlock: updateBlockInternal,
-		duplicateBlock: duplicateBlockInternal,
-		deleteBlock: deleteBlockInternal,
-		findBlockById,
-	} = useBlockManager(blocks);
+		currentState,
+		pushState,
+		undo,
+		redo,
+		canUndo,
+		canRedo,
+	} = useUndoRedo<BlockConfig[]>(initialBlocks);
+	const [blocks, setBlocks] = useState<BlockConfig[]>(currentState);
 
-	// Track if we're syncing to prevent loops
-	const isSyncingRef = useRef(false);
-
-	// Sync undo/redo state to manager when undo/redo happens
 	useEffect(() => {
-		if (!isSyncingRef.current && blocks !== managerBlocks) {
-			isSyncingRef.current = true;
-			setManagerBlocks(blocks);
-			// Reset flag after state update
-			setTimeout(() => {
-				isSyncingRef.current = false;
-			}, 0);
-		}
-	}, [blocks, managerBlocks, setManagerBlocks]);
+		setBlocks(currentState);
+	}, [currentState]);
 
-	// Sync manager blocks to undo/redo when they change from user actions
-	useEffect(() => {
-		if (!isSyncingRef.current && managerBlocks !== blocks) {
-			isSyncingRef.current = true;
-			pushState(managerBlocks);
-			// Reset flag after state update
-			setTimeout(() => {
-				isSyncingRef.current = false;
-			}, 0);
-		}
-	}, [managerBlocks, blocks, pushState]);
-
-	// Wrapped block operations that push to history
-	const updateBlock = useCallback((blockId: string, updates: Partial<BlockConfig>) => {
-		const result = updateBlockInternal(blockId, updates);
-		// State will be pushed via useEffect watching blocks
-		return result;
-	}, [updateBlockInternal]);
-
-	const duplicateBlock = useCallback((blockId: string, generateBlockId: () => string) => {
-		const result = duplicateBlockInternal(blockId, generateBlockId);
-		// State will be pushed via useEffect watching blocks
-		return result;
-	}, [duplicateBlockInternal]);
-
-	const deleteBlock = useCallback((blockId: string) => {
-		const result = deleteBlockInternal(blockId);
-		// State will be pushed via useEffect watching blocks
-		return result;
-	}, [deleteBlockInternal]);
-
-	// Wrapped setBlocks for drag/drop - pushes to history
-	const setBlocks = useCallback((newBlocks: BlockConfig[] | ((prev: BlockConfig[]) => BlockConfig[])) => {
-		if (typeof newBlocks === 'function') {
-			setManagerBlocks((prev: BlockConfig[]) => {
-				const next = newBlocks(prev);
-				pushState(next);
-				return next;
+	const commitBlocks = useCallback(
+		(next: BlockConfig[] | ((prev: BlockConfig[]) => BlockConfig[])) => {
+			setBlocks((prev) => {
+				const resolved =
+					typeof next === "function" ? (next as (p: BlockConfig[]) => BlockConfig[])(prev) : next;
+				if (resolved === prev) {
+					return prev;
+				}
+				pushState(resolved);
+				return resolved;
 			});
-		} else {
-			setManagerBlocks(newBlocks);
-			pushState(newBlocks);
-		}
-	}, [setManagerBlocks, pushState]);
+		},
+		[pushState],
+	);
 
-	// Keyboard shortcuts for undo/redo
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-				e.preventDefault();
-				undo();
-			} else if ((e.ctrlKey || e.metaKey) && (e.shiftKey && e.key === 'Z')) {
-				e.preventDefault();
-				redo();
-			}
-		};
-		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [undo, redo]);
+	const updateBlockPartial = useCallback(
+		(blockId: string, updates: Partial<BlockConfig>) => {
+			commitBlocks((prev) => {
+				const { found, next } = updateBlockDeep(prev, blockId, updates);
+				return found ? next : prev;
+			});
+		},
+		[commitBlocks],
+	);
+
+	const handleBlockChange = useCallback(
+		(updated: BlockConfig) => {
+			commitBlocks((prev) => {
+				const { found, next } = updateBlockDeep(prev, updated.id, updated);
+				return found ? next : prev;
+			});
+		},
+		[commitBlocks],
+	);
 
 	const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
 	const [deviceView, setDeviceView] = useState<"desktop" | "tablet" | "mobile">(
@@ -140,65 +134,90 @@ export default function PageBuilder({
 	>(null);
 	const [sidebarVisible, setSidebarVisible] = useState(true);
 
-	// Track if update is from props to prevent infinite loop
-	const isUpdatingFromPropsRef = useRef(false);
-	const prevPropBlocksRef = useRef<BlockConfig[] | undefined>(propBlocks);
-
-	// Only sync propBlocks if they're actually different (prevent infinite loop)
 	useEffect(() => {
-		if (propBlocks && JSON.stringify(propBlocks) !== JSON.stringify(prevPropBlocksRef.current)) {
-			prevPropBlocksRef.current = propBlocks;
-			if (JSON.stringify(propBlocks) !== JSON.stringify(managerBlocks)) {
-				isUpdatingFromPropsRef.current = true;
-				setManagerBlocks(propBlocks);
-				// Reset flag after state update
-				setTimeout(() => {
-					isUpdatingFromPropsRef.current = false;
-				}, 0);
-			}
-		}
-	}, [propBlocks, managerBlocks, setManagerBlocks]);
+		onBlocksChange?.(blocks);
+	}, [blocks, onBlocksChange]);
 
-	// Only call onBlocksChange if blocks actually changed and not from props update
-	const prevBlocksRef = useRef<BlockConfig[]>(managerBlocks);
-	useEffect(() => {
-		if (!isUpdatingFromPropsRef.current && JSON.stringify(prevBlocksRef.current) !== JSON.stringify(managerBlocks)) {
-			prevBlocksRef.current = managerBlocks;
-			onBlocksChange?.(managerBlocks);
-		}
-	}, [managerBlocks, onBlocksChange]);
-
-	const selectedBlock = selectedBlockId ? findBlockById(selectedBlockId) : null;
+	const selectedBlock = selectedBlockId ? findBlock(blocks, selectedBlockId) : null;
 
 	const saveMutation = usePageSave({ isTemplate, data, onSave });
 
+	const handleSave = useCallback(() => {
+		saveMutation.mutate(blocks);
+		onSave?.(data as any);
+	}, [blocks, saveMutation, onSave, data]);
+
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			const isMod = e.ctrlKey || e.metaKey;
+			const key = e.key.toLowerCase();
+
+			if (isMod && key === "z" && !e.shiftKey) {
+				e.preventDefault();
+				undo();
+			} else if (isMod && ((e.shiftKey && key === "z") || key === "y")) {
+				e.preventDefault();
+				redo();
+			} else if (isMod && key === "s") {
+				e.preventDefault();
+				handleSave();
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [undo, redo, handleSave]);
+
+	const setBlocksFromDnD = useCallback(
+		(next: BlockConfig[]) => {
+			commitBlocks(() => next);
+		},
+		[commitBlocks],
+	);
+
 	const { handleDragEnd } = useDragAndDropHandler(
-		managerBlocks,
-		setBlocks,
+		blocks,
+		setBlocksFromDnD,
 		setSelectedBlockId,
 		setActiveTab,
 	);
 
 	const handleDuplicate = useCallback(
 		(id: string) => {
-			const res = duplicateBlock(id, generateBlockId);
-			const newId = (res.data as any)?.newId;
+			let newId: string | undefined;
+			commitBlocks((prev) => {
+				const { found, next, duplicatedId } = duplicateBlockDeep(prev, id, generateBlockId);
+				if (!found) {
+					return prev;
+				}
+				newId = duplicatedId || undefined;
+				return next;
+			});
 			if (newId) {
 				setSelectedBlockId(newId);
 				setActiveTab("settings");
 			}
 		},
-		[duplicateBlock],
+		[commitBlocks, setActiveTab],
 	);
 
 	const handleDelete = useCallback(
 		(id: string) => {
-			deleteBlock(id);
-			if (selectedBlockId === id) {
+			const shouldClearSelection =
+				selectedBlockId === id ||
+				(selectedBlockId != null &&
+					isDescendant(blocks, id, selectedBlockId));
+
+			commitBlocks((prev) => {
+				const { next } = deleteBlockDeep(prev, id);
+				return next;
+			});
+
+			if (shouldClearSelection) {
 				setSelectedBlockId(null);
+				setActiveTab("blocks");
 			}
 		},
-		[deleteBlock, selectedBlockId],
+		[blocks, commitBlocks, selectedBlockId, setActiveTab],
 	);
 
 	const toggleSidebar = () => {
@@ -230,7 +249,7 @@ export default function PageBuilder({
 						// Attempt to resolve instance id by checking current blocks mapping name
 						let def = blockRegistry[id];
 						if (!def) {
-							const instance = managerBlocks.find(b => b.id === id);
+							const instance = blocks.find(b => b.id === id);
 							if (instance) def = blockRegistry[instance.name];
 						}
 						return (
@@ -257,7 +276,7 @@ export default function PageBuilder({
 							activeTab={activeTab}
 							setActiveTab={setActiveTab}
 							selectedBlock={selectedBlock}
-							updateBlock={updateBlock}
+							updateBlock={updateBlockPartial}
 							setHoverHighlight={setHoverHighlight}
 							sidebarVisible={sidebarVisible}
 							onToggleSidebar={toggleSidebar}
@@ -272,22 +291,24 @@ export default function PageBuilder({
 							isTemplate={isTemplate}
 							deviceView={deviceView}
 							setDeviceView={setDeviceView}
-							blocks={managerBlocks}
+							blocks={blocks}
 							sidebarVisible={sidebarVisible}
 							onToggleSidebar={toggleSidebar}
-							onSaveClick={() => {
-								saveMutation.mutate(managerBlocks);
-								onSave?.(data as any);
-							}}
+							onSaveClick={handleSave}
+							onUndo={undo}
+							onRedo={redo}
+							canUndo={canUndo}
+							canRedo={canRedo}
 						/>
 						<BuilderCanvas
-							blocks={managerBlocks}
+							blocks={blocks}
 							deviceView={deviceView}
 							selectedBlockId={selectedBlockId}
 							isPreviewMode={isPreviewMode}
 							duplicateBlock={handleDuplicate}
 							deleteBlock={handleDelete}
 							hoverHighlight={hoverHighlight}
+							onBlockChange={handleBlockChange}
 						/>
 					</div>
 				</DragDropContext>

@@ -1,22 +1,53 @@
-import React from "react";
-import type { BlockConfig } from "@shared/schema-types";
-import type { BlockDefinition } from "../types.ts";
+import React, { useState, useEffect, useRef } from "react";
+import type { BlockConfig, BlockContent } from "@shared/schema-types";
+import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Minus as MinusIcon, Settings } from "lucide-react";
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from "../blockStateRegistry";
 
-function DividerRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type DividerContent = {
+  style?: string;
+  color?: string;
+  width?: number;
+};
+
+const DEFAULT_CONTENT: DividerContent = {
+  style: 'solid',
+  width: 100,
+  color: '#cccccc',
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface DividerRendererProps {
+  content: DividerContent;
+  styles?: React.CSSProperties;
+}
+
+function DividerRenderer({ content, styles }: DividerRendererProps) {
   return (
-    <div style={{ padding: block.styles?.padding, margin: block.styles?.margin }}>
+    <div style={{ padding: styles?.padding, margin: styles?.margin }}>
       <hr
         style={{
-          borderStyle: block.content?.style,
+          borderStyle: content?.style as any,
           borderWidth: '1px 0 0 0',
-          borderColor: block.content?.color,
-          width: `${block.content?.width}%`,
+          borderColor: content?.color,
+          width: `${content?.width || 100}%`,
           margin: '0 auto',
         }}
       />
@@ -24,16 +55,127 @@ function DividerRenderer({ block }: { block: BlockConfig; isPreview: boolean }) 
   );
 }
 
-function DividerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
-        ...block.content,
-        ...contentUpdates,
-      },
-    });
+export function DividerBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<DividerContent>(() => {
+    return (value.content as DividerContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props when block ID changes OR when content/styles change significantly
+  // This prevents syncing to default values when parent state resets
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  const lastSyncedContentRef = useRef<string | null>(null);
+  const lastSyncedStylesRef = useRef<string | null>(null);
+  const isSyncingFromPropsRef = useRef(false);
+  
+  useEffect(() => {
+    const contentKey = JSON.stringify(value.content);
+    const stylesKey = JSON.stringify(value.styles);
+    
+    // Sync if ID changed OR if content/styles changed significantly (not just reference)
+    if (
+      lastSyncedBlockIdRef.current !== value.id ||
+      (lastSyncedBlockIdRef.current === value.id && 
+       (lastSyncedContentRef.current !== contentKey || lastSyncedStylesRef.current !== stylesKey))
+    ) {
+      lastSyncedBlockIdRef.current = value.id;
+      lastSyncedContentRef.current = contentKey;
+      lastSyncedStylesRef.current = stylesKey;
+      
+      // Mark that we're syncing from props to prevent onChange loop
+      isSyncingFromPropsRef.current = true;
+      
+      // Only sync if props have actual content, not defaults
+      // This prevents syncing to defaults when parent state resets
+      if (value.content && Object.keys(value.content).length > 0) {
+        const newContent = (value.content as DividerContent) || DEFAULT_CONTENT;
+        setContent(newContent);
+      }
+      if (value.styles && Object.keys(value.styles).length > 0) {
+        setStyles(value.styles);
+      }
+      
+      // Reset flag after state updates
+      setTimeout(() => {
+        isSyncingFromPropsRef.current = false;
+      }, 0);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  // Skip if we're syncing from props to prevent infinite loop
+  useEffect(() => {
+    if (!isSyncingFromPropsRef.current) {
+      onChange({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      });
+    }
+  }, [content, styles, value, onChange]);
+
+  return <DividerRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface DividerSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function DividerSettings({ block, onUpdate }: DividerSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as DividerContent)
+    : (block.content as DividerContent) || DEFAULT_CONTENT;
+
+  // Update handlers
+  const updateContent = (updates: Partial<DividerContent>) => {
+    if (accessor) {
+      const current = accessor.getContent() as DividerContent;
+      accessor.setContent({ ...current, ...updates });
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      onUpdate({
+        content: {
+          ...block.content,
+          ...updates,
+        } as BlockContent,
+      });
+    }
   };
 
   return (
@@ -44,7 +186,7 @@ function DividerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
           <div>
             <Label htmlFor="divider-style" className="text-sm font-medium text-gray-700">Line Style</Label>
             <Select
-              value={block.content?.style || 'solid'}
+              value={content?.style || 'solid'}
               onValueChange={(value) => updateContent({ style: value })}
             >
               <SelectTrigger id="divider-style" className="h-9">
@@ -63,12 +205,12 @@ function DividerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
               <Input
                 id="divider-color"
                 type="color"
-                value={block.content?.color || '#cccccc'}
+                value={content?.color || '#cccccc'}
                 onChange={(e) => updateContent({ color: e.target.value })}
                 className="w-12 h-9 p-1 border-gray-200"
               />
               <Input
-                value={block.content?.color || '#cccccc'}
+                value={content?.color || '#cccccc'}
                 onChange={(e) => updateContent({ color: e.target.value })}
                 placeholder="#cccccc"
                 className="flex-1 h-9 text-sm"
@@ -86,7 +228,7 @@ function DividerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
             <div className="flex items-center space-x-4 mt-1">
               <Slider
                 aria-label="Divider width percentage"
-                value={[block.content?.width || 100]}
+                value={[content?.width || 100]}
                 onValueChange={([value]) => updateContent({ width: value })}
                 max={100}
                 min={10}
@@ -96,7 +238,7 @@ function DividerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
               <Input
                 id="divider-width"
                 type="number"
-                value={block.content?.width || 100}
+                value={content?.width || 100}
                 onChange={(e) => updateContent({ width: parseInt(e.target.value) || 100 })}
                 className="w-20 h-9"
               />
@@ -107,6 +249,28 @@ function DividerSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyDividerRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <DividerRenderer
+      content={(block.content as DividerContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const DividerBlock: BlockDefinition = {
   id: 'divider',
@@ -122,10 +286,10 @@ const DividerBlock: BlockDefinition = {
   defaultStyles: {
     padding: '20px 0px',
   },
-  renderer: DividerRenderer,
+  component: DividerBlockComponent,
+  renderer: LegacyDividerRenderer,
   settings: DividerSettings,
   hasSettings: true,
 };
 
 export default DividerBlock;
-

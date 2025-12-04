@@ -1,6 +1,6 @@
-import React from 'react';
-import type { BlockConfig } from '@shared/schema-types';
-import type { BlockDefinition } from '../types.ts';
+import React, { useState, useEffect, useRef } from 'react';
+import type { BlockConfig, BlockContent } from '@shared/schema-types';
+import type { BlockDefinition, BlockComponentProps } from '../types.ts';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,6 +13,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { Plus, Trash2, SquareMousePointer, Settings, Wrench } from 'lucide-react';
+import {
+  registerBlockState,
+  unregisterBlockState,
+  getBlockStateAccessor,
+  type BlockStateAccessor,
+} from '../blockStateRegistry';
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 interface ButtonItem {
   id: string;
@@ -24,14 +34,50 @@ interface ButtonItem {
   className?: string;
 }
 
-function ButtonsRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  // Defensive check for discriminated union
-  const buttonsData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
+type ButtonsData = {
+  buttons?: ButtonItem[];
+  layout?: string;
+  orientation?: 'horizontal' | 'vertical';
+  className?: string;
+};
+
+type ButtonsContent = BlockContent & {
+  data?: ButtonsData;
+};
+
+const DEFAULT_DATA: ButtonsData = {
+  buttons: [
+    {
+      id: 'btn-1',
+      text: 'Click Me',
+      url: '#',
+      linkTarget: '_self',
+      rel: '',
+      title: '',
+      className: '',
+    },
+  ],
+  layout: 'flex-start',
+  orientation: 'horizontal',
+  className: '',
+};
+
+const DEFAULT_CONTENT: ButtonsContent = {
+  kind: 'structured',
+  data: DEFAULT_DATA,
+};
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface ButtonsRendererProps {
+  content: ButtonsContent;
+  styles?: React.CSSProperties;
+}
+
+function ButtonsRenderer({ content, styles }: ButtonsRendererProps) {
+  const buttonsData = content?.kind === 'structured' ? (content.data as ButtonsData) : DEFAULT_DATA;
   
   const buttons: ButtonItem[] = Array.isArray(buttonsData?.buttons)
     ? buttonsData.buttons
@@ -54,7 +100,7 @@ function ButtonsRenderer({
     <div
       className={className}
       style={{
-        ...block.styles,
+        ...styles,
         display: 'flex',
         flexDirection: orientation === 'vertical' ? 'column' : 'row',
         justifyContent: layout,
@@ -96,25 +142,146 @@ function ButtonsRenderer({
   );
 }
 
-function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) {
-  // Defensive check for discriminated union
-  const buttonsData = block.content?.kind === 'structured' ? (block.content.data as any) : {};
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function ButtonsBlockComponent({
+  value,
+  onChange,
+}: BlockComponentProps) {
+  // State
+  const [content, setContent] = useState<ButtonsContent>(() => {
+    return (value.content as ButtonsContent) || DEFAULT_CONTENT;
+  });
+  const [styles, setStyles] = useState<React.CSSProperties | undefined>(
+    () => value.styles
+  );
+
+  // Sync with props when block ID changes OR when content/styles change significantly
+  // This prevents syncing to default values when parent state resets
+  const lastSyncedBlockIdRef = useRef<string | null>(null);
+  const lastSyncedContentRef = useRef<string | null>(null);
+  const lastSyncedStylesRef = useRef<string | null>(null);
+  const isSyncingFromPropsRef = useRef(false);
+  
+  useEffect(() => {
+    const contentKey = JSON.stringify(value.content);
+    const stylesKey = JSON.stringify(value.styles);
+    
+    // Sync if ID changed OR if content/styles changed significantly (not just reference)
+    if (
+      lastSyncedBlockIdRef.current !== value.id ||
+      (lastSyncedBlockIdRef.current === value.id && 
+       (lastSyncedContentRef.current !== contentKey || lastSyncedStylesRef.current !== stylesKey))
+    ) {
+      lastSyncedBlockIdRef.current = value.id;
+      lastSyncedContentRef.current = contentKey;
+      lastSyncedStylesRef.current = stylesKey;
+      
+      // Mark that we're syncing from props to prevent onChange loop
+      isSyncingFromPropsRef.current = true;
+      
+      // Only sync if props have actual content, not defaults
+      // This prevents syncing to defaults when parent state resets
+      if (value.content && Object.keys(value.content).length > 0) {
+        const newContent = (value.content as ButtonsContent) || DEFAULT_CONTENT;
+        setContent(newContent);
+      }
+      if (value.styles && Object.keys(value.styles).length > 0) {
+        setStyles(value.styles);
+      }
+      
+      // Reset flag after state updates
+      setTimeout(() => {
+        isSyncingFromPropsRef.current = false;
+      }, 0);
+    }
+  }, [value.id, value.content, value.styles]);
+
+  // Register state accessors for settings
+  useEffect(() => {
+    const accessor: BlockStateAccessor = {
+      getContent: () => content,
+      getStyles: () => styles,
+      setContent: setContent,
+      setStyles: setStyles,
+      getFullState: () => ({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      }),
+    };
+    registerBlockState(value.id, accessor);
+    return () => unregisterBlockState(value.id);
+  }, [value.id, content, styles, value]);
+
+  // Immediate onChange to notify parent (parent handles debouncing for localStorage)
+  // Skip if we're syncing from props to prevent infinite loop
+  useEffect(() => {
+    if (!isSyncingFromPropsRef.current) {
+      onChange({
+        ...value,
+        content: content as BlockContent,
+        styles,
+      });
+    }
+  }, [content, styles, value, onChange]);
+
+  return <ButtonsRenderer content={content} styles={styles} />;
+}
+
+// ============================================================================
+// SETTINGS COMPONENT
+// ============================================================================
+
+interface ButtonsSettingsProps {
+  block: BlockConfig;
+  onUpdate?: (updates: Partial<BlockConfig>) => void;
+}
+
+function ButtonsSettings({ block, onUpdate }: ButtonsSettingsProps) {
+  const accessor = getBlockStateAccessor(block.id);
+  const [, setUpdateTrigger] = React.useState(0);
+
+  // Get current state
+  const content = accessor
+    ? (accessor.getContent() as ButtonsContent)
+    : (block.content as ButtonsContent) || DEFAULT_CONTENT;
+  const buttonsData = content?.kind === 'structured' ? (content.data as ButtonsData) : DEFAULT_DATA;
   
   const buttons: ButtonItem[] = Array.isArray(buttonsData?.buttons)
     ? buttonsData.buttons
     : [];
-  
 
-  const updateContent = (contentUpdates: any) => {
-    onUpdate({
-      content: {
+  // Update handlers
+  const updateContent = (updates: Partial<ButtonsData>) => {
+    if (accessor) {
+      const current = accessor.getContent() as ButtonsContent;
+      const currentData = current?.kind === 'structured' ? (current.data as ButtonsData) : DEFAULT_DATA;
+      accessor.setContent({
+        ...current,
         kind: 'structured',
         data: {
-          ...buttonsData,
-          ...contentUpdates,
+          ...currentData,
+          ...updates,
         },
-      },
-    });
+      } as ButtonsContent);
+      setUpdateTrigger((prev) => prev + 1);
+    } else if (onUpdate) {
+      const currentData = block.content?.kind === 'structured' 
+        ? (block.content.data as ButtonsData) 
+        : DEFAULT_DATA;
+      onUpdate({
+        content: {
+          kind: 'structured',
+          data: {
+            ...currentData,
+            ...updates,
+          },
+        } as BlockContent,
+      });
+    }
   };
 
   const updateButtons = (newButtons: ButtonItem[]) => {
@@ -148,7 +315,6 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
 
   return (
     <div className="space-y-4">
-      {/* Content Card */}
       <CollapsibleCard title="Content" icon={SquareMousePointer} defaultOpen={true}>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -216,7 +382,6 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
         </div>
       </CollapsibleCard>
 
-      {/* Settings Card */}
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
         <div className="space-y-4">
           <div>
@@ -240,7 +405,7 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
             <Label htmlFor="buttons-orientation" className="text-sm font-medium text-gray-700">Orientation</Label>
             <Select
               value={buttonsData?.orientation || 'horizontal'}
-              onValueChange={(value) => updateContent({ orientation: value })}>
+              onValueChange={(value) => updateContent({ orientation: value as any })}>
               <SelectTrigger id="buttons-orientation" className="h-9">
                 <SelectValue />
               </SelectTrigger>
@@ -253,7 +418,6 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
         </div>
       </CollapsibleCard>
 
-      {/* Advanced Card */}
       <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
         <div className="space-y-4">
           <div>
@@ -271,6 +435,28 @@ function ButtonsSettings({ block, onUpdate }: { block: BlockConfig; onUpdate: (u
     </div>
   );
 }
+
+// ============================================================================
+// LEGACY RENDERER (Backward Compatibility)
+// ============================================================================
+
+function LegacyButtonsRenderer({
+  block,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+}) {
+  return (
+    <ButtonsRenderer
+      content={(block.content as ButtonsContent) || DEFAULT_CONTENT}
+      styles={block.styles}
+    />
+  );
+}
+
+// ============================================================================
+// BLOCK DEFINITION
+// ============================================================================
 
 const ButtonsBlock: BlockDefinition = {
   id: 'core/buttons',
@@ -299,7 +485,8 @@ const ButtonsBlock: BlockDefinition = {
     },
   },
   defaultStyles: {},
-  renderer: ButtonsRenderer,
+  component: ButtonsBlockComponent,
+  renderer: LegacyButtonsRenderer,
   settings: ButtonsSettings,
   hasSettings: true,
 };

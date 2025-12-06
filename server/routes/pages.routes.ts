@@ -178,7 +178,7 @@ export function createPagesRoutes(deps: Deps): Router {
         const pageData = {
           ...parsed,
           version: (existingPage.version ?? 0) + 1,
-          history: [previousSnapshot], // retain only N-1 on the server
+          history: [previousSnapshot, ...(existingPage.history ?? [])], // append previous snapshot to existing history
         };
 
         const wasPublished = existingPage.status === 'publish';

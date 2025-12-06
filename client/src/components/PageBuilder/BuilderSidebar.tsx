@@ -38,7 +38,9 @@ export function BuilderSidebar({
 
   // Auto-set to 'page' when no block selected, 'block' when block selected
   useEffect(() => {
-    if (!selectedBlock && settingsView !== 'page') {
+    if (selectedBlock && settingsView !== 'block') {
+      setSettingsView('block');
+    } else if (!selectedBlock && settingsView !== 'page') {
       setSettingsView('page');
     }
   }, [selectedBlock, settingsView]);

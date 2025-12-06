@@ -46,7 +46,7 @@ const mockBlockRegistry = vi.hoisted(() => ({
 // Mock the block registry using the resolved module path
 const blocksModulePath = vi.hoisted(
   () =>
-    '/home/kizz/Code~Vault/OPEN SOURCE/nextpress/client/src/components/PageBuilder/blocks',
+    '../components/PageBuilder/blocks',
 );
 vi.mock(blocksModulePath, () => ({
   blockRegistry: mockBlockRegistry,

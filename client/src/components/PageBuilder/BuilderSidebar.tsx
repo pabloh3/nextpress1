@@ -20,6 +20,7 @@ export function BuilderSidebar({
   page,
   isTemplate,
   onPageUpdate,
+  onPageMetaChange,
 }: {
   activeTab: 'blocks' | 'settings';
   setActiveTab: (tab: 'blocks' | 'settings') => void;
@@ -31,6 +32,7 @@ export function BuilderSidebar({
   page?: Post | Template;
   isTemplate?: boolean;
   onPageUpdate?: (updatedPage: Post | Template) => void;
+  onPageMetaChange?: (meta: Partial<{ title: string; slug: string; status: string }>) => void;
 }) {
   const [settingsView, setSettingsView] = useState<'page' | 'block'>('page');
 
@@ -113,6 +115,7 @@ export function BuilderSidebar({
                     page={page}
                     isTemplate={isTemplate}
                     onUpdate={onPageUpdate}
+                    onMetaChange={onPageMetaChange}
                   />
                 ) : selectedBlock ? (
                   <BlockSettings

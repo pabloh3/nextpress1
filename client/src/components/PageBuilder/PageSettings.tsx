@@ -21,6 +21,7 @@ interface PageSettingsProps {
   page: Page | Post | Template | undefined;
   isTemplate?: boolean;
   onUpdate?: (updatedPage: Page | Post | Template) => void;
+  onMetaChange?: (meta: Partial<{ title: string; slug: string; status: string }>) => void;
 }
 
 /**
@@ -31,6 +32,7 @@ export default function PageSettings({
   page,
   isTemplate = false,
   onUpdate,
+  onMetaChange,
 }: PageSettingsProps) {
   const [formData, setFormData] = useState({
     title: (page as any)?.title || (page as Template)?.name || '',
@@ -68,6 +70,9 @@ export default function PageSettings({
 
   const handleFieldChange = (field: string, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'title' || field === 'slug' || field === 'status') {
+      onMetaChange?.({ [field]: value } as any);
+    }
   };
 
   const handleSave = async () => {

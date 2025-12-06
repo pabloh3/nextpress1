@@ -96,6 +96,8 @@ beforeAll(async () => {
 			menu_order INTEGER DEFAULT 0,
 			template_id UUID,
 			blocks JSONB DEFAULT '[]',
+			version INTEGER NOT NULL DEFAULT 0,
+			history JSONB DEFAULT '[]',
 			created_at TIMESTAMP DEFAULT NOW(),
 			updated_at TIMESTAMP DEFAULT NOW(),
 			other JSONB DEFAULT '{}'

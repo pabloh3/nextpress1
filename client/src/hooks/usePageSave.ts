@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { BlockConfig, Page, Post, Template } from "@shared/schema-types";
+import type { BlockConfig, Page } from "@shared/schema-types";
 import { savePageDraft } from "@/lib/pageDraftStorage";
 
 export function usePageSave({
@@ -11,8 +11,8 @@ export function usePageSave({
 	pageMeta,
 }: {
 	isTemplate: boolean;
-	data: Post | Template | undefined;
-	onSave?: (updatedData: Post | Template) => void;
+	data: Page | undefined;
+	onSave?: (updatedData: Page) => void;
 	pageMeta?: {
 		title?: string;
 		slug?: string;
@@ -30,22 +30,14 @@ export function usePageSave({
 			let payload: any;
 			let endpoint: string;
 
-			if (isTemplate) {
-				endpoint = `/api/templates/${data.id}`;
-				payload = { blocks: builderData };
-			} else {
-				const isPage = "menuOrder" in data;
-				endpoint = isPage ? `/api/pages/${data.id}` : `/api/posts/${data.id}`;
-				payload = isPage
-					? {
-							title: pageMeta?.title ?? (data as Page).title,
-							slug: pageMeta?.slug ?? (data as Page).slug,
-							status: pageMeta?.status ?? (data as Page).status,
-							blocks: builderData,
-							version: pageMeta?.version ?? (data as Page).version ?? 0,
-					  }
-					: { builderData, usePageBuilder: true };
-			}
+			endpoint = `/api/pages/${data.id}`;
+			payload = {
+				title: pageMeta?.title ?? data.title,
+				slug: pageMeta?.slug ?? data.slug,
+				status: pageMeta?.status ?? data.status,
+				blocks: builderData,
+				version: pageMeta?.version ?? data.version ?? 0,
+			};
 
 			const response = await apiRequest("PUT", endpoint, payload);
 			return await response.json();

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { Post, Template, BlockConfig } from "@shared/schema-types";
+import type { BlockConfig, Page } from "@shared/schema-types";
 import { DragDropContext } from "@/lib/dnd";
 import type { DropResult as DndDropResult } from "@/lib/dnd";
 import { generateBlockId } from "./utils";
@@ -47,11 +47,11 @@ function containsChild(block: BlockConfig, targetId: string): boolean {
 }
 
 interface PageBuilderProps {
-	post?: Post | Template;
-	template?: Template;
+	post?: Page;
+	template?: never;
 	blocks?: BlockConfig[];
 	onBlocksChange?: (blocks: BlockConfig[]) => void;
-	onSave?: (updatedData: Post | Template) => void;
+	onSave?: (updatedData: Page) => void;
 	onPreview?: () => void;
 	pageMeta?: {
 		title?: string;
@@ -59,6 +59,7 @@ interface PageBuilderProps {
 		status?: string;
 		version?: number;
 	};
+	onPageMetaChange?: (meta: Partial<{ title: string; slug: string; status: string }>) => void;
 }
 
 export default function PageBuilder({
@@ -69,9 +70,10 @@ export default function PageBuilder({
 	onSave,
 	onPreview,
 	pageMeta,
+	onPageMetaChange,
 }: PageBuilderProps) {
-	const data = template || post;
-	const isTemplate = !!template;
+	const data = post;
+	const isTemplate = false;
 
 	const initialBlocks =
 		propBlocks ||
@@ -301,6 +303,7 @@ export default function PageBuilder({
 							page={data}
 							isTemplate={isTemplate}
 							onPageUpdate={onSave}
+						onPageMetaChange={onPageMetaChange}
 						/>
 					)}
 					<div className="flex-1 flex flex-col">

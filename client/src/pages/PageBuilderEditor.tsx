@@ -10,42 +10,37 @@ import AdminSidebar from "@/components/AdminSidebar";
 import PageBuilder from "@/components/PageBuilder/PageBuilder";
 import PublishDialog from "@/components/PageBuilder/PublishDialog";
 import { useToast } from "@/hooks/use-toast";
-import type { Post, Template, BlockConfig, Page } from "@shared/schema-types";
-import {
-  saveEditorState,
-  loadEditorState,
-  clearEditorState,
-  storeSlugToIdMapping,
-  getPageIdFromSlug,
-} from "@/lib/editorStorage";
+import type { BlockConfig, Page } from "@shared/schema-types";
+import { storeSlugToIdMapping, getPageIdFromSlug } from "@/lib/editorStorage";
 import {
   clearPageDraft,
   loadPageDraft,
   savePageDraft,
+  savePageDraftWithHistory,
 } from "@/lib/pageDraftStorage";
 
 interface PageBuilderEditorProps {
   postId?: string;
-  templateId?: string;
-  type?: "post" | "page" | "template";
-  isSlug?: boolean; // Whether postId is a slug (for pages) or an id
+  isSlug?: boolean;
 }
 
 export default function PageBuilderEditor({
   postId,
-  templateId,
-  type = "page",
   isSlug = false,
 }: PageBuilderEditorProps) {
   const [, setLocation] = useLocation();
   const [blocks, setBlocks] = useState<BlockConfig[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [pageTitle, setPageTitle] = useState<string>("");
-  const [settingsView, setSettingsView] = useState<"page" | "block">("page");
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [pageSlug, setPageSlug] = useState<string>("");
   const [pageStatus, setPageStatus] = useState<string>("draft");
-  const pageBuilderRef = useRef<any>(null);
+  const draftSaveRef = useRef<NodeJS.Timeout>();
+  const latestPageStateRef = useRef<{
+    blocks: BlockConfig[];
+    title: string;
+    slug: string;
+    status: string;
+  }>({ blocks: [], title: "", slug: "", status: "draft" });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -55,165 +50,122 @@ export default function PageBuilderEditor({
   );
 
   useEffect(() => {
-    if (type === "page" && isSlug && postId) {
-      // Try to get ID from localStorage first
+    if (isSlug && postId) {
       const mappingResult = getPageIdFromSlug(postId);
       if (mappingResult.status && mappingResult.data) {
         setResolvedPageId(mappingResult.data);
       } else {
-        // If not in localStorage, we'll fetch by slug and store the mapping
-        setResolvedPageId(postId); // Will be resolved when data loads
+        setResolvedPageId(postId);
       }
     } else {
       setResolvedPageId(postId);
     }
-  }, [postId, type, isSlug]);
+  }, [postId, isSlug]);
 
-  // Fetch the post/page or template data
-  const {
-    data: post,
-    isLoading: postLoading,
-    error: postError,
-  } = useQuery<Post | Page>({
-    queryKey:
-      type === "page"
-        ? [`/api/pages/${resolvedPageId || postId}`]
-        : [`/api/posts/${postId}`],
-    enabled: !!(resolvedPageId || postId) && type !== "template",
+  const { data, isLoading, error } = useQuery<Page>({
+    queryKey: [`/api/pages/${resolvedPageId || postId}`],
+    enabled: !!(resolvedPageId || postId),
   });
 
-  const {
-    data: template,
-    isLoading: templateLoading,
-    error: templateError,
-  } = useQuery<Template>({
-    queryKey: [`/api/templates/${templateId}`],
-    enabled: !!templateId && type === "template",
-  });
-
-  const isLoading = postLoading || templateLoading;
-  const error = postError || templateError;
-  const data = type === "template" ? template : post;
-
-  // Initialize blocks when data is loaded (page uses full draft/local comparison)
   useEffect(() => {
     if (!data) return;
 
-    if (type === "page") {
-      const page = data as Page;
-      const local = loadPageDraft(page.id);
-      const localDraft = local.status ? local.data : null;
+    const page = data;
+    const local = loadPageDraft(page.id);
+    const localDraft = local.status ? local.data : null;
 
-      const remoteTs = Date.parse(page.updatedAt || "");
-      const localTs = localDraft?.updatedAt ? Date.parse(localDraft.updatedAt) : 0;
-      const useLocal = localDraft && localTs > remoteTs;
-      const source = useLocal ? localDraft : page;
-
-      setBlocks((source.blocks as BlockConfig[]) || []);
-      setPageTitle(source.title || "Untitled");
-      setPageSlug(source.slug || "");
-      setPageStatus(source.status || "draft");
-
-      if (page.id && page.slug) {
-        storeSlugToIdMapping(page.slug, page.id);
-      }
-
-      savePageDraft(page.id, source as any);
-      return;
-    }
-
-    if (type === "template") {
-      setBlocks(((data as Template).blocks as BlockConfig[]) || []);
-      setPageTitle((data as Template).name || "Untitled");
-      return;
-    }
-
-    const post = data as Post;
-    setBlocks((post.builderData as BlockConfig[]) || []);
-    setPageTitle(post.title || "Untitled");
-    setPageSlug(post.slug || "");
-    setPageStatus(post.status || "draft");
-  }, [data, type]);
-
-  // Update URL to show slug after data loads (but keep redirects using id)
-  useEffect(() => {
-    if (data && type === "page" && postId && !isSlug) {
-      const page = data as Page;
-      if (page.slug) {
-        // Only update URL if slug exists and we're on an id-based URL
-        const currentPath = window.location.pathname;
-        const slugPath = `/page-builder/page/${page.slug}`;
-        // Check if current path uses UUID format (id-based)
-        const isUUIDPath =
-          /^\/page-builder\/page\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-            currentPath
-          );
-        // Only update if we're on id-based URL and slug is different
-        if (isUUIDPath && currentPath !== slugPath) {
-          // Use replace to avoid adding to history
-          window.history.replaceState({}, "", slugPath);
-        }
-      }
-    }
-  }, [data, type, postId, isSlug]);
-
-  // Load editor state from localStorage on mount (non-page)
-  useEffect(() => {
-    if (type === "page" || !data?.id) return;
-    const savedState = loadEditorState(data.id);
-    if (savedState.status && savedState.data) {
-      if (savedState.data.blocks?.length > 0) {
-        setBlocks(savedState.data.blocks);
-      }
-      if (savedState.data.pageTitle) {
-        setPageTitle(savedState.data.pageTitle);
-      }
-      if (savedState.data.settingsView) {
-        setSettingsView(savedState.data.settingsView);
-      }
-    }
-  }, [data?.id, type]);
-
-  // Debounce ref for localStorage save
-  const saveDebounceRef = useRef<NodeJS.Timeout>();
-
-  // Debounced auto-save to localStorage when state changes
-  // Blocks state updates immediately, but localStorage save is debounced
-  useEffect(() => {
-    if (saveDebounceRef.current) {
-      clearTimeout(saveDebounceRef.current);
-    }
-
-    saveDebounceRef.current = setTimeout(() => {
-      if (!data?.id) return;
-
-      if (type === "page") {
-        savePageDraft(data.id, {
-          ...(data as Page),
-          blocks,
-          title: pageTitle,
-          slug: pageSlug,
-          status: pageStatus,
-          updatedAt: new Date().toISOString(),
-        } as any);
-        return;
-      }
-
-      if (blocks.length > 0 || pageTitle) {
-        saveEditorState(data.id, {
-          blocks,
-          pageTitle,
-          settingsView,
-        });
-      }
-    }, 300); // 300ms debounce for localStorage
-
-    return () => {
-      if (saveDebounceRef.current) {
-        clearTimeout(saveDebounceRef.current);
-      }
+    const toTs = (value: unknown) => {
+      if (!value) return 0;
+      if (value instanceof Date) return value.getTime();
+      return Date.parse(String(value));
     };
-  }, [blocks, pageTitle, pageSlug, pageStatus, settingsView, data?.id, type]);
+
+    const remoteTs = toTs(page.updatedAt);
+    const localTs = toTs(localDraft?.updatedAt);
+    const useLocal = localDraft && localTs > remoteTs;
+    const source = useLocal ? localDraft : page;
+
+    const initialBlocks = Array.isArray(source.blocks) ? source.blocks : [];
+    const initialTitle = source.title || "Untitled";
+    const initialSlug = source.slug || "";
+    const initialStatus = source.status || "draft";
+
+    setBlocks(initialBlocks);
+    setPageTitle(initialTitle);
+    setPageSlug(initialSlug);
+    setPageStatus(initialStatus);
+    latestPageStateRef.current = {
+      blocks: initialBlocks,
+      title: initialTitle,
+      slug: initialSlug,
+      status: initialStatus,
+    };
+
+    if (page.id && page.slug) {
+      storeSlugToIdMapping(page.slug, page.id);
+    }
+
+    savePageDraft(page.id, source);
+  }, [data]);
+
+  useEffect(() => {
+    if (data && postId && !isSlug && data.slug) {
+      const currentPath = window.location.pathname;
+      const slugPath = `/page-builder/page/${data.slug}`;
+      const isUUIDPath =
+        /^\/page-builder\/page\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          currentPath
+        );
+      if (isUUIDPath && currentPath !== slugPath) {
+        window.history.replaceState({}, "", slugPath);
+      }
+    }
+  }, [data, postId, isSlug]);
+
+  const queuePageDraftSave = (
+    override?: Partial<typeof latestPageStateRef.current>
+  ) => {
+    if (!data?.id) return;
+    const next = {
+      ...latestPageStateRef.current,
+      ...override,
+    };
+    latestPageStateRef.current = next;
+    if (draftSaveRef.current) clearTimeout(draftSaveRef.current);
+    draftSaveRef.current = setTimeout(() => {
+      savePageDraftWithHistory(
+        data.id,
+        {
+          ...data,
+          title: next.title,
+          slug: next.slug,
+          status: next.status,
+          blocks: next.blocks,
+          version: data.version ?? 0,
+        },
+        3
+      );
+    }, 300);
+  };
+
+  const handleBlocksChange = (nextBlocks: BlockConfig[]) => {
+    setBlocks(nextBlocks);
+    queuePageDraftSave({ blocks: nextBlocks });
+  };
+
+  const handleTitleChange = (value: string) => {
+    setPageTitle(value);
+    queuePageDraftSave({ title: value });
+  };
+
+  const handlePageMetaChange = (
+    meta: Partial<{ title: string; slug: string; status: string }>
+  ) => {
+    if (meta.title !== undefined) setPageTitle(meta.title);
+    if (meta.slug !== undefined) setPageSlug(meta.slug);
+    if (meta.status !== undefined) setPageStatus(meta.status);
+    queuePageDraftSave(meta);
+  };
 
   if (isLoading) {
     return (
@@ -232,18 +184,7 @@ export default function PageBuilderEditor({
     );
   }
 
-  if (error || (!data && (postId || templateId))) {
-    const entityName =
-      type === "template" ? "Template" : type === "page" ? "Page" : "Post";
-    const backPath =
-      type === "template"
-        ? "/templates"
-        : type === "page"
-        ? "/pages"
-        : "/posts";
-    const entityPlural =
-      type === "template" ? "Templates" : type === "page" ? "Pages" : "Posts";
-
+  if (error || !data) {
     return (
       <div className="flex h-screen">
         <AdminSidebar />
@@ -256,14 +197,14 @@ export default function PageBuilderEditor({
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  {entityName} not found or failed to load.
+                  Page not found or failed to load.
                 </p>
                 <Button
-                  onClick={() => setLocation(backPath)}
+                  onClick={() => setLocation("/pages")}
                   className="w-full"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to {entityPlural}
+                  Back to Pages
                 </Button>
               </CardContent>
             </Card>
@@ -273,69 +214,46 @@ export default function PageBuilderEditor({
     );
   }
 
-  const handleSave = (updatedData: Post | Template) => {
-    const entityName =
-      type === "template" ? "Template" : type === "page" ? "Page" : "Post";
+  const handleSave = () => {
     toast({
       title: "Success",
-      description: `${entityName} saved successfully`,
+      description: "Page saved successfully",
     });
 
-    // Clear localStorage after successful save
-    if (data?.id) {
-      if (type === "page") {
-        clearPageDraft(data.id);
-      } else {
-        clearEditorState(data.id);
-      }
-    }
-
-    // Force query refresh to get latest data
-    if (type === "page") {
-      queryClient.invalidateQueries({ queryKey: [`/api/pages/${postId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/pages"] });
-    } else if (type === "post") {
-      queryClient.invalidateQueries({ queryKey: [`/api/posts/${postId}`] });
-    }
-    queryClient.invalidateQueries({
-      queryKey: [`/api/templates/${templateId}`],
-    });
+    clearPageDraft(data.id);
+    queryClient.invalidateQueries({ queryKey: [`/api/pages/${postId}`] });
+    queryClient.invalidateQueries({ queryKey: ["/api/pages"] });
   };
 
   const handlePageBuilderSave = async () => {
     if (!data) return;
-    if (type !== "page") {
-      // For non-page, keep existing behavior (templates/posts) if needed later
-      return;
-    }
 
     setIsSaving(true);
     try {
       const { apiRequest } = await import("@/lib/queryClient");
-      const endpoint = `/api/pages/${data.id}`;
       const payload = {
         title: pageTitle,
         slug: pageSlug,
         status: pageStatus,
         blocks,
-        version: (data as Page).version ?? 0,
+        version: data.version ?? 0,
       };
 
-      const response = await apiRequest("PUT", endpoint, payload);
-      const updatedPage = await response.json();
+      const response = await apiRequest(
+        "PUT",
+        `/api/pages/${data.id}`,
+        payload
+      );
+      const updatedPage: Page = await response.json();
 
-      // Sync local draft with authoritative server response
       savePageDraft(updatedPage.id, updatedPage);
       clearPageDraft(updatedPage.id);
-
-      handleSave(updatedPage as any);
-    } catch (error) {
-      console.error("Error in save handler:", error);
+      handleSave();
+    } catch (err) {
+      console.error("Error saving page:", err);
       toast({
         title: "Error",
-        description: `Failed to save ${
-          type === "template" ? "template" : "page"
-        }`,
+        description: "Failed to save page",
         variant: "destructive",
       });
     } finally {
@@ -344,59 +262,12 @@ export default function PageBuilderEditor({
   };
 
   const handlePreview = () => {
-    if (type === "template") {
-      toast({
-        title: "Info",
-        description:
-          "Template preview is not available. Templates are applied to content dynamically.",
-      });
-      return;
-    }
-
-    if (data) {
-      const postType = type === "page" ? "page" : "post";
-      const previewUrl = `/preview/${postType}/${data.id}`;
-      window.open(previewUrl, "_blank");
-    }
+    if (!data) return;
+    window.open(`/preview/page/${data.id}`, "_blank");
   };
 
   const handleBackToList = () => {
-    const backPath =
-      type === "template"
-        ? "/templates"
-        : type === "page"
-        ? "/pages"
-        : "/posts";
-    setLocation(backPath);
-  };
-
-  const handlePageSettingsSave = async () => {
-    if (!data || type === "template") return;
-
-    setIsSaving(true);
-    try {
-      const { apiRequest } = await import("@/lib/queryClient");
-
-      const endpoint =
-        type === "page" ? `/api/pages/${data.id}` : `/api/posts/${data.id}`;
-
-      const response = await apiRequest("PUT", endpoint, {
-        title: pageTitle,
-        slug: pageSlug,
-        status: pageStatus,
-      });
-
-      const updatedData = await response.json();
-      handleSave(updatedData);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save page settings",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
+    setLocation("/pages");
   };
 
   return (
@@ -419,7 +290,7 @@ export default function PageBuilderEditor({
               <span className="text-sm text-gray-400">Editing:</span>
               <Input
                 value={pageTitle}
-                onChange={(e) => setPageTitle(e.target.value)}
+                onChange={(e) => handleTitleChange(e.target.value)}
                 className="bg-wp-gray border-gray-600 text-white text-sm h-8 focus:border-wp-blue"
                 placeholder="Enter title..."
               />
@@ -435,7 +306,7 @@ export default function PageBuilderEditor({
               data-testid="button-preview"
             >
               <Eye className="w-4 h-4" />
-              {type === "template" ? "Settings" : "Preview"}
+              Preview
             </Button>
 
             <Button
@@ -448,36 +319,29 @@ export default function PageBuilderEditor({
               <Save className="w-4 h-4" />
               {isSaving ? "Saving..." : "Save"}
             </Button>
-            {type !== "template" && data && (
-              <PublishDialog
-                post={data as Post}
-                blocks={blocks}
-                onPublished={handleSave}
-                disabled={isSaving}
-              />
-            )}
+            <PublishDialog
+              post={data}
+              blocks={blocks}
+              onPublished={handleSave}
+              disabled={isSaving}
+            />
           </div>
         </div>
 
-        {/* Page Builder Component */}
         <div className="flex-1 min-h-0">
           <PageBuilder
             post={data}
-            template={type === "template" ? (data as Template) : undefined}
             blocks={blocks}
-            onBlocksChange={setBlocks}
+            onBlocksChange={handleBlocksChange}
             onSave={handleSave}
             onPreview={handlePreview}
-            pageMeta={
-              type === "page"
-                ? {
-                    title: pageTitle,
-                    slug: pageSlug,
-                    status: pageStatus,
-                    version: (data as Page | undefined)?.version,
-                  }
-                : undefined
-            }
+            pageMeta={{
+              title: pageTitle,
+              slug: pageSlug,
+              status: pageStatus,
+              version: data.version,
+            }}
+            onPageMetaChange={handlePageMetaChange}
           />
         </div>
       </div>

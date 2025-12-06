@@ -148,6 +148,13 @@ export default function PageBuilderEditor({
     }, 300);
   };
 
+  useEffect(() => {
+    return () => {
+      if (draftSaveRef.current) {
+        clearTimeout(draftSaveRef.current);
+      }
+    };
+  }, [data?.id]);
   const handleBlocksChange = (nextBlocks: BlockConfig[]) => {
     setBlocks(nextBlocks);
     queuePageDraftSave({ blocks: nextBlocks });

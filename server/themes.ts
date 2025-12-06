@@ -571,7 +571,8 @@ class ThemeManager {
 		}
 
 		// Runtime fallback for missing renderer field with one-time warning
-		const rendererName = activeTheme.renderer ?? activeTheme.other?.renderer ?? 'custom-ssr';
+		const other = activeTheme.other as Record<string, any> | null | undefined;
+		const rendererName = activeTheme.renderer ?? other?.renderer ?? 'custom-ssr';
 		
 		if (!activeTheme.renderer && !rendererWarningLogged) {
 			console.warn(

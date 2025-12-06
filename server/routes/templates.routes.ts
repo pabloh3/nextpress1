@@ -83,10 +83,24 @@ export function createTemplatesRoutes(deps: Deps): Router {
           throw new Error('User not authenticated');
         }
 
-        const templateData = schemas.templates.insert.parse({
+        const parsedData = schemas.templates.insert.parse({
           ...req.body,
           authorId: userId,
         });
+
+        // Ensure required fields are present and properly typed
+        if (!parsedData.name || !parsedData.type) {
+          throw new Error('name and type are required');
+        }
+
+        const templateData = {
+          name: String(parsedData.name),
+          authorId: String(parsedData.authorId),
+          type: String(parsedData.type),
+          ...(parsedData.description && { description: String(parsedData.description) }),
+          ...(parsedData.blocks && { blocks: parsedData.blocks }),
+          ...(parsedData.settings && { settings: parsedData.settings }),
+        } as any;
 
         const template = await models.templates.create(templateData);
         return template;

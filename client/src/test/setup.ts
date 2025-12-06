@@ -1,9 +1,5 @@
 import '@testing-library/jest-dom'
-import { blockRegistry } from '../components/PageBuilder/blocks';
-import type { BlockConfig, BlockContent } from '@shared/schema-types';
-
-// Debug log for blockRegistry
-console.log('Test Setup - blockRegistry:', blockRegistry);
+import type { BlockContent } from '@shared/schema-types';
 import { vi } from 'vitest'
 
 /**

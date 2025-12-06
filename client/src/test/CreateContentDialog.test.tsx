@@ -199,7 +199,7 @@ describe('CreateContentDialog', () => {
     renderDialog();
     const input = screen.getByPlaceholderText('Enter page title...');
     
-    expect(input).toHaveAttribute('autofocus');
+    expect(input).toHaveFocus();
   });
 
   test('displays correct description for page type', () => {

@@ -18,9 +18,10 @@ import {
 import type { Table, InferSelectModel, InferInsertModel } from "drizzle-orm";
 import { db } from "../server/db";
 
-// Transaction-aware database type - using the type of the imported db instance for type safety
-// The union type approach causes method signature conflicts between PostgreSQL drivers
-export type DatabaseInstance = typeof db;
+// Generic database type that supports both Neon and PGlite
+// Using 'any' for maximum compatibility since both drivers have compatible APIs at runtime
+export type DatabaseInstance = any;
+export type TransactionInstance = any;
 
 // Filter types
 export interface PropertyFilter {
@@ -579,7 +580,7 @@ export function createModel<TTable extends Table>(
 
 // Transaction helper
 export function withTransaction<T>(
-	callback: (tx: DatabaseInstance) => Promise<T>,
+	callback: (tx: TransactionInstance) => Promise<T>,
 ): Promise<T> {
-	return db.transaction(callback);
+	return db.transaction(callback as any);
 }

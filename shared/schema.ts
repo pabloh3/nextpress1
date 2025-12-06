@@ -119,6 +119,7 @@ export const themes = pgTable('themes', {
   price: bigint('price', { mode: 'number' }).default(0),
   currency: varchar('currency').default('USD'),
   status: varchar('status').default('draft'),
+  renderer: varchar('renderer'), // Optional renderer name (e.g., 'custom-ssr', 'react-ssr')
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
   settings: jsonb('settings').default({}),

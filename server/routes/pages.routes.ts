@@ -111,18 +111,25 @@ export function createPagesRoutes(deps: Deps): Router {
         }
 
         // Include authorId in the data before validation
-        const pageData = pageSchemas.insert.parse({
+        const parsedData = pageSchemas.insert.parse({
           ...req.body,
           authorId: userId,
-        });
+        }) as any;
 
         // Generate slug if not provided
-        if (!pageData.slug) {
-          pageData.slug = pageData.title
+        const title = parsedData.title;
+        if (!title || typeof title !== 'string') {
+          throw new Error('Title is required and must be a string');
+        }
+
+        const pageData = {
+          ...parsedData,
+          title: String(title),
+          slug: parsedData.slug || title
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '');
-        }
+            .replace(/^-|-$/g, ''),
+        };
 
         const page = await models.pages.create(pageData);
         hooks.doAction('save_post', page);

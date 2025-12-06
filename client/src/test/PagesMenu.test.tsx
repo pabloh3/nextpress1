@@ -1,5 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PagesMenu } from '@/components/PageBuilder/EditorBar/PagesMenu';
 
@@ -40,6 +41,8 @@ describe('PagesMenu', () => {
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    // jsdom missing scrollIntoView
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
   const renderPagesMenu = (props = {}) => {
@@ -57,23 +60,25 @@ describe('PagesMenu', () => {
     expect(screen.getByText('Pages')).toBeInTheDocument();
   });
 
-  test('opens dropdown menu on trigger click', () => {
+  test('opens dropdown menu on trigger click', async () => {
+    const user = userEvent.setup();
     renderPagesMenu();
     const trigger = screen.getByText('Pages');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     expect(screen.getByText('Browse Pages')).toBeInTheDocument();
     expect(screen.getByText('Create New Page')).toBeInTheDocument();
   });
 
   test('opens command palette when Browse Pages is clicked', async () => {
+    const user = userEvent.setup();
     renderPagesMenu();
     
     const trigger = screen.getByText('Pages');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Pages');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
     // Command palette should be visible with pages
     await waitFor(() => {
@@ -84,46 +89,47 @@ describe('PagesMenu', () => {
   });
 
   test('navigates to page edit view when page is selected', async () => {
+    const user = userEvent.setup();
     renderPagesMenu();
     
     const trigger = screen.getByText('Pages');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Pages');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
     await waitFor(() => {
       expect(screen.getByText('Home Page')).toBeInTheDocument();
     });
 
     const pageItem = screen.getByText('Home Page');
-    fireEvent.click(pageItem);
+    await user.click(pageItem);
 
     expect(mockSetLocation).toHaveBeenCalledWith('/pages/page-1/edit');
   });
 
-  test('opens create dialog when Create New Page is clicked', () => {
+  test('navigates to create when Create New Page is clicked', async () => {
+    const user = userEvent.setup();
     renderPagesMenu();
     
     const trigger = screen.getByText('Pages');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const createItem = screen.getByText('Create New Page');
-    fireEvent.click(createItem);
+    await user.click(createItem);
 
-    const dialog = screen.getByTestId('create-dialog');
-    expect(dialog).toBeInTheDocument();
-    expect(dialog).toHaveAttribute('data-type', 'page');
+    expect(mockSetLocation).toHaveBeenCalledWith('/pages?create=true');
   });
 
   test('highlights current page in command palette', async () => {
+    const user = userEvent.setup();
     renderPagesMenu({ currentPageId: 'page-2' });
     
     const trigger = screen.getByText('Pages');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Pages');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
     await waitFor(() => {
       expect(screen.getByText('About Page')).toBeInTheDocument();
@@ -134,17 +140,21 @@ describe('PagesMenu', () => {
   });
 
   test('displays page status in command palette', async () => {
+    const user = userEvent.setup();
     renderPagesMenu();
     
     const trigger = screen.getByText('Pages');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Pages');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
-    await waitFor(() => {
-      expect(screen.getByText('published')).toBeInTheDocument();
-    });
-    expect(screen.getByText('draft')).toBeInTheDocument();
+    const firstPage = await screen.findByText('Home Page');
+    const firstPageRow = firstPage.closest('[role]');
+    expect(within(firstPageRow!).getByText('published')).toBeInTheDocument();
+
+    const secondPage = screen.getByText('About Page');
+    const secondPageRow = secondPage.closest('[role]');
+    expect(within(secondPageRow!).getByText('draft')).toBeInTheDocument();
   });
 });

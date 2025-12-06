@@ -16,33 +16,59 @@ function getText(content: BlockContent): string {
   return ''
 }
 
-// Mock the block registry
-vi.mock('../components/PageBuilder/blocks', () => ({
-  blockRegistry: {
-    'core/paragraph': {
-      id: 'core/paragraph',
-      name: 'Paragraph',
-      renderer: ({ block }: { block: BlockConfig }) => (
-        <p className="wp-block-paragraph" style={block.styles as any}>
-          {getText(block.content)}
-        </p>
-      ),
-      isContainer: false
-    },
-    'core/group': {
-      id: 'core/group',
-      name: 'Group',
-      renderer: ({ block, children }: { block: BlockConfig; children?: React.ReactNode }) => (
-        <div data-testid="group-block" data-block-id={block.id}>
-          Group Container
-          {children}
-        </div>
-      ),
-      isContainer: true,
-      handlesOwnChildren: false
-    }
-  }
-}))
+const mockBlockRegistry = vi.hoisted(() => ({
+  'core/paragraph': {
+    id: 'core/paragraph',
+    name: 'Paragraph',
+    label: 'Paragraph',
+    renderer: ({ block }: { block: BlockConfig }) => (
+      <p className="wp-block-paragraph" style={block.styles as any}>
+        {getText(block.content)}
+      </p>
+    ),
+    isContainer: false,
+  },
+  'core/group': {
+    id: 'core/group',
+    name: 'Group',
+    label: 'Group',
+    renderer: ({ block, children }: { block: BlockConfig; children?: React.ReactNode }) => (
+      <div className="wp-block-group" data-testid="group-block" data-block-id={block.id}>
+        Group Container
+        {children}
+      </div>
+    ),
+    isContainer: true,
+    handlesOwnChildren: false,
+  },
+}));
+
+// Mock the block registry using the resolved module path
+const blocksModulePath = vi.hoisted(
+  () =>
+    '/home/kizz/Code~Vault/OPEN SOURCE/nextpress/client/src/components/PageBuilder/blocks',
+);
+vi.mock(blocksModulePath, () => ({
+  blockRegistry: mockBlockRegistry,
+}));
+vi.mock(`${blocksModulePath}/index.ts`, () => ({
+  blockRegistry: mockBlockRegistry,
+}));
+
+// Simplify DnD components for testing
+vi.mock('@/lib/dnd', () => ({
+  DragDropContext: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Droppable: ({ children }: any) =>
+    children(
+      { innerRef: vi.fn(), droppableProps: {}, placeholder: null },
+      { isDraggingOver: false },
+    ),
+  Draggable: ({ children }: any) =>
+    children(
+      { innerRef: vi.fn(), draggableProps: {}, dragHandleProps: {} },
+      { isDragging: false },
+    ),
+}));
 
 describe('BlockRenderer', () => {
   const mockActions = {

@@ -104,7 +104,7 @@ export function createMediaRoutes(deps: Deps): Router {
         // Create URL for the uploaded file
         const fileUrl = `/uploads/${file.filename}`;
 
-        const mediaData = schemas.media.insert.parse({
+        const parsedData = schemas.media.insert.parse({
           filename: file.filename,
           originalName: file.originalname,
           mimeType: file.mimetype,
@@ -115,6 +115,19 @@ export function createMediaRoutes(deps: Deps): Router {
           description: description || '',
           authorId: userId,
         });
+
+        // Ensure all required fields are properly typed
+        const mediaData = {
+          authorId: String(parsedData.authorId),
+          filename: String(parsedData.filename),
+          originalName: String(parsedData.originalName),
+          mimeType: String(parsedData.mimeType),
+          size: Number(parsedData.size),
+          url: String(parsedData.url),
+          ...(parsedData.alt && { alt: String(parsedData.alt) }),
+          ...(parsedData.caption && { caption: String(parsedData.caption) }),
+          ...(parsedData.description && { description: String(parsedData.description) }),
+        } as any;
 
         const mediaItem = await models.media.create(mediaData);
         hooks.doAction('wp_handle_upload', mediaItem);

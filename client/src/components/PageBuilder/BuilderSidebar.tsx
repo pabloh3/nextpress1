@@ -36,12 +36,10 @@ export function BuilderSidebar({
 
   // Auto-set to 'page' when no block selected, 'block' when block selected
   useEffect(() => {
-    if (selectedBlock) {
-      setSettingsView('block');
-    } else {
+    if (!selectedBlock && settingsView !== 'page') {
       setSettingsView('page');
     }
-  }, [selectedBlock]);
+  }, [selectedBlock, settingsView]);
   return (
     <div className="w-80 sm:w-80 lg:w-80 bg-white border-r border-gray-200 flex flex-col min-h-0 transition-all duration-300 ease-out shadow-sm">
       <div className="p-4 border-b border-gray-200 flex items-center gap-2 w-full justify-between bg-white">

@@ -11,6 +11,7 @@ import { BuilderTopBar } from "./BuilderTopBar";
 import { BuilderCanvas } from "./BuilderCanvas";
 import { blockRegistry } from "./blocks";
 import { BlockActionsProvider } from "./BlockActionsContext";
+import { savePageDraftWithHistory } from "@/lib/pageDraftStorage";
 import {
 	findBlock,
 	updateBlockDeep,
@@ -52,6 +53,12 @@ interface PageBuilderProps {
 	onBlocksChange?: (blocks: BlockConfig[]) => void;
 	onSave?: (updatedData: Post | Template) => void;
 	onPreview?: () => void;
+	pageMeta?: {
+		title?: string;
+		slug?: string;
+		status?: string;
+		version?: number;
+	};
 }
 
 export default function PageBuilder({
@@ -61,6 +68,7 @@ export default function PageBuilder({
 	onBlocksChange,
 	onSave,
 	onPreview,
+	pageMeta,
 }: PageBuilderProps) {
 	const data = template || post;
 	const isTemplate = !!template;
@@ -140,9 +148,19 @@ export default function PageBuilder({
 
 	const selectedBlock = selectedBlockId ? findBlock(blocks, selectedBlockId) : null;
 
-	const saveMutation = usePageSave({ isTemplate, data, onSave });
+	const saveMutation = usePageSave({ isTemplate, data, onSave, pageMeta });
 
 	const handleSave = useCallback(() => {
+		if (!isTemplate && data && "menuOrder" in data && data.id) {
+			savePageDraftWithHistory(
+				data.id as string,
+				{
+					...(data as any),
+					blocks,
+					updatedAt: new Date().toISOString(),
+				} as any,
+			);
+		}
 		saveMutation.mutate(blocks);
 		onSave?.(data as any);
 	}, [blocks, saveMutation, onSave, data]);

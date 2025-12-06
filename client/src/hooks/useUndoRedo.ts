@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
  * Hook for managing undo/redo functionality with state history.
@@ -10,6 +10,11 @@ import { useState } from 'react';
 export function useUndoRedo<T>(initialState: T) {
   const [history, setHistory] = useState<T[]>([initialState]);
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    setHistory([initialState]);
+    setCurrentIndex(0);
+  }, [initialState]);
   
   const canUndo = currentIndex > 0;
   const canRedo = currentIndex < history.length - 1;

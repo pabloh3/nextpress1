@@ -35,9 +35,25 @@ export type NewRole = typeof roles.$inferInsert;
 export type UserRole = typeof userRoles.$inferSelect;
 export type NewUserRole = typeof userRoles.$inferInsert;
 
+// Page version history entry (page-level, not per block)
+export interface PageVersionEntry {
+	version: number;
+	updatedAt: string; // ISO timestamp
+	blocks: BlockConfig[];
+	authorId?: string;
+	message?: string;
+}
+
 // Page types
-export type Page = typeof pages.$inferSelect;
-export type NewPage = typeof pages.$inferInsert;
+export type Page = typeof pages.$inferSelect & {
+	version?: number;
+	history?: PageVersionEntry[];
+};
+export type NewPage = typeof pages.$inferInsert & {
+	version?: number;
+	history?: PageVersionEntry[];
+};
+export type PageDraft = Page & { localVersion?: number };
 
 // Template types
 export type Template = typeof templates.$inferSelect;
@@ -78,59 +94,65 @@ export type NewSession = typeof sessions.$inferInsert;
  * Each content type has a unique 'kind' discriminator for type-safe handling
  */
 export type BlockContent =
-  | { kind: 'text'; value: string; textAlign?: string; dropCap?: boolean }
-  | { kind: 'markdown'; value: string; textAlign?: string }
-  | { kind: 'media'; url: string; alt?: string; caption?: string; mediaType: 'image' | 'video' | 'audio' }
-  | { kind: 'html'; value: string; sanitized: boolean }
-  | { kind: 'structured'; data: Record<string, unknown> } // For complex blocks like tables, columns
-  | { kind: 'empty' } // Explicitly empty block
-  | undefined; // No content set
+	| { kind: "text"; value: string; textAlign?: string; dropCap?: boolean }
+	| { kind: "markdown"; value: string; textAlign?: string }
+	| {
+			kind: "media";
+			url: string;
+			alt?: string;
+			caption?: string;
+			mediaType: "image" | "video" | "audio";
+	  }
+	| { kind: "html"; value: string; sanitized: boolean }
+	| { kind: "structured"; data: Record<string, unknown> } // For complex blocks like tables, columns
+	| { kind: "empty" } // Explicitly empty block
+	| undefined; // No content set
 
 /**
  * Core block configuration for PageBuilder runtime
  * Used during editing and rendering
  */
 export interface BlockConfig {
-  // Core identity & type
-  id: string; // Unique instance ID
-  name: string; // Canonical machine key (e.g., 'core/heading', 'core/paragraph')
-  type: "block" | "container"; // Structural kind: can this block have children?
-  parentId: string | null; // Parent block ID or null for root-level blocks
-  
-  // Display metadata
-  label?: string; // User-facing display name (e.g., 'Heading', 'Two Columns')
-  category?: "basic" | "layout" | "media" | "advanced";
-  
-  // Content - Discriminated union for type-safe handling
-  // - For text blocks: { kind: 'text', value: '...' }
-  // - For media blocks: { kind: 'media', url: '...', mediaType: 'image' }
-  // - For containers: { kind: 'structured', data: { gap, alignment, ... } }
-  content: BlockContent;
-  
-  // Styling (three layers: typed styles → block dev CSS → user CSS)
-  styles?: React.CSSProperties; // Typed inline styles: {marginTop: "4rem", fontSize: "2rem"}
-  customCss?: string; // CSS string defined by block developer
-  
-  // Container support (ONLY for type: "container")
-  // Regular blocks (type: "block") should NOT have children
-  children?: BlockConfig[];
-  
-  // Configuration
-  settings?: Record<string, any>; // Block settings/options
-  
-  // Compatibility & rendering
-  requires?: string; // Minimal NextPress version: "^4.0", ">=3.2.0", "~5.1"
-  isReactive?: boolean; // If true, renders as React component in renderer
-  
-  // User overrides & extensions
-  other?: {
-    css?: string; // Custom CSS string added by user in editor
-    classNames?: string; // CSS class names
-    js?: string; // Custom JavaScript
-    html?: string; // Custom HTML override
-    attributes?: Record<string, any>; // HTML attributes
-    metadata?: Record<string, any>; // Any additional custom data
-  };
+	// Core identity & type
+	id: string; // Unique instance ID
+	name: string; // Canonical machine key (e.g., 'core/heading', 'core/paragraph')
+	type: "block" | "container"; // Structural kind: can this block have children?
+	parentId: string | null; // Parent block ID or null for root-level blocks
+
+	// Display metadata
+	label?: string; // User-facing display name (e.g., 'Heading', 'Two Columns')
+	category?: "basic" | "layout" | "media" | "advanced";
+
+	// Content - Discriminated union for type-safe handling
+	// - For text blocks: { kind: 'text', value: '...' }
+	// - For media blocks: { kind: 'media', url: '...', mediaType: 'image' }
+	// - For containers: { kind: 'structured', data: { gap, alignment, ... } }
+	content: BlockContent;
+
+	// Styling (three layers: typed styles → block dev CSS → user CSS)
+	styles?: React.CSSProperties; // Typed inline styles: {marginTop: "4rem", fontSize: "2rem"}
+	customCss?: string; // CSS string defined by block developer
+
+	// Container support (ONLY for type: "container")
+	// Regular blocks (type: "block") should NOT have children
+	children?: BlockConfig[];
+
+	// Configuration
+	settings?: Record<string, any>; // Block settings/options
+
+	// Compatibility & rendering
+	requires?: string; // Minimal NextPress version: "^4.0", ">=3.2.0", "~5.1"
+	isReactive?: boolean; // If true, renders as React component in renderer
+
+	// User overrides & extensions
+	other?: {
+		css?: string; // Custom CSS string added by user in editor
+		classNames?: string; // CSS class names
+		js?: string; // Custom JavaScript
+		html?: string; // Custom HTML override
+		attributes?: Record<string, any>; // HTML attributes
+		metadata?: Record<string, any>; // Any additional custom data
+	};
 }
 
 /**
@@ -139,9 +161,8 @@ export interface BlockConfig {
  * Note: Version history types defined but not implemented yet (future feature)
  */
 export interface SavedBlockConfig extends BlockConfig {
-  version: number; // Current version number (increments on each save)
-  previousState?: SavedBlockConfig; // Full N-1 version for undo/redo
-  authorId: string; // UUID of user who created/owns this block
-  createdAt: string; // ISO timestamp when first created
-  updatedAt: string; // ISO timestamp when last updated
+	version?: number; // Optional block version if needed
+	authorId?: string;
+	createdAt?: string;
+	updatedAt?: string;
 }

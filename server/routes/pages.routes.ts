@@ -159,12 +159,27 @@ export function createPagesRoutes(deps: Deps): Router {
     asyncHandler(async (req, res) => {
       try {
         const id = req.params.id;
-        const pageData = pageSchemas.update.parse(coerceDates(req.body, ['publishedAt']));
+        const parsed = pageSchemas.update.parse(coerceDates(req.body, ['publishedAt'])) as any;
 
         const existingPage = await models.pages.findById(id);
         if (!existingPage) {
           return res.status(404).json({ message: 'Page not found' });
         }
+
+        const previousSnapshot = {
+          version: existingPage.version ?? 0,
+          updatedAt: existingPage.updatedAt
+            ? new Date(existingPage.updatedAt as any).toISOString()
+            : new Date().toISOString(),
+          blocks: existingPage.blocks ?? [],
+          authorId: (existingPage as any).authorId,
+        };
+
+        const pageData = {
+          ...parsed,
+          version: (existingPage.version ?? 0) + 1,
+          history: [previousSnapshot], // retain only N-1 on the server
+        };
 
         const wasPublished = existingPage.status === 'publish';
         const page = await models.pages.update(id, pageData);

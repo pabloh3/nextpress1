@@ -18,6 +18,11 @@ import {
   storeSlugToIdMapping,
   getPageIdFromSlug,
 } from "@/lib/editorStorage";
+import {
+  clearPageDraft,
+  loadPageDraft,
+  savePageDraft,
+} from "@/lib/pageDraftStorage";
 
 interface PageBuilderEditorProps {
   postId?: string;
@@ -90,37 +95,44 @@ export default function PageBuilderEditor({
   const error = postError || templateError;
   const data = type === "template" ? template : post;
 
-  // Initialize blocks when data is loaded
+  // Initialize blocks when data is loaded (page uses full draft/local comparison)
   useEffect(() => {
-    if (data) {
-      if (type === "template") {
-        setBlocks(((data as Template).blocks as BlockConfig[]) || []);
-      } else if (type === "page") {
-        // Pages have blocks field directly
-        const page = data as Page;
-        setBlocks((page.blocks as BlockConfig[]) || []);
-        setPageTitle(page.title || "Untitled");
-        setPageSlug(page.slug || "");
-        setPageStatus(page.status || "draft");
+    if (!data) return;
 
-        // Store slug-to-id mapping for future reloads
-        if (page.id && page.slug) {
-          storeSlugToIdMapping(page.slug, page.id);
-        }
-      } else {
-        // Posts use builderData
-        const post = data as Post;
-        setBlocks((post.builderData as BlockConfig[]) || []);
-        setPageTitle(post.title || "Untitled");
-        setPageSlug(post.slug || "");
-        setPageStatus(post.status || "draft");
+    if (type === "page") {
+      const page = data as Page;
+      const local = loadPageDraft(page.id);
+      const localDraft = local.status ? local.data : null;
+
+      const remoteTs = Date.parse(page.updatedAt || "");
+      const localTs = localDraft?.updatedAt ? Date.parse(localDraft.updatedAt) : 0;
+      const useLocal = localDraft && localTs > remoteTs;
+      const source = useLocal ? localDraft : page;
+
+      setBlocks((source.blocks as BlockConfig[]) || []);
+      setPageTitle(source.title || "Untitled");
+      setPageSlug(source.slug || "");
+      setPageStatus(source.status || "draft");
+
+      if (page.id && page.slug) {
+        storeSlugToIdMapping(page.slug, page.id);
       }
 
-      // Set initial page title from data
-      if (type === "template") {
-        setPageTitle((data as Template).name || "Untitled");
-      }
+      savePageDraft(page.id, source as any);
+      return;
     }
+
+    if (type === "template") {
+      setBlocks(((data as Template).blocks as BlockConfig[]) || []);
+      setPageTitle((data as Template).name || "Untitled");
+      return;
+    }
+
+    const post = data as Post;
+    setBlocks((post.builderData as BlockConfig[]) || []);
+    setPageTitle(post.title || "Untitled");
+    setPageSlug(post.slug || "");
+    setPageStatus(post.status || "draft");
   }, [data, type]);
 
   // Update URL to show slug after data loads (but keep redirects using id)
@@ -145,28 +157,22 @@ export default function PageBuilderEditor({
     }
   }, [data, type, postId, isSlug]);
 
-  // Load editor state from localStorage on mount
+  // Load editor state from localStorage on mount (non-page)
   useEffect(() => {
-    if (data?.id) {
-      const savedState = loadEditorState(data.id);
-      if (savedState.status && savedState.data) {
-        // Restore blocks if they exist and are more recent
-        if (savedState.data.blocks?.length > 0) {
-          setBlocks(savedState.data.blocks);
-        }
-
-        // Restore page title
-        if (savedState.data.pageTitle) {
-          setPageTitle(savedState.data.pageTitle);
-        }
-
-        // Restore settings view
-        if (savedState.data.settingsView) {
-          setSettingsView(savedState.data.settingsView);
-        }
+    if (type === "page" || !data?.id) return;
+    const savedState = loadEditorState(data.id);
+    if (savedState.status && savedState.data) {
+      if (savedState.data.blocks?.length > 0) {
+        setBlocks(savedState.data.blocks);
+      }
+      if (savedState.data.pageTitle) {
+        setPageTitle(savedState.data.pageTitle);
+      }
+      if (savedState.data.settingsView) {
+        setSettingsView(savedState.data.settingsView);
       }
     }
-  }, [data?.id]);
+  }, [data?.id, type]);
 
   // Debounce ref for localStorage save
   const saveDebounceRef = useRef<NodeJS.Timeout>();
@@ -179,7 +185,21 @@ export default function PageBuilderEditor({
     }
 
     saveDebounceRef.current = setTimeout(() => {
-      if (data?.id && (blocks.length > 0 || pageTitle)) {
+      if (!data?.id) return;
+
+      if (type === "page") {
+        savePageDraft(data.id, {
+          ...(data as Page),
+          blocks,
+          title: pageTitle,
+          slug: pageSlug,
+          status: pageStatus,
+          updatedAt: new Date().toISOString(),
+        } as any);
+        return;
+      }
+
+      if (blocks.length > 0 || pageTitle) {
         saveEditorState(data.id, {
           blocks,
           pageTitle,
@@ -193,7 +213,7 @@ export default function PageBuilderEditor({
         clearTimeout(saveDebounceRef.current);
       }
     };
-  }, [blocks, pageTitle, settingsView, data?.id]);
+  }, [blocks, pageTitle, pageSlug, pageStatus, settingsView, data?.id, type]);
 
   if (isLoading) {
     return (
@@ -263,7 +283,11 @@ export default function PageBuilderEditor({
 
     // Clear localStorage after successful save
     if (data?.id) {
-      clearEditorState(data.id);
+      if (type === "page") {
+        clearPageDraft(data.id);
+      } else {
+        clearEditorState(data.id);
+      }
     }
 
     // Force query refresh to get latest data
@@ -280,91 +304,31 @@ export default function PageBuilderEditor({
 
   const handlePageBuilderSave = async () => {
     if (!data) return;
+    if (type !== "page") {
+      // For non-page, keep existing behavior (templates/posts) if needed later
+      return;
+    }
 
     setIsSaving(true);
     try {
-      // const { apiRequest } = await import('@/lib/queryClient'); // Commented out - backend save disabled
+      const { apiRequest } = await import("@/lib/queryClient");
+      const endpoint = `/api/pages/${data.id}`;
+      const payload = {
+        title: pageTitle,
+        slug: pageSlug,
+        status: pageStatus,
+        blocks,
+        version: (data as Page).version ?? 0,
+      };
 
-      // Prepare payload for logging
-      let payload: any;
-      let endpoint: string;
+      const response = await apiRequest("PUT", endpoint, payload);
+      const updatedPage = await response.json();
 
-      if (type === "template") {
-        endpoint = `/api/templates/${data.id}`;
-        payload = {
-          name: pageTitle,
-          blocks: blocks,
-        };
-      } else if (type === "page") {
-        // Pages use /api/pages and blocks field
-        endpoint = `/api/pages/${data.id}`;
-        payload = {
-          title: pageTitle,
-          blocks: blocks,
-        };
-      } else {
-        // Posts use /api/posts and builderData
-        endpoint = `/api/posts/${data.id}`;
-        payload = {
-          title: pageTitle,
-          builderData: blocks,
-          usePageBuilder: true,
-        };
-      }
+      // Sync local draft with authoritative server response
+      savePageDraft(updatedPage.id, updatedPage);
+      clearPageDraft(updatedPage.id);
 
-      // Log what would be saved
-      console.group("🔍 PAGE BUILDER SAVE - BACKEND PAYLOAD (DISABLED)");
-      console.log("Type:", type);
-      console.log("Endpoint:", endpoint);
-      console.log("Data ID:", data.id);
-      console.log("Page Title:", pageTitle);
-      console.log("Blocks Count:", blocks.length);
-      console.log("Full Payload:", JSON.stringify(payload, null, 2));
-      console.log("Blocks Array:", blocks);
-      console.log(
-        "Blocks Structure:",
-        blocks.map((block, index) => ({
-          index,
-          id: block.id,
-          name: block.name,
-          settings: block.settings,
-          children: block.children?.length || 0,
-        }))
-      );
-      console.groupEnd();
-
-      // Simulate success
-      toast({
-        title: "Debug Mode",
-        description: `Save logged to console (backend disabled)`,
-      });
-
-      // BACKEND SAVE DISABLED - Original code commented out for debugging
-      // if (type === 'template') {
-      //   const response = await apiRequest('PUT', `/api/templates/${data.id}`, {
-      //     name: pageTitle,
-      //     blocks: blocks,
-      //   });
-      //   const updatedTemplate = await response.json();
-      //   handleSave(updatedTemplate);
-      // } else if (type === 'page') {
-      //   // Pages use /api/pages and blocks field
-      //   const response = await apiRequest('PUT', `/api/pages/${data.id}`, {
-      //     title: pageTitle,
-      //     blocks: blocks,
-      //   });
-      //   const updatedPage = await response.json();
-      //   handleSave(updatedPage);
-      // } else {
-      //   // Posts use /api/posts and builderData
-      //   const response = await apiRequest('PUT', `/api/posts/${data.id}`, {
-      //     title: pageTitle,
-      //     builderData: blocks,
-      //     usePageBuilder: true,
-      //   });
-      //   const updatedPost = await response.json();
-      //   handleSave(updatedPost);
-      // }
+      handleSave(updatedPage as any);
     } catch (error) {
       console.error("Error in save handler:", error);
       toast({
@@ -504,6 +468,16 @@ export default function PageBuilderEditor({
             onBlocksChange={setBlocks}
             onSave={handleSave}
             onPreview={handlePreview}
+            pageMeta={
+              type === "page"
+                ? {
+                    title: pageTitle,
+                    slug: pageSlug,
+                    status: pageStatus,
+                    version: (data as Page | undefined)?.version,
+                  }
+                : undefined
+            }
           />
         </div>
       </div>

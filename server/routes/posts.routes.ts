@@ -105,7 +105,7 @@ export function createPostsRoutes(deps: Deps): Router {
         const parsedData = postSchemas.insert.parse({
           ...req.body,
           authorId: userId,
-        }) as any;
+        });
 
         // Generate slug if not provided
         const title = parsedData.title;

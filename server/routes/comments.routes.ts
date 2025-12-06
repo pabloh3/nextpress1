@@ -67,9 +67,7 @@ export function createCommentsRoutes(deps: Deps): Router {
       }
       const commentData = {
         ...parsedData,
-        postId: String(parsedData.postId),
-        content: String(parsedData.content),
-      } as any;
+      };
       const comment = await models.comments.create(commentData);
       hooks.doAction('new_comment', comment);
       res.status(201).json(comment);

@@ -118,7 +118,7 @@ describe('PagesMenu', () => {
     const createItem = screen.getByText('Create New Page');
     await user.click(createItem);
 
-    expect(mockSetLocation).toHaveBeenCalledWith('/pages?create=true');
+    expect(mockSetLocation).toHaveBeenCalledWith(expect.stringContaining('/pages/new'));
   });
 
   test('highlights current page in command palette', async () => {

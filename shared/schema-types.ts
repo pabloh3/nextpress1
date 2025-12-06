@@ -156,13 +156,7 @@ export interface BlockConfig {
 }
 
 /**
- * Saved block configuration with version history & authorship
- * Used when persisting to database (posts.blocks, templates.blocks, pages.blocks)
- * Note: Version history types defined but not implemented yet (future feature)
+ * Blocks are persisted to database using BlockConfig directly (in posts.blocks, templates.blocks, pages.blocks).
+ * Version tracking happens at the page level via PageVersionEntry, not at individual block level.
+ * This ensures atomic rollback of entire page state rather than per-block versioning.
  */
-export interface SavedBlockConfig extends BlockConfig {
-	version?: number; // Optional block version if needed
-	authorId?: string;
-	createdAt?: string;
-	updatedAt?: string;
-}

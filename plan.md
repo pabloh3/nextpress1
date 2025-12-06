@@ -80,8 +80,9 @@ This plan now reflects the new flow and requirements for page creation and edito
 
 ## References
 - **Schema:** See `/shared/schema.ts` for the authoritative definition of page properties and structure.
-- **Types:** See `/shared/schema-types.ts` for TypeScript types, including `Page`, `NewPage`, `BlockConfig`, and `SavedBlockConfig`.
+- **Types:** See `/shared/schema-types.ts` for TypeScript types, including `Page`, `NewPage`, `BlockConfig`, and `PageVersionEntry`.
 - These files define which fields are valid for page creation and how block editing/undo/redo should be implemented.
+- Version tracking happens at the page level (via `PageVersionEntry`), not at individual block level.
 
 ## Notes
 - All changes should follow existing code patterns and conventions.

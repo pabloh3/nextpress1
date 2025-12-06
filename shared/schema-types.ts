@@ -111,6 +111,10 @@ export type BlockContent =
 /**
  * Core block configuration for PageBuilder runtime
  * Used during editing and rendering
+ * 
+ * Blocks are persisted to database using BlockConfig directly (in posts.blocks, templates.blocks, pages.blocks).
+ * Version tracking happens at the page level via PageVersionEntry, not at individual block level.
+ * This ensures atomic rollback of entire page state rather than per-block versioning.
  */
 export interface BlockConfig {
 	// Core identity & type
@@ -154,9 +158,3 @@ export interface BlockConfig {
 		metadata?: Record<string, any>; // Any additional custom data
 	};
 }
-
-/**
- * Blocks are persisted to database using BlockConfig directly (in posts.blocks, templates.blocks, pages.blocks).
- * Version tracking happens at the page level via PageVersionEntry, not at individual block level.
- * This ensures atomic rollback of entire page state rather than per-block versioning.
- */

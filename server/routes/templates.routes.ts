@@ -94,13 +94,13 @@ export function createTemplatesRoutes(deps: Deps): Router {
         }
 
         const templateData = {
-          name: String(parsedData.name),
-          authorId: String(parsedData.authorId),
-          type: String(parsedData.type),
-          ...(parsedData.description && { description: String(parsedData.description) }),
+          name: parsedData.name,
+          authorId: parsedData.authorId,
+          type: parsedData.type,
+          ...(parsedData.description && { description: parsedData.description }),
           ...(parsedData.blocks && { blocks: parsedData.blocks }),
           ...(parsedData.settings && { settings: parsedData.settings }),
-        } as any;
+        };
 
         const template = await models.templates.create(templateData);
         return template;

@@ -67,8 +67,33 @@ export default function PageBuilderEditor({
     enabled: !!(resolvedPageId || postId),
   });
 
+  // Reset state when page ID changes (before data loads)
+  useEffect(() => {
+    if (resolvedPageId || postId) {
+      // Clear any pending draft saves
+      if (draftSaveRef.current) {
+        clearTimeout(draftSaveRef.current);
+      }
+      // Reset state
+      setBlocks([]);
+      setPageTitle("");
+      setPageSlug("");
+      setPageStatus("draft");
+      latestPageStateRef.current = {
+        blocks: [],
+        title: "",
+        slug: "",
+        status: "draft",
+      };
+    }
+  }, [resolvedPageId, postId]);
+
   useEffect(() => {
     if (!data) return;
+
+    // Ensure data matches the current page ID to avoid stale data
+    const currentPageId = resolvedPageId || postId;
+    if (data.id !== currentPageId) return;
 
     const page = data;
     const local = loadPageDraft(page.id);
@@ -106,7 +131,7 @@ export default function PageBuilderEditor({
     }
 
     savePageDraft(page.id, source);
-  }, [data]);
+  }, [data, resolvedPageId, postId]);
 
   useEffect(() => {
     if (data && postId && !isSlug && data.slug) {
@@ -148,13 +173,14 @@ export default function PageBuilderEditor({
     }, 300);
   };
 
+  // Clear timeout on unmount
   useEffect(() => {
     return () => {
       if (draftSaveRef.current) {
         clearTimeout(draftSaveRef.current);
       }
     };
-  }, [data?.id]);
+  }, []);
   const handleBlocksChange = (nextBlocks: BlockConfig[]) => {
     setBlocks(nextBlocks);
     queuePageDraftSave({ blocks: nextBlocks });

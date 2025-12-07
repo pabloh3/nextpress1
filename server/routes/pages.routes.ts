@@ -175,10 +175,11 @@ export function createPagesRoutes(deps: Deps): Router {
           authorId: (existingPage as any).authorId,
         };
 
+        const existingHistory = Array.isArray(existingPage.history) ? existingPage.history : [];
         const pageData = {
           ...parsed,
           version: (existingPage.version ?? 0) + 1,
-          history: [previousSnapshot, ...(existingPage.history ?? [])], // append previous snapshot to existing history
+          history: [previousSnapshot, ...existingHistory], // append previous snapshot to existing history
         };
 
         const wasPublished = existingPage.status === 'publish';

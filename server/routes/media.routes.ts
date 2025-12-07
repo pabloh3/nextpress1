@@ -116,17 +116,17 @@ export function createMediaRoutes(deps: Deps): Router {
           authorId: userId,
         });
 
-        // Use parsedData directly, assuming schema is properly typed
+        // Use parsedData directly, ensuring proper types
         const mediaData = {
-          authorId: parsedData.authorId,
-          filename: parsedData.filename,
-          originalName: parsedData.originalName,
-          mimeType: parsedData.mimeType,
-          size: parsedData.size,
-          url: parsedData.url,
-          ...(parsedData.alt && { alt: parsedData.alt }),
-          ...(parsedData.caption && { caption: parsedData.caption }),
-          ...(parsedData.description && { description: parsedData.description }),
+          authorId: String(parsedData.authorId),
+          filename: String(parsedData.filename),
+          originalName: String(parsedData.originalName),
+          mimeType: String(parsedData.mimeType),
+          size: Number(parsedData.size),
+          url: String(parsedData.url),
+          ...(parsedData.alt && { alt: String(parsedData.alt) }),
+          ...(parsedData.caption && { caption: String(parsedData.caption) }),
+          ...(parsedData.description && { description: String(parsedData.description) }),
         };
 
         const mediaItem = await models.media.create(mediaData);

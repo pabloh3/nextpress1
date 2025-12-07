@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useContentLists } from '@/hooks/useContentLists';
+import { getQueryFn } from '@/lib/queryClient';
 import type { Post, Template, Theme } from '@shared/schema-types';
 
 // Mock data
@@ -137,6 +138,7 @@ describe('useContentLists', () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: {
+          queryFn: getQueryFn({ on401: 'throw' }),
           retry: false,
           gcTime: 0,
         },

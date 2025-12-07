@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { Post, Template, BlockConfig } from "@shared/schema-types";
+import type { BlockConfig, Page } from "@shared/schema-types";
 import { DragDropContext } from "@/lib/dnd";
 import type { DropResult as DndDropResult } from "@/lib/dnd";
 import { generateBlockId } from "./utils";
@@ -11,6 +11,7 @@ import { BuilderTopBar } from "./BuilderTopBar";
 import { BuilderCanvas } from "./BuilderCanvas";
 import { blockRegistry } from "./blocks";
 import { BlockActionsProvider } from "./BlockActionsContext";
+import { savePageDraftWithHistory } from "@/lib/pageDraftStorage";
 import {
 	findBlock,
 	updateBlockDeep,
@@ -46,12 +47,19 @@ function containsChild(block: BlockConfig, targetId: string): boolean {
 }
 
 interface PageBuilderProps {
-	post?: Post | Template;
-	template?: Template;
+	post?: Page;
+	template?: never;
 	blocks?: BlockConfig[];
 	onBlocksChange?: (blocks: BlockConfig[]) => void;
-	onSave?: (updatedData: Post | Template) => void;
+	onSave?: (updatedData: Page) => void;
 	onPreview?: () => void;
+	pageMeta?: {
+		title?: string;
+		slug?: string;
+		status?: string;
+		version?: number;
+	};
+	onPageMetaChange?: (meta: Partial<{ title: string; slug: string; status: string }>) => void;
 }
 
 export default function PageBuilder({
@@ -61,9 +69,11 @@ export default function PageBuilder({
 	onBlocksChange,
 	onSave,
 	onPreview,
+	pageMeta,
+	onPageMetaChange,
 }: PageBuilderProps) {
-	const data = template || post;
-	const isTemplate = !!template;
+	const data = post;
+	const isTemplate = false;
 
 	const initialBlocks =
 		propBlocks ||
@@ -140,9 +150,19 @@ export default function PageBuilder({
 
 	const selectedBlock = selectedBlockId ? findBlock(blocks, selectedBlockId) : null;
 
-	const saveMutation = usePageSave({ isTemplate, data, onSave });
+	const saveMutation = usePageSave({ isTemplate, data, onSave, pageMeta });
 
 	const handleSave = useCallback(() => {
+		if (!isTemplate && data && "menuOrder" in data && data.id) {
+			savePageDraftWithHistory(
+				data.id as string,
+				{
+					...(data as any),
+					blocks,
+					updatedAt: new Date().toISOString(),
+				} as any,
+			);
+		}
 		saveMutation.mutate(blocks);
 		onSave?.(data as any);
 	}, [blocks, saveMutation, onSave, data]);
@@ -283,6 +303,7 @@ export default function PageBuilder({
 							page={data}
 							isTemplate={isTemplate}
 							onPageUpdate={onSave}
+						onPageMetaChange={onPageMetaChange}
 						/>
 					)}
 					<div className="flex-1 flex flex-col">

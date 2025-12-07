@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BlogMenu } from '@/components/PageBuilder/EditorBar/BlogMenu';
@@ -10,7 +11,7 @@ vi.mock('wouter', () => ({
 }));
 
 // Mock useContentLists hook
-const mockUseContentLists = vi.fn();
+const mockUseContentLists = vi.hoisted(() => vi.fn());
 vi.mock('@/hooks/useContentLists', () => ({
   useContentLists: mockUseContentLists,
 }));
@@ -28,6 +29,7 @@ vi.mock('@/components/PageBuilder/EditorBar/CreateContentDialog', () => ({
 
 describe('BlogMenu', () => {
   let queryClient: QueryClient;
+  let user: ReturnType<typeof userEvent.setup>;
 
   const mockPosts = [
     { id: 'post-1', title: 'First Blog Post', status: 'published' },
@@ -44,6 +46,9 @@ describe('BlogMenu', () => {
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    user = userEvent.setup();
+    // jsdom missing scrollIntoView used by cmdk
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
   const renderBlogMenu = (props = {}) => {
@@ -61,12 +66,12 @@ describe('BlogMenu', () => {
     expect(screen.getByText('Blog')).toBeInTheDocument();
   });
 
-  test('opens dropdown menu on trigger click', () => {
+  test('opens dropdown menu on trigger click', async () => {
     renderBlogMenu();
     const trigger = screen.getByText('Blog');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
-    expect(screen.getByText('Browse Posts')).toBeInTheDocument();
+    expect(await screen.findByText('Browse Posts')).toBeInTheDocument();
     expect(screen.getByText('Create New Post')).toBeInTheDocument();
   });
 
@@ -74,10 +79,10 @@ describe('BlogMenu', () => {
     renderBlogMenu();
     
     const trigger = screen.getByText('Blog');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Posts');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
     // Command palette should be visible with posts
     await waitFor(() => {
@@ -91,29 +96,29 @@ describe('BlogMenu', () => {
     renderBlogMenu();
     
     const trigger = screen.getByText('Blog');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Posts');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
     await waitFor(() => {
       expect(screen.getByText('First Blog Post')).toBeInTheDocument();
     });
 
     const postItem = screen.getByText('First Blog Post');
-    fireEvent.click(postItem);
+    await user.click(postItem);
 
     expect(mockSetLocation).toHaveBeenCalledWith('/posts/post-1/edit');
   });
 
-  test('opens create dialog when Create New Post is clicked', () => {
+  test('opens create dialog when Create New Post is clicked', async () => {
     renderBlogMenu();
     
     const trigger = screen.getByText('Blog');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const createItem = screen.getByText('Create New Post');
-    fireEvent.click(createItem);
+    await user.click(createItem);
 
     const dialog = screen.getByTestId('create-dialog');
     expect(dialog).toBeInTheDocument();
@@ -124,10 +129,10 @@ describe('BlogMenu', () => {
     renderBlogMenu({ currentPostId: 'post-2' });
     
     const trigger = screen.getByText('Blog');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Posts');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
     await waitFor(() => {
       expect(screen.getByText('Second Blog Post')).toBeInTheDocument();
@@ -141,25 +146,28 @@ describe('BlogMenu', () => {
     renderBlogMenu();
     
     const trigger = screen.getByText('Blog');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Posts');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
-    await waitFor(() => {
-      expect(screen.getByText('published')).toBeInTheDocument();
-    });
-    expect(screen.getByText('draft')).toBeInTheDocument();
+    const firstPost = await screen.findByText('First Blog Post');
+    const firstPostRow = firstPost.closest('[role]');
+    expect(within(firstPostRow!).getByText('published')).toBeInTheDocument();
+
+    const secondPost = screen.getByText('Second Blog Post');
+    const secondPostRow = secondPost.closest('[role]');
+    expect(within(secondPostRow!).getByText('draft')).toBeInTheDocument();
   });
 
   test('shows "All Posts" heading when no blogId is provided', async () => {
     renderBlogMenu();
     
     const trigger = screen.getByText('Blog');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Posts');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
     await waitFor(() => {
       expect(screen.getByText('All Posts')).toBeInTheDocument();
@@ -170,10 +178,10 @@ describe('BlogMenu', () => {
     renderBlogMenu({ blogId: 'blog-123' });
     
     const trigger = screen.getByText('Blog');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Posts');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
     await waitFor(() => {
       expect(screen.getByText('Blog Posts')).toBeInTheDocument();
@@ -201,10 +209,10 @@ describe('BlogMenu', () => {
     renderBlogMenu();
     
     const trigger = screen.getByText('Blog');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Posts');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
     await waitFor(() => {
       expect(screen.getByText('Loading posts...')).toBeInTheDocument();
@@ -220,10 +228,10 @@ describe('BlogMenu', () => {
     renderBlogMenu();
     
     const trigger = screen.getByText('Blog');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const browseItem = screen.getByText('Browse Posts');
-    fireEvent.click(browseItem);
+    await user.click(browseItem);
 
     await waitFor(() => {
       expect(screen.getByText('No posts found.')).toBeInTheDocument();

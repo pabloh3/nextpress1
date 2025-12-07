@@ -102,18 +102,31 @@ export function createPostsRoutes(deps: Deps): Router {
         }
 
         // Include authorId in the data before validation
-        const postData = postSchemas.insert.parse({
+        const parsedData = postSchemas.insert.parse({
           ...req.body,
           authorId: userId,
         });
 
         // Generate slug if not provided
-        if (!postData.slug) {
-          postData.slug = postData.title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '');
+        const title = parsedData.title;
+        if (!title || typeof title !== 'string') {
+          throw new Error('Title is required and must be a string');
         }
+
+        const titleStr = String(title);
+        const slugValue = parsedData.slug 
+          ? String(parsedData.slug)
+          : titleStr
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-|-$/g, '');
+        
+        const postData = {
+          ...parsedData,
+          title: titleStr,
+          slug: slugValue,
+          authorId: String(parsedData.authorId),
+        };
 
         const post = await models.posts.create(postData);
         hooks.doAction('save_post', post);

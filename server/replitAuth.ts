@@ -124,7 +124,7 @@ export async function setupAuth(app: Express) {
 					callbackURL: `https://${domain}/api/callback`,
 				},
 				verify,
-			);
+			) as any;
 			passport.use(strategy);
 		}
 

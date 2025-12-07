@@ -395,10 +395,9 @@ describe("Specialized Model Factories", () => {
 				id: testUuids.page1,
 				title: "About Us",
 				slug: "about-us",
-				content: "About us content",
 				status: "draft",
 				authorId: testUuids.user1,
-			});
+			} as any);
 		});
 
 		it("should find page by slug", async () => {
@@ -868,11 +867,10 @@ describe("Specialized Model Factories", () => {
 			const page = await pageModel.create({
 				id: testUuids.page1,
 				title: "Test Page",
-				content: "Page content",
 				slug: "test-page-blocks",
 				authorId: testUuids.user1,
 				blocks: blockConfigs,
-			});
+			} as any);
 
 			expect(page.blocks).toHaveLength(1);
 			expect((page.blocks as any)[0].name).toBe("heading");

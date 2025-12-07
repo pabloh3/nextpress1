@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, Eye, Paintbrush } from "lucide-react";
+import { Plus, Search, Trash2, Eye, Pencil } from "lucide-react";
 import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
 import { CreatePageModal } from "@/components/Pages/CreatePageModal";
@@ -214,7 +214,7 @@ export default function Pages() {
                               onClick={() => handlePageBuilder(page.id)}
                               title="Edit with Page Builder"
                             >
-                              <Paintbrush className="w-4 h-4" />
+                              <Pencil className="w-4 h-4" />
                             </Button>
                             <Button 
                               variant="ghost" 

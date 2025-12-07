@@ -85,7 +85,6 @@ beforeAll(async () => {
 		CREATE TABLE IF NOT EXISTS pages (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			title VARCHAR NOT NULL,
-			content TEXT NOT NULL,
 			slug VARCHAR NOT NULL,
 			status VARCHAR DEFAULT 'draft',
 			author_id UUID NOT NULL REFERENCES users(id),
@@ -97,6 +96,8 @@ beforeAll(async () => {
 			menu_order INTEGER DEFAULT 0,
 			template_id UUID,
 			blocks JSONB DEFAULT '[]',
+			version INTEGER NOT NULL DEFAULT 0,
+			history JSONB DEFAULT '[]',
 			created_at TIMESTAMP DEFAULT NOW(),
 			updated_at TIMESTAMP DEFAULT NOW(),
 			other JSONB DEFAULT '{}'
@@ -128,6 +129,7 @@ beforeAll(async () => {
 			author_id UUID NOT NULL REFERENCES users(id),
 			version VARCHAR NOT NULL,
 			requires VARCHAR NOT NULL,
+			renderer VARCHAR,
 			is_paid BOOLEAN DEFAULT false,
 			price INTEGER DEFAULT 0,
 			currency VARCHAR DEFAULT 'USD',

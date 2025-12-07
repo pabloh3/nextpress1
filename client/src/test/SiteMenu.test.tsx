@@ -1,5 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { SiteMenu } from '@/components/PageBuilder/EditorBar/SiteMenu';
 
 // Mock wouter's useLocation hook
@@ -24,6 +25,7 @@ describe('SiteMenu', () => {
   });
 
   test('opens dropdown menu on trigger click', async () => {
+    const user = userEvent.setup();
     render(
       <SiteMenu>
         <button>Open Menu</button>
@@ -31,7 +33,7 @@ describe('SiteMenu', () => {
     );
 
     const trigger = screen.getByText('Open Menu');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     // Check for menu items
     expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -40,6 +42,7 @@ describe('SiteMenu', () => {
   });
 
   test('navigates to /settings when Settings is clicked', async () => {
+    const user = userEvent.setup();
     render(
       <SiteMenu>
         <button>Open Menu</button>
@@ -47,15 +50,16 @@ describe('SiteMenu', () => {
     );
 
     const trigger = screen.getByText('Open Menu');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const settingsItem = screen.getByText('Settings');
-    fireEvent.click(settingsItem);
+    await user.click(settingsItem);
 
     expect(mockSetLocation).toHaveBeenCalledWith('/settings');
   });
 
   test('navigates to /themes when Themes is clicked', async () => {
+    const user = userEvent.setup();
     render(
       <SiteMenu>
         <button>Open Menu</button>
@@ -63,15 +67,16 @@ describe('SiteMenu', () => {
     );
 
     const trigger = screen.getByText('Open Menu');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const themesItem = screen.getByText('Themes');
-    fireEvent.click(themesItem);
+    await user.click(themesItem);
 
     expect(mockSetLocation).toHaveBeenCalledWith('/themes');
   });
 
   test('navigates to /media when Media Library is clicked', async () => {
+    const user = userEvent.setup();
     render(
       <SiteMenu>
         <button>Open Menu</button>
@@ -79,15 +84,16 @@ describe('SiteMenu', () => {
     );
 
     const trigger = screen.getByText('Open Menu');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const mediaItem = screen.getByText('Media Library');
-    fireEvent.click(mediaItem);
+    await user.click(mediaItem);
 
     expect(mockSetLocation).toHaveBeenCalledWith('/media');
   });
 
   test('displays correct icons for menu items', async () => {
+    const user = userEvent.setup();
     render(
       <SiteMenu>
         <button>Open Menu</button>
@@ -95,7 +101,7 @@ describe('SiteMenu', () => {
     );
 
     const trigger = screen.getByText('Open Menu');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     // Check that all menu items are present (icons are rendered with lucide-react)
     expect(screen.getByText('Settings')).toBeInTheDocument();

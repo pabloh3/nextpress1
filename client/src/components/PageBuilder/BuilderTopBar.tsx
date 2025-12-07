@@ -1,6 +1,6 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Smartphone,
   Tablet,
@@ -12,8 +12,13 @@ import {
   Palette,
   RotateCcw,
   RotateCw,
-} from 'lucide-react';
-import { SiteMenu, PagesMenu, BlogMenu, DesignMenu } from '@/components/PageBuilder/EditorBar';
+} from "lucide-react";
+import {
+  SiteMenu,
+  PagesMenu,
+  BlogMenu,
+  DesignMenu,
+} from "@/components/PageBuilder/EditorBar";
 
 export function BuilderTopBar({
   data,
@@ -31,8 +36,8 @@ export function BuilderTopBar({
 }: {
   data: any;
   isTemplate: boolean;
-  deviceView: 'desktop' | 'tablet' | 'mobile';
-  setDeviceView: (view: 'desktop' | 'tablet' | 'mobile') => void;
+  deviceView: "desktop" | "tablet" | "mobile";
+  setDeviceView: (view: "desktop" | "tablet" | "mobile") => void;
   blocks: any[];
   sidebarVisible: boolean;
   onToggleSidebar: () => void;
@@ -48,9 +53,9 @@ export function BuilderTopBar({
         <div className="flex items-center gap-4">
           {!sidebarVisible && (
             <>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={onToggleSidebar}
                 className="p-1 h-auto"
               >
@@ -59,33 +64,33 @@ export function BuilderTopBar({
               <Separator orientation="vertical" className="h-6" />
             </>
           )}
-          <h3 className="font-medium">{data ? (isTemplate ? data.name : data.title) : 'Untitled'}</h3>
-          <Separator orientation="vertical" className="h-6" />
+          {/* <h3 className="font-medium">{data ? (isTemplate ? data.name : data.title) : 'Untitled'}</h3> */}
+          {/* <Separator orientation="vertical" className="h-6" /> */}
           <div className="flex items-center gap-2">
             <Button
-              variant={deviceView === 'desktop' ? 'default' : 'outline'}
+              variant={deviceView === "desktop" ? "default" : "outline"}
               size="sm"
               aria-label="desktop"
-              className={deviceView === 'desktop' ? 'active' : ''}
-              onClick={() => setDeviceView('desktop')}
+              className={deviceView === "desktop" ? "active" : ""}
+              onClick={() => setDeviceView("desktop")}
             >
               <Monitor className="w-4 h-4" />
             </Button>
             <Button
-              variant={deviceView === 'tablet' ? 'default' : 'outline'}
+              variant={deviceView === "tablet" ? "default" : "outline"}
               size="sm"
               aria-label="tablet"
-              className={deviceView === 'tablet' ? 'active' : ''}
-              onClick={() => setDeviceView('tablet')}
+              className={deviceView === "tablet" ? "active" : ""}
+              onClick={() => setDeviceView("tablet")}
             >
               <Tablet className="w-4 h-4" />
             </Button>
             <Button
-              variant={deviceView === 'mobile' ? 'default' : 'outline'}
+              variant={deviceView === "mobile" ? "default" : "outline"}
               size="sm"
               aria-label="mobile"
-              className={deviceView === 'mobile' ? 'active' : ''}
-              onClick={() => setDeviceView('mobile')}
+              className={deviceView === "mobile" ? "active" : ""}
+              onClick={() => setDeviceView("mobile")}
             >
               <Smartphone className="w-4 h-4" />
             </Button>
@@ -116,7 +121,10 @@ export function BuilderTopBar({
             </Button>
           </BlogMenu>
 
-          <DesignMenu currentPostId={data?.id} currentType={isTemplate ? 'template' : 'post'}>
+          <DesignMenu
+            currentPostId={data?.id}
+            currentType={isTemplate ? "template" : "post"}
+          >
             <Button variant="outline" size="sm" className="gap-2">
               <Palette className="w-4 h-4" />
               Design

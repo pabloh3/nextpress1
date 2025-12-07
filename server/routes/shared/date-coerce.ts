@@ -14,12 +14,12 @@ export function coerceDates<T extends Record<string, any>>(
   data: T,
   fields: string[]
 ): T {
-  const result = { ...data };
+  const result = { ...data } as T;
   
   for (const field of fields) {
-    if (result[field] && typeof result[field] === 'string') {
+    if (field in result && typeof result[field as keyof T] === 'string') {
       try {
-        result[field] = new Date(result[field]);
+        (result as any)[field] = new Date(result[field as keyof T] as string);
       } catch (error) {
         // If date parsing fails, leave as is and let Zod validation handle it
         console.warn(`Failed to coerce ${field} to Date:`, error);

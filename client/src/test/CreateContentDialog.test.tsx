@@ -96,7 +96,7 @@ describe('CreateContentDialog', () => {
     fireEvent.change(input, { target: { value: 'My New Page' } });
     fireEvent.click(createButton);
     
-    expect(mockSetLocation).toHaveBeenCalledWith('/pages/new?title=My%20New%20Page');
+    expect(mockSetLocation).toHaveBeenCalledWith('/pages?create=true&title=My%20New%20Page');
   });
 
   test('navigates to post creation form with title when create is clicked', () => {
@@ -119,7 +119,7 @@ describe('CreateContentDialog', () => {
     fireEvent.click(createButton);
     
     expect(mockSetLocation).toHaveBeenCalledWith(
-      '/pages/new?title=Title%20with%20spaces%20%26%20symbols!'
+      '/pages?create=true&title=Title%20with%20spaces%20%26%20symbols!'
     );
   });
 
@@ -173,7 +173,7 @@ describe('CreateContentDialog', () => {
     fireEvent.change(input, { target: { value: 'My New Page' } });
     fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
     
-    expect(mockSetLocation).toHaveBeenCalledWith('/pages/new?title=My%20New%20Page');
+    expect(mockSetLocation).toHaveBeenCalledWith('/pages?create=true&title=My%20New%20Page');
   });
 
   test('does not create content when Enter is pressed with empty input', () => {
@@ -199,7 +199,7 @@ describe('CreateContentDialog', () => {
     renderDialog();
     const input = screen.getByPlaceholderText('Enter page title...');
     
-    expect(input).toHaveAttribute('autofocus');
+    expect(input).toHaveFocus();
   });
 
   test('displays correct description for page type', () => {

@@ -60,7 +60,20 @@ export function createCommentsRoutes(deps: Deps): Router {
   router.post(
     '/',
     asyncHandler(async (req, res) => {
-      const commentData = schemas.comments.insert.parse(req.body);
+      const parsedData = schemas.comments.insert.parse(req.body);
+      // Ensure required fields are present
+      if (!parsedData.postId || !parsedData.content) {
+        return res.status(400).json({ message: 'postId and content are required' });
+      }
+      const commentData = {
+        postId: String(parsedData.postId),
+        content: String(parsedData.content),
+        ...(parsedData.authorId && { authorId: String(parsedData.authorId) }),
+        ...(parsedData.status && { status: String(parsedData.status) }),
+        ...(parsedData.parentId && { parentId: String(parsedData.parentId) }),
+        ...(parsedData.authorName && { authorName: String(parsedData.authorName) }),
+        ...(parsedData.authorEmail && { authorEmail: String(parsedData.authorEmail) }),
+      };
       const comment = await models.comments.create(commentData);
       hooks.doAction('new_comment', comment);
       res.status(201).json(comment);

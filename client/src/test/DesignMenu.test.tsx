@@ -1,11 +1,12 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DesignMenu } from '@/components/PageBuilder/EditorBar/DesignMenu';
 import * as queryClient from '@/lib/queryClient';
 
 // Mock useContentLists hook
-const mockUseContentLists = vi.fn();
+const mockUseContentLists = vi.hoisted(() => vi.fn());
 vi.mock('@/hooks/useContentLists', () => ({
   useContentLists: mockUseContentLists,
 }));
@@ -21,6 +22,7 @@ vi.spyOn(queryClient, 'apiRequest');
 
 describe('DesignMenu', () => {
   let queryClientInstance: QueryClient;
+  let user: ReturnType<typeof userEvent.setup>;
 
   const mockTemplates = [
     { id: 'template-1', name: 'Blog Post Template', type: 'post' },
@@ -44,6 +46,7 @@ describe('DesignMenu', () => {
     queryClientInstance = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    user = userEvent.setup();
   });
 
   const renderDesignMenu = (props = {}) => {
@@ -61,22 +64,22 @@ describe('DesignMenu', () => {
     expect(screen.getByText('Design')).toBeInTheDocument();
   });
 
-  test('opens dropdown menu on trigger click', () => {
+  test('opens dropdown menu on trigger click', async () => {
     renderDesignMenu();
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
-    expect(screen.getByText('Templates')).toBeInTheDocument();
+    expect(await screen.findByText('Templates')).toBeInTheDocument();
     expect(screen.getByText('Themes')).toBeInTheDocument();
   });
 
-  test('displays templates and themes in dropdown', () => {
+  test('displays templates and themes in dropdown', async () => {
     renderDesignMenu();
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     // Check templates
-    expect(screen.getByText('Blog Post Template')).toBeInTheDocument();
+    expect(await screen.findByText('Blog Post Template')).toBeInTheDocument();
     expect(screen.getByText('Landing Page Template')).toBeInTheDocument();
     expect(screen.getByText('Portfolio Template')).toBeInTheDocument();
 
@@ -86,7 +89,7 @@ describe('DesignMenu', () => {
     expect(screen.getByText('Modern Theme')).toBeInTheDocument();
   });
 
-  test('displays "No templates" when templates array is empty', () => {
+  test('displays "No templates" when templates array is empty', async () => {
     mockUseContentLists.mockReturnValue({
       templates: [],
       themes: mockThemes,
@@ -94,12 +97,12 @@ describe('DesignMenu', () => {
 
     renderDesignMenu();
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
-    expect(screen.getByText('No templates')).toBeInTheDocument();
+    expect(await screen.findByText('No templates')).toBeInTheDocument();
   });
 
-  test('displays "No themes" when themes array is empty', () => {
+  test('displays "No themes" when themes array is empty', async () => {
     mockUseContentLists.mockReturnValue({
       templates: mockTemplates,
       themes: [],
@@ -107,9 +110,9 @@ describe('DesignMenu', () => {
 
     renderDesignMenu();
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
-    expect(screen.getByText('No themes')).toBeInTheDocument();
+    expect(await screen.findByText('No themes')).toBeInTheDocument();
   });
 
   test('applies template when template is clicked', async () => {
@@ -117,10 +120,10 @@ describe('DesignMenu', () => {
 
     renderDesignMenu({ currentPostId: 'post-123', currentType: 'post' });
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const templateItem = screen.getByText('Blog Post Template');
-    fireEvent.click(templateItem);
+    await user.click(templateItem);
 
     await waitFor(() => {
       expect(queryClient.apiRequest).toHaveBeenCalledWith(
@@ -145,10 +148,10 @@ describe('DesignMenu', () => {
 
     renderDesignMenu({ currentPostId: 'post-123', currentType: 'post' });
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const templateItem = screen.getByText('Blog Post Template');
-    fireEvent.click(templateItem);
+    await user.click(templateItem);
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
@@ -159,13 +162,13 @@ describe('DesignMenu', () => {
     });
   });
 
-  test('shows error toast when applying template without currentPostId', () => {
+  test('shows error toast when applying template without currentPostId', async () => {
     renderDesignMenu({ currentType: 'post' });
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const templateItem = screen.getByText('Blog Post Template');
-    fireEvent.click(templateItem);
+    await user.click(templateItem);
 
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Error',
@@ -179,10 +182,10 @@ describe('DesignMenu', () => {
 
     renderDesignMenu({ currentPostId: 'post-123', currentType: 'post' });
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const themeItem = screen.getByText('Dark Theme');
-    fireEvent.click(themeItem);
+    await user.click(themeItem);
 
     await waitFor(() => {
       expect(queryClient.apiRequest).toHaveBeenCalledWith(
@@ -207,10 +210,10 @@ describe('DesignMenu', () => {
 
     renderDesignMenu({ currentPostId: 'post-123', currentType: 'post' });
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const themeItem = screen.getByText('Dark Theme');
-    fireEvent.click(themeItem);
+    await user.click(themeItem);
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
@@ -221,13 +224,13 @@ describe('DesignMenu', () => {
     });
   });
 
-  test('disables template items when no currentPostId is provided', () => {
+  test('disables template items when no currentPostId is provided', async () => {
     renderDesignMenu({ currentType: 'post' });
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
-    const templateItem = screen.getByText('Blog Post Template').closest('div');
-    expect(templateItem).toHaveAttribute('data-disabled', 'true');
+    const templateItem = screen.getByText('Blog Post Template').closest('[role]');
+    expect(templateItem).toHaveAttribute('aria-disabled', 'true');
   });
 
   test('does not render when currentType is template', () => {
@@ -241,10 +244,10 @@ describe('DesignMenu', () => {
 
     renderDesignMenu({ currentPostId: 'post-123', currentType: 'post' });
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const templateItem = screen.getByText('Blog Post Template');
-    fireEvent.click(templateItem);
+    await user.click(templateItem);
 
     await waitFor(() => {
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
@@ -259,10 +262,10 @@ describe('DesignMenu', () => {
 
     renderDesignMenu({ currentPostId: 'post-123', currentType: 'post' });
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     const themeItem = screen.getByText('Dark Theme');
-    fireEvent.click(themeItem);
+    await user.click(themeItem);
 
     await waitFor(() => {
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
@@ -274,7 +277,7 @@ describe('DesignMenu', () => {
     });
   });
 
-  test('limits templates display to 5 items', () => {
+  test('limits templates display to 5 items', async () => {
     const manyTemplates = Array.from({ length: 10 }, (_, i) => ({
       id: `template-${i}`,
       name: `Template ${i}`,
@@ -288,7 +291,7 @@ describe('DesignMenu', () => {
 
     renderDesignMenu();
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     // Should only show first 5 templates
     expect(screen.getByText('Template 0')).toBeInTheDocument();
@@ -296,7 +299,7 @@ describe('DesignMenu', () => {
     expect(screen.queryByText('Template 5')).not.toBeInTheDocument();
   });
 
-  test('limits themes display to 5 items', () => {
+  test('limits themes display to 5 items', async () => {
     const manyThemes = Array.from({ length: 10 }, (_, i) => ({
       id: `theme-${i}`,
       name: `Theme ${i}`,
@@ -310,7 +313,7 @@ describe('DesignMenu', () => {
 
     renderDesignMenu();
     const trigger = screen.getByText('Design');
-    fireEvent.click(trigger);
+    await user.click(trigger);
 
     // Should only show first 5 themes
     expect(screen.getByText('Theme 0')).toBeInTheDocument();

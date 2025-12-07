@@ -447,6 +447,6 @@ This plan implements the requirements from `plan.md` to refactor the Page Builde
 - Use `/api/pages` endpoint for page operations (not `/api/posts`)
 - Page schema fields: title, slug, featuredImage, allowComments, password, parentId, menuOrder, templateId
 - Status is always 'draft' on creation, blocks are always `[]`
-- Use `SavedBlockConfig` type for version history in undo/redo (future enhancement)
+- Use `PageVersionEntry` type for version history at page level (blocks are versioned as part of page state, not individually)
 - Local storage already implemented, just need to verify it works correctly
 

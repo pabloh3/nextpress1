@@ -111,18 +111,25 @@ export function createPagesRoutes(deps: Deps): Router {
         }
 
         // Include authorId in the data before validation
-        const pageData = pageSchemas.insert.parse({
+        const parsedData = pageSchemas.insert.parse({
           ...req.body,
           authorId: userId,
-        });
+        }) as any;
 
         // Generate slug if not provided
-        if (!pageData.slug) {
-          pageData.slug = pageData.title
+        const title = parsedData.title;
+        if (!title || typeof title !== 'string') {
+          throw new Error('Title is required and must be a string');
+        }
+
+        const pageData = {
+          ...parsedData,
+          title: String(title),
+          slug: parsedData.slug || title
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '');
-        }
+            .replace(/^-|-$/g, ''),
+        };
 
         const page = await models.pages.create(pageData);
         hooks.doAction('save_post', page);
@@ -152,12 +159,28 @@ export function createPagesRoutes(deps: Deps): Router {
     asyncHandler(async (req, res) => {
       try {
         const id = req.params.id;
-        const pageData = pageSchemas.update.parse(coerceDates(req.body, ['publishedAt']));
+        const parsed = pageSchemas.update.parse(coerceDates(req.body, ['publishedAt'])) as any;
 
         const existingPage = await models.pages.findById(id);
         if (!existingPage) {
           return res.status(404).json({ message: 'Page not found' });
         }
+
+        const previousSnapshot = {
+          version: existingPage.version ?? 0,
+          updatedAt: existingPage.updatedAt
+            ? new Date(existingPage.updatedAt as any).toISOString()
+            : new Date().toISOString(),
+          blocks: existingPage.blocks ?? [],
+          authorId: (existingPage as any).authorId,
+        };
+
+        const existingHistory = Array.isArray(existingPage.history) ? existingPage.history : [];
+        const pageData = {
+          ...parsed,
+          version: (existingPage.version ?? 0) + 1,
+          history: [previousSnapshot, ...existingHistory], // append previous snapshot to existing history
+        };
 
         const wasPublished = existingPage.status === 'publish';
         const page = await models.pages.update(id, pageData);

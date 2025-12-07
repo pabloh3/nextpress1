@@ -19,19 +19,19 @@ export function deepMerge<T extends Record<string, any>>(
   target: T,
   source: Partial<T>
 ): T {
-  const result = { ...target };
+  const result = { ...target } as T;
 
   for (const key in source) {
     if (Object.prototype.hasOwnProperty.call(source, key)) {
       const sourceValue = source[key];
-      const targetValue = result[key];
+      const targetValue = result[key as keyof T];
 
       // If both are plain objects, recurse
       if (isPlainObject(sourceValue) && isPlainObject(targetValue)) {
-        result[key] = deepMerge(targetValue, sourceValue);
+        (result as any)[key] = deepMerge(targetValue, sourceValue as Partial<typeof targetValue>);
       } else if (sourceValue !== undefined) {
         // Otherwise replace (arrays, primitives, null)
-        result[key] = sourceValue as any;
+        (result as any)[key] = sourceValue;
       }
     }
   }

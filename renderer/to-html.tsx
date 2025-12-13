@@ -1,3 +1,4 @@
+// React is required for JSX transformation when using ReactDOMServer
 import * as React from "react";
 import * as ReactDOMServer from "react-dom/server";
 import { BLOCK_COMPONENTS } from "./react/block-components";
@@ -9,7 +10,7 @@ const HYDRATION_CONTAINER_ID = "react-island-";
  * Loading placeholder HTML for interactive blocks
  */
 function getLoadingPlaceholder(blockName: string): string {
-	return `
+  return `
 		<div style="
 			display: flex;
 			align-items: center;
@@ -49,41 +50,50 @@ function getLoadingPlaceholder(blockName: string): string {
  * @returns A single string of HTML with hydration islands for interactive blocks.
  */
 export function renderBlocksToHtml(blocks: BlockData[]): string {
-	let fullHtml = "";
+  let fullHtml = "";
 
-	for (const block of blocks) {
-		const { blockName } = block;
+  for (const block of blocks) {
+    const { blockName } = block;
 
-		// 1. Look up the component in the registry
-		const BlockComponent = BLOCK_COMPONENTS[blockName];
+    // Handle HTML override (if other.html is set)
+    const blockWithOverride = block as BlockData & { htmlOverride?: string };
+    if (blockWithOverride.htmlOverride) {
+      fullHtml += blockWithOverride.htmlOverride;
+      continue;
+    }
 
-		if (!BlockComponent) {
-			console.warn(`Unknown block: ${blockName}. Skipping render.`);
-			continue;
-		}
+    // 1. Look up the component in the registry
+    const BlockComponent = BLOCK_COMPONENTS[blockName];
 
-		try {
-			// 2. Check if block is interactive via the flag
-			const blockIsInteractive = block.interactive === true;
+    if (!BlockComponent) {
+      console.warn(`Unknown block: ${blockName}. Skipping render.`);
+      continue;
+    }
 
-			if (blockIsInteractive) {
-				// Interactive block: Create hydration island
-				// Generate a unique ID for this instance
-				const uniqueId = `${HYDRATION_CONTAINER_ID}${Math.random().toString(36).substring(2, 9)}`;
+    try {
+      // 2. Check if block is interactive via the flag
+      const blockIsInteractive = block.interactive === true;
 
-				// Render initial HTML (for SEO and initial display)
-				const initialHtml = ReactDOMServer.renderToString(
-					<BlockComponent {...block} />,
-				);
+      if (blockIsInteractive) {
+        // Interactive block: Create hydration island
+        // Generate a unique ID for this instance
+        const uniqueId = `${HYDRATION_CONTAINER_ID}${Math.random()
+          .toString(36)
+          .substring(2, 9)}`;
 
-				// Create the 'Island' wrapper with loading placeholder
-				// The placeholder will be replaced during hydration
-				const loadingPlaceholder = getLoadingPlaceholder(blockName);
+        // Render initial HTML (for SEO and initial display)
+        const initialHtml = ReactDOMServer.renderToString(
+          <BlockComponent {...block} />
+        );
 
-				// Escape quotes in JSON for HTML attributes
-				const propsJson = JSON.stringify(block).replace(/'/g, "&#39;");
+        // Create the 'Island' wrapper with loading placeholder
+        // The placeholder will be replaced during hydration
+        const loadingPlaceholder = getLoadingPlaceholder(blockName);
 
-				fullHtml += `
+        // Escape quotes in JSON for HTML attributes
+        const propsJson = JSON.stringify(block).replace(/'/g, "&#39;");
+
+        fullHtml += `
 					<div 
 						id="${uniqueId}" 
 						data-block-component="${blockName}"
@@ -98,25 +108,25 @@ export function renderBlocksToHtml(blocks: BlockData[]): string {
 						</div>
 					</div>
 				`;
-			} else {
-				// Static block: Use faster renderToStaticMarkup (no hydration needed)
-				const blockHtml = ReactDOMServer.renderToStaticMarkup(
-					<BlockComponent {...block} />,
-				);
-				fullHtml += blockHtml;
-			}
-		} catch (error) {
-			console.error(`Error rendering block ${blockName}:`, error);
-			fullHtml += `<!-- Error rendering block: ${blockName} -->`;
-		}
-	}
+      } else {
+        // Static block: Use faster renderToStaticMarkup (no hydration needed)
+        const blockHtml = ReactDOMServer.renderToStaticMarkup(
+          <BlockComponent {...block} />
+        );
+        fullHtml += blockHtml;
+      }
+    } catch (error) {
+      console.error(`Error rendering block ${blockName}:`, error);
+      fullHtml += `<!-- Error rendering block: ${blockName} -->`;
+    }
+  }
 
-	return fullHtml;
+  return fullHtml;
 }
 
 /**
  * Generates the hydration script tag to include in page
  */
 export function getHydrationScript(): string {
-	return `<script type="module" src="/renderer/scripts/hydrate.js"></script>`;
+  return `<script type="module" src="/renderer/scripts/hydrate.js"></script>`;
 }

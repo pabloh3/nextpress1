@@ -100,8 +100,14 @@ export default function Pages() {
     setCreateModalOpen(true);
   };
 
-  const handleView = (pageId: string) => {
-    window.open(`/pages/${pageId}`, '_blank');
+  const handleView = (page: Page) => {
+    // For published pages, use the site-based route
+    if (page.status === 'publish' && page.siteId && page.slug) {
+      window.open(`/sites/${page.siteId}/${page.slug}`, '_blank');
+    } else {
+      // Fallback to old route for non-published pages
+      window.open(`/pages/${page.id}`, '_blank');
+    }
   };
 
   const handlePageBuilder = (pageId: string) => {
@@ -202,9 +208,9 @@ export default function Pages() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => handleView(page.id)}
+                              onClick={() => handleView(page)}
                               title="View Page"
-                              disabled
+                              disabled={page.status !== 'publish'}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>

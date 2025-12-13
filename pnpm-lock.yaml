@@ -157,10 +157,10 @@ importers:
         version: 17.2.2
       drizzle-orm:
         specifier: ^0.44.7
-        version: 0.44.7(@electric-sql/pglite@0.3.11)(@libsql/client@0.15.15(bufferutil@4.0.9))(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(better-sqlite3@12.4.1)(gel@2.1.1)(pg@8.16.3)(postgres@3.4.7)
+        version: 0.44.7(@electric-sql/pglite@0.3.11)(@libsql/client@0.15.15(bufferutil@4.0.9))(@neondatabase/serverless@0.10.4)(@types/pg@8.16.0)(better-sqlite3@12.4.1)(gel@2.1.1)(pg@8.16.3)(postgres@3.4.7)
       drizzle-zod:
         specifier: ^0.7.0
-        version: 0.7.1(drizzle-orm@0.44.7(@electric-sql/pglite@0.3.11)(@libsql/client@0.15.15(bufferutil@4.0.9))(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(better-sqlite3@12.4.1)(gel@2.1.1)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76)
+        version: 0.7.1(drizzle-orm@0.44.7(@electric-sql/pglite@0.3.11)(@libsql/client@0.15.15(bufferutil@4.0.9))(@neondatabase/serverless@0.10.4)(@types/pg@8.16.0)(better-sqlite3@12.4.1)(gel@2.1.1)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76)
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@18.3.1)
@@ -206,6 +206,9 @@ importers:
       passport-local:
         specifier: ^1.0.0
         version: 1.0.0
+      pg:
+        specifier: ^8.16.3
+        version: 8.16.3
       postgres:
         specifier: ^3.4.7
         version: 3.4.7
@@ -309,6 +312,9 @@ importers:
       '@types/passport-local':
         specifier: ^1.0.38
         version: 1.0.38
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.16.0
       '@types/react':
         specifier: ^18.3.11
         version: 18.3.24
@@ -2394,8 +2400,8 @@ packages:
   '@types/pg@8.11.6':
     resolution: {integrity: sha512-/2WmmBXHLsfRqzfHW7BNZ8SbYzE8OSk7i3WjFYvfgRHj7S1xj+16Je5fUKv3lVdVzk/zn9TXOqf+avFCFIE0yQ==}
 
-  '@types/pg@8.15.5':
-    resolution: {integrity: sha512-LF7lF6zWEKxuT3/OR8wAZGzkg4ENGXFNyiV/JeOt9z5B+0ZVwbql9McqX5c/WStFq1GaGso7H1AzP/qSzmlCKQ==}
+  '@types/pg@8.16.0':
+    resolution: {integrity: sha512-RmhMd/wD+CF8Dfo+cVIy3RR5cl8CyfXQ0tGgW6XBL8L4LM/UTEbNXYRbLwU6w+CgrKBNbrQWt4FUtTfaU5jSYQ==}
 
   '@types/prop-types@15.7.15':
     resolution: {integrity: sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==}
@@ -6474,7 +6480,7 @@ snapshots:
     dependencies:
       '@types/express': 4.17.21
       '@types/express-session': 1.18.2
-      '@types/pg': 8.15.5
+      '@types/pg': 8.16.0
 
   '@types/connect@3.4.38':
     dependencies:
@@ -6576,7 +6582,7 @@ snapshots:
       pg-protocol: 1.10.3
       pg-types: 4.1.0
 
-  '@types/pg@8.15.5':
+  '@types/pg@8.16.0':
     dependencies:
       '@types/node': 20.16.11
       pg-protocol: 1.10.3
@@ -7102,20 +7108,20 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.44.7(@electric-sql/pglite@0.3.11)(@libsql/client@0.15.15(bufferutil@4.0.9))(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(better-sqlite3@12.4.1)(gel@2.1.1)(pg@8.16.3)(postgres@3.4.7):
+  drizzle-orm@0.44.7(@electric-sql/pglite@0.3.11)(@libsql/client@0.15.15(bufferutil@4.0.9))(@neondatabase/serverless@0.10.4)(@types/pg@8.16.0)(better-sqlite3@12.4.1)(gel@2.1.1)(pg@8.16.3)(postgres@3.4.7):
     optionalDependencies:
       '@electric-sql/pglite': 0.3.11
       '@libsql/client': 0.15.15(bufferutil@4.0.9)
       '@neondatabase/serverless': 0.10.4
-      '@types/pg': 8.15.5
+      '@types/pg': 8.16.0
       better-sqlite3: 12.4.1
       gel: 2.1.1
       pg: 8.16.3
       postgres: 3.4.7
 
-  drizzle-zod@0.7.1(drizzle-orm@0.44.7(@electric-sql/pglite@0.3.11)(@libsql/client@0.15.15(bufferutil@4.0.9))(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(better-sqlite3@12.4.1)(gel@2.1.1)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76):
+  drizzle-zod@0.7.1(drizzle-orm@0.44.7(@electric-sql/pglite@0.3.11)(@libsql/client@0.15.15(bufferutil@4.0.9))(@neondatabase/serverless@0.10.4)(@types/pg@8.16.0)(better-sqlite3@12.4.1)(gel@2.1.1)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76):
     dependencies:
-      drizzle-orm: 0.44.7(@electric-sql/pglite@0.3.11)(@libsql/client@0.15.15(bufferutil@4.0.9))(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(better-sqlite3@12.4.1)(gel@2.1.1)(pg@8.16.3)(postgres@3.4.7)
+      drizzle-orm: 0.44.7(@electric-sql/pglite@0.3.11)(@libsql/client@0.15.15(bufferutil@4.0.9))(@neondatabase/serverless@0.10.4)(@types/pg@8.16.0)(better-sqlite3@12.4.1)(gel@2.1.1)(pg@8.16.3)(postgres@3.4.7)
       zod: 3.25.76
 
   dunder-proto@1.0.1:

@@ -73,7 +73,10 @@ export const userRoles = pgTable("user_roles", {
 export const pages = pgTable("pages", {
 	id: uuid("id").primaryKey().defaultRandom(),
 	title: varchar("title").notNull(),
-	slug: varchar("slug").notNull(),
+	slug: varchar("slug").notNull().unique(),
+	siteId: uuid("site_id")
+		.references(() => sites.id)
+		.notNull(),
 	status: varchar("status").default("draft"), // publish, draft, private, trash
 	authorId: uuid("author_id")
 		.references(() => users.id)

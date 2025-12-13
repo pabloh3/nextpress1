@@ -67,26 +67,42 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
     mutationFn: async () => {
       if (!post) throw new Error("No post data");
       
-      const publishData = {
-        builderData: blocks,
-        usePageBuilder: true,
+      // Determine if this is a page or post (pages have menuOrder field)
+      const isPage = "menuOrder" in post;
+      const endpoint = isPage ? `/api/pages/${post.id}` : `/api/posts/${post.id}`;
+      
+      const publishData: any = {
+        blocks: blocks,
         status: 'publish',
         publishedAt: new Date().toISOString(),
         slug: slug || generateSlug(post.title)
       };
 
-      const response = await apiRequest('PUT', `/api/posts/${post.id}`, publishData);
+      // Include siteId for pages (required field)
+      if (isPage && (post as any).siteId) {
+        publishData.siteId = (post as any).siteId;
+      }
+
+      const response = await apiRequest('PUT', endpoint, publishData);
       return await response.json();
     },
     onSuccess: (updatedData) => {
+      const isPage = post && "menuOrder" in post;
       toast({
         title: "Published!",
-        description: `Page is now live at /${updatedData.type}/${updatedData.slug}`,
+        description: `Page is now live at /${updatedData.type || (isPage ? 'page' : 'post')}/${updatedData.slug}`,
       });
       setOpen(false);
       onPublished?.(updatedData);
-      queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/posts/${post?.id}`] });
+      
+      // Invalidate correct queries based on type
+      if (isPage) {
+        queryClient.invalidateQueries({ queryKey: ['/api/pages'] });
+        queryClient.invalidateQueries({ queryKey: [`/api/pages/${post?.id}`] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
+        queryClient.invalidateQueries({ queryKey: [`/api/posts/${post?.id}`] });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -101,26 +117,42 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
     mutationFn: async () => {
       if (!post) throw new Error("No post data");
       
-      const unpublishData = {
-        builderData: blocks,
-        usePageBuilder: true,
+      // Determine if this is a page or post (pages have menuOrder field)
+      const isPage = "menuOrder" in post;
+      const endpoint = isPage ? `/api/pages/${post.id}` : `/api/posts/${post.id}`;
+      
+      const unpublishData: any = {
+        blocks: blocks,
         status: 'draft',
         publishedAt: null,
         slug: post.slug // Keep the same slug
       };
 
-      const response = await apiRequest('PUT', `/api/posts/${post.id}`, unpublishData);
+      // Include siteId for pages (required field)
+      if (isPage && (post as any).siteId) {
+        unpublishData.siteId = (post as any).siteId;
+      }
+
+      const response = await apiRequest('PUT', endpoint, unpublishData);
       return await response.json();
     },
     onSuccess: (updatedData) => {
+      const isPage = post && "menuOrder" in post;
       toast({
         title: "Moved to Draft",
         description: "Page is no longer publicly accessible",
       });
       setOpen(false);
       onPublished?.(updatedData);
-      queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/posts/${post?.id}`] });
+      
+      // Invalidate correct queries based on type
+      if (isPage) {
+        queryClient.invalidateQueries({ queryKey: ['/api/pages'] });
+        queryClient.invalidateQueries({ queryKey: [`/api/pages/${post?.id}`] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
+        queryClient.invalidateQueries({ queryKey: [`/api/posts/${post?.id}`] });
+      }
     },
     onError: (error: any) => {
       toast({

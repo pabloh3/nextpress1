@@ -5,6 +5,34 @@ import { safeTryAsync } from '../utils';
 import { coerceDates } from './shared/date-coerce';
 
 /**
+ * Validates that a slug is unique within a site (application-level check)
+ * Complements database unique constraint for better error messages
+ * @param models - Models dependency
+ * @param siteId - The site ID to check uniqueness within
+ * @param slug - The slug to validate
+ * @param excludePageId - Optional page ID to exclude from check (for updates)
+ * @returns true if unique, throws error if not
+ */
+async function validateSlugUniqueness(
+	models: any,
+	siteId: string,
+	slug: string,
+	excludePageId?: string
+) {
+	const existingPage = await models.pages.findBySiteAndSlug(siteId, slug);
+	
+	if (existingPage) {
+		// If updating, exclude the current page
+		if (excludePageId && existingPage.id === excludePageId) {
+			return true;
+		}
+		throw new Error(`Slug "${slug}" already exists for this site`);
+	}
+	
+	return true;
+}
+
+/**
  * Creates Pages CRUD routes for the NextPress API.
  * Pages are a special type of post with type='page'.
  * 
@@ -110,11 +138,27 @@ export function createPagesRoutes(deps: Deps): Router {
           throw new Error('User not authenticated');
         }
 
-        // Include authorId in the data before validation
-        const parsedData = pageSchemas.insert.parse({
+        // Get siteId from request or use default site (before validation)
+        let siteId = req.body?.siteId;
+        if (!siteId) {
+          const defaultSite = await models.sites.findDefaultSite();
+          if (!defaultSite || !defaultSite.id) {
+            throw new Error('No site found. Please create a site first.');
+          }
+          siteId = String(defaultSite.id);
+        } else {
+          siteId = String(siteId);
+        }
+
+        // Prepare data object with required fields before validation
+        const dataToValidate = {
           ...req.body,
           authorId: userId,
-        }) as any;
+          siteId: siteId,
+        };
+
+        // Include authorId and siteId in the data before validation
+        const parsedData = pageSchemas.insert.parse(dataToValidate) as any;
 
         // Generate slug if not provided
         const title = parsedData.title;
@@ -130,6 +174,9 @@ export function createPagesRoutes(deps: Deps): Router {
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-|-$/g, ''),
         };
+
+        // Validate slug uniqueness per site
+        await validateSlugUniqueness(models, siteId, pageData.slug);
 
         const page = await models.pages.create(pageData);
         hooks.doAction('save_post', page);
@@ -176,6 +223,16 @@ export function createPagesRoutes(deps: Deps): Router {
         };
 
         const existingHistory = Array.isArray(existingPage.history) ? existingPage.history : [];
+        
+        // Determine siteId and slug for validation
+        const siteId = parsed.siteId || existingPage.siteId;
+        const slug = parsed.slug || existingPage.slug;
+
+        // Validate slug uniqueness per site (only if slug changed)
+        if (parsed.slug && parsed.slug !== existingPage.slug) {
+          await validateSlugUniqueness(models, siteId, slug, id);
+        }
+
         const pageData = {
           ...parsed,
           version: (existingPage.version ?? 0) + 1,

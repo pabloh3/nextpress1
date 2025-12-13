@@ -128,5 +128,103 @@ export function createRenderRoutes(deps: Deps): Router {
     })
   );
 
+  /**
+   * GET /sites/:siteId/:pageSlug - Retrieve page by site ID and page slug
+   * Phase 1: Retrieves and logs blocks to console (rendering in Phase 2)
+   */
+  router.get(
+    '/sites/:siteId/:pageSlug',
+    asyncHandler(async (req, res) => {
+      const { err, result } = await safeTryAsync(async () => {
+        const { siteId, pageSlug } = req.params;
+
+        // 1. Validate siteId format (should be UUID)
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(siteId);
+        if (!isUUID) {
+          res.status(400).json({ message: 'Invalid site ID format' });
+          return;
+        }
+
+        // 2. Find site by ID
+        const { err: siteErr, result: site } = await safeTryAsync(async () => {
+          return await models.sites.findById(siteId);
+        });
+
+        if (siteErr) {
+          console.error('Error finding site:', siteErr);
+          res.status(500).json({ message: 'Error looking up site' });
+          return;
+        }
+
+        if (!site) {
+          console.error(`Site not found with ID: ${siteId}`);
+          // Try to list all sites to help debug
+          const { result: allSites } = await safeTryAsync(async () => {
+            return await models.sites.findMany();
+          });
+          if (allSites && allSites.length > 0) {
+            const sitesList = allSites.map((s: any) => `{id: ${s.id}, name: ${s.name || 'N/A'}}`).join(', ');
+            console.log(`Available sites (${allSites.length}):`, sitesList);
+            // Also try to get default site
+            const { result: defaultSite } = await safeTryAsync(async () => {
+              return await models.sites.findDefaultSite();
+            });
+            if (defaultSite) {
+              console.log(`Default site ID: ${defaultSite.id}`);
+            }
+          } else {
+            console.log('No sites found in database');
+          }
+          res.status(404).json({ 
+            message: 'Site not found',
+            requestedSiteId: siteId,
+            hint: 'Check server logs for available site IDs'
+          });
+          return;
+        }
+
+        // 3. Find page by siteId and slug
+        const page = await models.pages.findBySiteAndSlug(siteId, pageSlug);
+        if (!page) {
+          res.status(404).json({ message: 'Page not found' });
+          return;
+        }
+
+        // 4. Only allow published pages for public access
+        if (page.status !== 'publish') {
+          res.status(404).json({ message: 'Page not found' });
+          return;
+        }
+
+        // 5. Phase 1: Log blocks to console
+        console.log('='.repeat(80));
+        console.log(`Page: ${page.title} (${page.slug})`);
+        console.log(`Site: ${site.name} (${site.id})`);
+        console.log('='.repeat(80));
+        console.log('Blocks:', JSON.stringify(page.blocks, null, 2));
+        console.log('='.repeat(80));
+
+        // 6. Return page metadata (rendering will be added in Phase 2)
+        res.json({
+          message: 'Page retrieved successfully (Phase 1: Blocks logged to console)',
+          page: {
+            id: page.id,
+            title: page.title,
+            slug: page.slug,
+            siteId: page.siteId,
+            blocksCount: Array.isArray(page.blocks) ? page.blocks.length : 0,
+          },
+        });
+      });
+
+      if (err) {
+        console.error('Error retrieving page:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ message: 'Failed to retrieve page' });
+        }
+      }
+    })
+  );
+
   return router;
 }

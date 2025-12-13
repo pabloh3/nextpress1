@@ -195,6 +195,21 @@ export function createPageModel(dbInstance: DatabaseInstance = db) {
 		},
 
 		/**
+		 * Find a page by site ID and slug (for site-scoped routing)
+		 * @param siteId - The site UUID
+		 * @param slug - The page slug
+		 * @returns The page or undefined if not found
+		 * @example
+		 * const page = await pageModel.findBySiteAndSlug(siteId, 'about-us');
+		 */
+		async findBySiteAndSlug(siteId: string, slug: string) {
+			return baseModel.findFirst([
+				{ where: "siteId", equals: siteId },
+				{ where: "slug", equals: slug }
+			]);
+		},
+
+		/**
 		 * Find pages by their status
 		 * @param status - The status to filter by (publish, draft, private, trash)
 		 * @returns Array of pages with the specified status
@@ -418,6 +433,16 @@ export function createSiteModel(dbInstance: DatabaseInstance = db) {
 		...baseModel,
 		async findDefaultSite() {
 			return baseModel.findFirst([{ where: "name", equals: "Default Site" }]);
+		},
+		/**
+		 * Find a site by its name
+		 * @param name - The site name
+		 * @returns The site or undefined if not found
+		 * @example
+		 * const site = await siteModel.findByName('My Site');
+		 */
+		async findByName(name: string) {
+			return baseModel.findFirst([{ where: "name", equals: name }]);
 		},
 		async findByOwner(ownerId: string) {
 			return baseModel.findManyWhere([{ where: "ownerId", equals: ownerId }]);

@@ -74,5 +74,6 @@ echo -e "${GREEN}============================================${NC}"
 echo ""
 echo -e "NextPress has been completely removed."
 echo -e "To reinstall, run:"
+# TODO: Update URL when repo is public (remove token/use raw.githubusercontent.com)
 echo -e "  ${YELLOW}curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/ft-packaging/install.sh | sudo bash${NC}"
 echo ""

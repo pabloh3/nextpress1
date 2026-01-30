@@ -20,6 +20,8 @@ import { createDashboardRoutes } from './dashboard.routes';
 import { createPreviewRoutes } from './preview.routes';
 import { createPublicRoutes } from './public.routes';
 import { createRenderRoutes } from './render.routes';
+import { createSetupRoutes } from './setup.routes';
+import { setupCheck } from '../middleware/setupCheck';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,6 +48,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup authentication middleware
   setupAuth(app);
+
+  // ============================================
+  // Setup Wizard Routes (must be before setupCheck middleware)
+  // ============================================
+  app.use('/api/setup', createSetupRoutes(deps));
+
+  // Setup check middleware - redirects to wizard if not configured
+  app.use(setupCheck);
 
   // Fire WordPress-style 'init' action hook
   hooks.doAction('init');

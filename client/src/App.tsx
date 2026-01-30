@@ -1,6 +1,6 @@
 import { Switch, Route } from 'wouter';
 import { queryClient } from './lib/queryClient';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,12 +22,51 @@ import Templates from '@/pages/Templates';
 import PreviewPage from '@/pages/PreviewPage';
 import { Spinner } from '@/components/ui/spinner';
 import PublicPageView from '@/pages/PublicPageView';
+import Setup from '@/pages/Setup';
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  
+  // Check setup status on mount
+  const { data: setupStatus, isLoading: isCheckingSetup } = useQuery({
+    queryKey: ['setup-status'],
+    queryFn: async () => {
+      const res = await fetch('/api/setup/status');
+      return res.json();
+    },
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  // Show loading while checking setup status
+  if (isCheckingSetup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Spinner className="h-12 w-12 text-wp-blue" />
+      </div>
+    );
+  }
+
+  // If not setup, only show setup route
+  if (setupStatus && !setupStatus.isSetup) {
+    return (
+      <Switch>
+        <Route path="/setup" component={Setup} />
+        <Route>
+          {() => {
+            window.location.href = '/setup';
+            return null;
+          }}
+        </Route>
+      </Switch>
+    );
+  }
 
   return (
     <Switch>
+      {/* Setup route - redirects to login if already setup */}
+      <Route path="/setup" component={Setup} />
+      
       {/* Auth routes - always available */}
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />

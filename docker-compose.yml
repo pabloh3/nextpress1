@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: nextpress
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nextpress
+
+  app:
+    build: .
+    restart: always
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/nextpress
+      SESSION_SECRET: ${SESSION_SECRET}
+      PORT: 5000
+      NODE_ENV: production
+    volumes:
+      - caddy_config:/etc/caddy
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nextpress
+
+  caddy:
+    image: caddy:2.7-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_config:/etc/caddy
+      - caddy_data:/data
+      - caddy_config_files:/config
+    command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    depends_on:
+      - app
+    networks:
+      - nextpress
+
+volumes:
+  db_data:
+    driver: local
+  caddy_config:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config_files:
+    driver: local
+  uploads:
+    driver: local
+
+networks:
+  nextpress:
+    driver: bridge

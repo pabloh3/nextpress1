@@ -7,6 +7,15 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# ============================================
+# CONFIGURATION - Edit these values as needed
+# ============================================
+REPO_URL="https://github.com/pabloh3/nextpress1.git"
+BRANCH="ft-packaging"
+INSTALL_DIR="/opt/nextpress"
+DEFAULT_DOMAIN="nextpress.localhost"  # User sets actual domain via Setup Wizard
+# ============================================
+
 # Spinner for long-running commands (ASCII compatible)
 # Usage: run_with_spinner "message" command arg1 arg2 ...
 run_with_spinner() {
@@ -49,25 +58,29 @@ echo "       NextPress Installer"
 echo "============================================"
 echo -e "${NC}"
 
-# Configuration
-# TODO: Change to HTTPS URL when repo is public: https://github.com/pabloh3/nextpress1.git
-REPO_URL="git@github.com:pabloh3/nextpress1.git"
-BRANCH="ft-packaging"
-INSTALL_DIR="/opt/nextpress"
-
 # 1. Root check
 if [ "$EUID" -ne 0 ]; then
   echo -e "${RED}Please run this script with sudo${NC}"
-  # TODO: Update URL when repo is public (remove token/use raw.githubusercontent.com)
   echo "Usage: curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/${BRANCH}/install.sh | sudo bash"
   exit 1
 fi
 
-# Get the original user who invoked sudo (for SSH key access)
+# Get the original user who invoked sudo (for file ownership)
 ORIGINAL_USER="${SUDO_USER:-$USER}"
-ORIGINAL_HOME=$(eval echo "~$ORIGINAL_USER")
 
-# 2. Check for Docker
+# 2. Check for git
+echo -e "${YELLOW}Checking for git...${NC}"
+if ! command -v git &> /dev/null; then
+  echo -e "${RED}Git is not installed.${NC}"
+  echo "Please install git and try again."
+  echo "  Debian/Ubuntu: sudo apt install git"
+  echo "  RHEL/CentOS:   sudo yum install git"
+  echo "  macOS:         brew install git"
+  exit 1
+fi
+echo -e "  ${GREEN}Git is available${NC}"
+
+# 3. Check for Docker
 echo -e "${YELLOW}Checking for Docker...${NC}"
 if ! command -v docker &> /dev/null; then
   if ! run_with_spinner "Installing Docker" bash -c "curl -fsSL https://get.docker.com | sh -s -- --quiet"; then
@@ -81,7 +94,7 @@ else
   echo -e "  ${GREEN}Docker is already installed${NC}"
 fi
 
-# 3. Check for Docker Compose
+# 4. Check for Docker Compose
 echo -e "${YELLOW}Checking for Docker Compose...${NC}"
 if ! docker compose version &> /dev/null; then
   echo -e "${RED}Docker Compose v2 not found.${NC}"
@@ -91,36 +104,38 @@ if ! docker compose version &> /dev/null; then
 fi
 echo -e "  ${GREEN}Docker Compose is available${NC}"
 
-# 4. Setup installation directory
+# 5. Setup installation directory
 echo -e "${YELLOW}Setting up installation directory...${NC}"
 mkdir -p "$INSTALL_DIR"
-chown "$ORIGINAL_USER:$ORIGINAL_USER" "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 echo -e "  ${GREEN}Directory ready: ${INSTALL_DIR}${NC}"
 
-# 5. Download or update NextPress
+# 6. Download or update NextPress
 echo -e "${YELLOW}Downloading NextPress...${NC}"
 
-# SSH command that auto-accepts host keys (needed for non-interactive clone)
-export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes"
+# Disable git credential prompts (public repo, no auth needed)
+export GIT_TERMINAL_PROMPT=0
 
 if [ -d ".git" ]; then
-  # Update existing installation (as original user)
-  if ! run_with_spinner "Updating repository" sudo -u "$ORIGINAL_USER" -E git pull origin "$BRANCH"; then
+  # Update existing installation
+  if ! run_with_spinner "Updating repository" git pull origin "$BRANCH"; then
     echo -e "${RED}Failed to update repository.${NC}"
     exit 1
   fi
 else
-  # Fresh clone (as original user for SSH key access)
-  if ! run_with_spinner "Cloning repository" sudo -u "$ORIGINAL_USER" -E git clone --branch "$BRANCH" "$REPO_URL" .; then
+  # Fresh clone
+  if ! run_with_spinner "Cloning repository" git clone --branch "$BRANCH" "$REPO_URL" .; then
     echo -e "${RED}Failed to clone repository.${NC}"
-    echo -e "${YELLOW}Make sure you have SSH access to the repository.${NC}"
+    echo -e "${YELLOW}Check your internet connection and try again.${NC}"
     exit 1
   fi
 fi
+
+# Set ownership to original user
+chown -R "$ORIGINAL_USER:$ORIGINAL_USER" "$INSTALL_DIR"
 echo -e "  ${GREEN}NextPress code ready${NC}"
 
-# 6. Generate secrets if .env doesn't exist
+# 7. Generate secrets if .env doesn't exist
 echo -e "${YELLOW}Configuring environment...${NC}"
 if [ ! -f .env ]; then
   POSTGRES_PASSWORD=$(openssl rand -hex 16)
@@ -136,21 +151,29 @@ else
   echo -e "  ${GREEN}Using existing .env file${NC}"
 fi
 
-# 7. Create default Caddyfile for initial setup
+# 8. Create default Caddyfile for initial setup
 mkdir -p caddy_config
 cat > caddy_config/Caddyfile <<EOF
 {
   admin 0.0.0.0:2019
+  email info@nextpress.com
 }
 
+# Default HTTP catch-all on port 80
 :80 {
+  root * /usr/share/caddy
+  file_server
+}
+
+# App Domain
+${DEFAULT_DOMAIN} {
   reverse_proxy app:5000
 }
 EOF
 chown -R "$ORIGINAL_USER:$ORIGINAL_USER" caddy_config
 echo -e "  ${GREEN}Caddy configuration ready${NC}"
 
-# 8. Create .dockerignore if it doesn't exist
+# 9. Create .dockerignore if it doesn't exist
 if [ ! -f .dockerignore ]; then
   cat > .dockerignore <<EOF
 node_modules
@@ -166,7 +189,7 @@ EOF
   chown "$ORIGINAL_USER:$ORIGINAL_USER" .dockerignore
 fi
 
-# 9. Launch the stack
+# 10. Launch the stack
 echo -e "${YELLOW}Building and starting NextPress...${NC}"
 if ! run_with_spinner "Building containers (this may take a few minutes)" docker compose build; then
   echo -e "${RED}Failed to build containers.${NC}"
@@ -178,10 +201,10 @@ if ! run_with_spinner "Starting services" docker compose up -d; then
   exit 1
 fi
 
-# 10. Wait for services to be ready
+# 11. Wait for services to be ready
 run_with_spinner "Waiting for services to initialize" sleep 10
 
-# 11. Get server IP
+# 12. Get server IP
 SERVER_IP=$(hostname -I | awk '{print $1}')
 
 echo ""
@@ -192,7 +215,9 @@ echo ""
 echo -e "NextPress is now running!"
 echo ""
 echo -e "Open your browser and visit:"
-echo -e "  ${GREEN}http://${SERVER_IP}${NC}"
+echo -e "  - ${GREEN}http://${SERVER_IP}:5000${NC}       (Direct app access)"
+echo -e "  - ${GREEN}https://nextpress.localhost${NC}  (Local domain)"
+echo -e "  - ${GREEN}http://${SERVER_IP}${NC}           (Server info page)"
 echo ""
 echo -e "Complete the setup wizard to configure your:"
 echo -e "  - Site name"

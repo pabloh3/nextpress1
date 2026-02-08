@@ -17,16 +17,6 @@ if (!isReplitAuthConfigured) {
 	console.log("Replit Auth not configured - running in local development mode");
 }
 
-/**
- * Determines if cookies should be marked as secure based on SITE_URL.
- * Only returns true if SITE_URL explicitly starts with "https://".
- * This allows local development (http://localhost, http://*.localhost) to work properly.
- */
-function shouldUseSecureCookies(): boolean {
-	const siteUrl = process.env.SITE_URL || "";
-	return siteUrl.startsWith("https://");
-}
-
 const getOidcConfig = memoize(
 	async () => {
 		if (!isReplitAuthConfigured) {
@@ -49,9 +39,6 @@ export function getSession() {
 		ttl: sessionTtl,
 		tableName: "sessions",
 	});
-	const useSecureCookies = shouldUseSecureCookies();
-	console.log(`Session cookie secure: ${useSecureCookies} (SITE_URL: ${process.env.SITE_URL || "not set"})`);
-	
 	return session({
 		secret: process.env.SESSION_SECRET!,
 		store: sessionStore,
@@ -59,7 +46,7 @@ export function getSession() {
 		saveUninitialized: false,
 		cookie: {
 			httpOnly: true,
-			secure: useSecureCookies,
+			secure: "auto",
 			sameSite: "lax",
 			maxAge: sessionTtl,
 		},

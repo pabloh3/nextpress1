@@ -54,6 +54,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
   app.use('/api/setup', createSetupRoutes(deps));
 
+  // Health check endpoint for container orchestration (before setupCheck so it's always accessible)
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Setup check middleware - redirects to wizard if not configured
   app.use(setupCheck);
 

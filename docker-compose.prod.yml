@@ -9,7 +9,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -17,17 +17,16 @@ services:
       - nextpress
 
   app:
-    build: .
+    image: husseinkizz/nextpress:${NEXTPRESS_VERSION:-latest}
     restart: always
     ports:
-      - '5000:5000'
+      - "5000:5000"
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/nextpress
       SESSION_SECRET: ${SESSION_SECRET}
       PORT: 5000
       NODE_ENV: production
     volumes:
-      - caddy_config:/etc/caddy
       - uploads:/app/uploads
     depends_on:
       postgres:
@@ -39,13 +38,11 @@ services:
     image: caddy:2.7-alpine
     restart: always
     ports:
-      - '80:80'
-      - '443:443'
+      - "80:80"
+      - "443:443"
     volumes:
-      - caddy_config:/etc/caddy
+      - ./caddy_config:/etc/caddy
       - caddy_data:/data
-      - caddy_config_files:/config
-    command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
     depends_on:
       - app
     networks:
@@ -53,15 +50,8 @@ services:
 
 volumes:
   db_data:
-    driver: local
-  caddy_config:
-    driver: local
   caddy_data:
-    driver: local
-  caddy_config_files:
-    driver: local
   uploads:
-    driver: local
 
 networks:
   nextpress:

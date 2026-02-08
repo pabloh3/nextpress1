@@ -33,7 +33,9 @@ fi
 
 # 3. Stop and remove containers
 echo -e "${YELLOW}Stopping containers...${NC}"
-if [ -f "docker-compose.yml" ]; then
+if [ -f "docker-compose.prod.yml" ]; then
+  docker compose -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
+elif [ -f "docker-compose.yml" ]; then
   docker compose down --remove-orphans 2>/dev/null || true
 fi
 echo -e "${GREEN}Containers stopped${NC}"
@@ -49,8 +51,13 @@ echo -e "${GREEN}Docker volumes removed${NC}"
 
 # 5. Remove Docker images
 echo -e "${YELLOW}Removing Docker images...${NC}"
+# Remove local build image
 docker rmi nextpress-app 2>/dev/null || true
-docker rmi $(docker images -q nextpress* 2>/dev/null) 2>/dev/null || true
+# Remove Docker Hub images (all tags)
+docker rmi husseinkizz/nextpress:latest 2>/dev/null || true
+docker rmi $(docker images husseinkizz/nextpress -q 2>/dev/null) 2>/dev/null || true
+# Remove any other nextpress images
+docker rmi $(docker images -q "nextpress*" 2>/dev/null) 2>/dev/null || true
 echo -e "${GREEN}Docker images removed${NC}"
 
 # 6. Remove installation directory

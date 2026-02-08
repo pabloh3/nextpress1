@@ -50,7 +50,8 @@ The installer will automatically install Docker and Docker Compose if not presen
 After installation, open your browser and visit:
 
 - `http://<server-ip>:5000` - Direct app access
-- `http://<server-ip>` - Server info page
+- `http://nextpress.localhost:5000` - Local domain
+- `http://<server-ip>` - Caddy default page
 
 Complete the setup wizard to configure:
 - Site name

@@ -172,12 +172,13 @@ export function createSetupRoutes(deps: Deps): Router {
     // Normalize domain for siteUrl
     const siteUrl = domain.startsWith('http') ? domain : `https://${domain}`;
 
-    // Create site
+    // Create site (marked as default)
     const site = await deps.models.sites.create({
       name: siteName,
       description: `${siteName} - Powered by NextPress`,
       siteUrl,
       ownerId: adminUser.id,
+      isDefault: true,
       settings: {
         general: {
           siteName,

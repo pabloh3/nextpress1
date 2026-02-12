@@ -1,14 +1,14 @@
 import { relations } from "drizzle-orm";
 import {
-	jsonb,
 	pgTable,
-	timestamp,
-	varchar,
 	text,
-	integer,
-	boolean,
+	timestamp,
 	uuid,
+	varchar,
+	jsonb,
+	integer,
 	bigint,
+	boolean,
 } from "drizzle-orm/pg-core";
 
 export const sites = pgTable("sites", {
@@ -25,6 +25,8 @@ export const sites = pgTable("sites", {
 	updatedAt: timestamp("updated_at").defaultNow(),
 	settings: jsonb("settings").default({}),
 	activeThemeId: uuid("active_theme_id").references(() => themes.id),
+	/** Marks this site as the default/primary site for the installation */
+	isDefault: boolean("is_default").default(false),
 	other: jsonb("other").default({}),
 });
 

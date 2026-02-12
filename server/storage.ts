@@ -431,8 +431,12 @@ export function createSiteModel(dbInstance: DatabaseInstance = db) {
 	const baseModel = createModel(sites, dbInstance);
 	return {
 		...baseModel,
+		/**
+		 * Find the default site marked with isDefault: true
+		 * @returns The default site or undefined if none exists
+		 */
 		async findDefaultSite() {
-			return baseModel.findFirst([{ where: "name", equals: "Default Site" }]);
+			return baseModel.findFirst([{ where: "isDefault", equals: true }]);
 		},
 		/**
 		 * Find a site by its name

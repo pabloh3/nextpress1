@@ -5,7 +5,7 @@ A modern, self-hostable wordpress compatible CMS built in JavaScript.
 ## Development
 
 ```bash
-git clone https://github.com/pabloh3/nextpress1
+git clone https://github.com/pabloh3/nextpress1 nextpress
 pnpm install
 pnpm dev
 ```

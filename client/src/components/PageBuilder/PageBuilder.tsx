@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { BlockConfig, Page } from "@shared/schema-types";
 import { DragDropContext } from "@/lib/dnd";
 import type { DropResult as DndDropResult } from "@/lib/dnd";
@@ -144,9 +144,16 @@ export default function PageBuilder({
 	>(null);
 	const [sidebarVisible, setSidebarVisible] = useState(true);
 
+	// Store onBlocksChange in a ref to avoid infinite loops when parent re-renders
+	const onBlocksChangeRef = useRef(onBlocksChange);
 	useEffect(() => {
-		onBlocksChange?.(blocks);
-	}, [blocks, onBlocksChange]);
+		onBlocksChangeRef.current = onBlocksChange;
+	});
+
+	// Notify parent of blocks changes without onBlocksChange in deps
+	useEffect(() => {
+		onBlocksChangeRef.current?.(blocks);
+	}, [blocks]);
 
 	const selectedBlock = selectedBlockId ? findBlock(blocks, selectedBlockId) : null;
 

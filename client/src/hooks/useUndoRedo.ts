@@ -1,20 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 
 /**
  * Hook for managing undo/redo functionality with state history.
  * Tracks a history of states and allows navigation between them.
  * 
- * @param initialState - The initial state value
+ * NOTE: initialState is only used on first mount. Subsequent changes to
+ * initialState prop are ignored to prevent infinite loops when the prop
+ * is an array/object (new reference on each render).
+ * 
+ * @param initialState - The initial state value (only used on mount)
  * @returns Object with current state, pushState, undo, redo functions, and availability flags
  */
 export function useUndoRedo<T>(initialState: T) {
-  const [history, setHistory] = useState<T[]>([initialState]);
+  // Capture initial state only once on mount to avoid loops from reference changes
+  const initialStateRef = useRef(initialState);
+  const [history, setHistory] = useState<T[]>(() => [initialStateRef.current]);
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    setHistory([initialState]);
-    setCurrentIndex(0);
-  }, [initialState]);
   
   const canUndo = currentIndex > 0;
   const canRedo = currentIndex < history.length - 1;

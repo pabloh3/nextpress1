@@ -705,7 +705,7 @@ async function initializeDefaultThemes() {
 
 const themeManager = new ThemeManager();
 
-// Initialize themes on startup
-initializeDefaultThemes().catch(console.error);
+// Export initialization function to be called after database is ready
+export { initializeDefaultThemes };
 
 export default themeManager;

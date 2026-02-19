@@ -1,4 +1,5 @@
 
+import { generateId } from '@/lib/utils';
 import type { BlockConfig } from '@shared/schema-types';
 import { blockRegistry, getDefaultBlock as getDefaultBlockExport } from '@/components/PageBuilder/blocks';
 
@@ -40,7 +41,7 @@ export function findBlockPath(rootBlocks: BlockConfig[], targetId: string): numb
 
 export function insertNewBlock(rootBlocks: BlockConfig[], parentId: string | null, index: number, type: string): { blocks: BlockConfig[]; newId?: string } {
   const clone = structuredClone(rootBlocks) as BlockConfig[];
-  const id = crypto.randomUUID();
+  const id = generateId();
   
   // Use getDefaultBlock to create block with new structure
   const newBlock = getDefaultBlockExport(type, id);

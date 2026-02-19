@@ -37,3 +37,4 @@ trash
 
 # PGlite local development database
 data/pglite/
+/data

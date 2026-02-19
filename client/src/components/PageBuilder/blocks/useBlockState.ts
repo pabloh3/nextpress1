@@ -54,6 +54,15 @@ export function useBlockState<TContent>({
 		settings,
 	});
 
+	// Store onChange in a ref to avoid infinite loops when parent re-renders
+	const onChangeRef = useRef(onChange);
+	useEffect(() => {
+		onChangeRef.current = onChange;
+	});
+
+	// Track initial mount to avoid emitting onChange before any user interaction
+	const isInitialMount = useRef(true);
+
 	// Keep the latest value for structural metadata (parentId, order, etc.)
 	useEffect(() => {
 		latestValueRef.current = { ...value, id: clientId, content, styles, settings };
@@ -72,6 +81,12 @@ export function useBlockState<TContent>({
 
 	// Emit changes upstream whenever local state mutates
 	useEffect(() => {
+		// Skip emitting on initial mount - only emit on actual user changes
+		if (isInitialMount.current) {
+			isInitialMount.current = false;
+			return;
+		}
+
 		const base = latestValueRef.current;
 		const nextBlock: BlockConfig = {
 			...base,
@@ -81,8 +96,8 @@ export function useBlockState<TContent>({
 			settings,
 		};
 		latestValueRef.current = nextBlock;
-		onChange(nextBlock);
-	}, [clientId, content, styles, settings, onChange]);
+		onChangeRef.current(nextBlock);
+	}, [clientId, content, styles, settings]);
 
 	// Register accessors so sidebar settings can interact with the block state
 	useEffect(() => {

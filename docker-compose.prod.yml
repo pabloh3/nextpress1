@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: nextpress
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nextpress
+
+  app:
+    image: husseinkizz/nextpress:${NEXTPRESS_VERSION:-latest}
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/nextpress
+      SESSION_SECRET: ${SESSION_SECRET}
+      PORT: 5000
+      NODE_ENV: production
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nextpress
+
+  caddy:
+    image: caddy:2.7-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy_config:/etc/caddy
+      - caddy_data:/data
+    depends_on:
+      - app
+    networks:
+      - nextpress
+
+volumes:
+  db_data:
+  caddy_data:
+  uploads:
+
+networks:
+  nextpress:
+    driver: bridge

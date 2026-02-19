@@ -32,21 +32,31 @@ const getOidcConfig = memoize(
 
 export function getSession() {
 	const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-	const pgStore = connectPg(session);
-	const sessionStore = new pgStore({
-		conString: process.env.DATABASE_URL,
-		createTableIfMissing: false,
-		ttl: sessionTtl,
-		tableName: "sessions",
-	});
+	const isProduction = process.env.NODE_ENV === "production";
+
+	// Dev uses in-memory sessions (no PG needed), prod uses connect-pg-simple
+	const store = isProduction
+		? new (connectPg(session))({
+				conString: process.env.DATABASE_URL,
+				createTableIfMissing: false,
+				ttl: sessionTtl,
+				tableName: "sessions",
+			})
+		: undefined; // express-session defaults to MemoryStore
+
+	if (!isProduction) {
+		console.log("[Session] Using MemoryStore for development");
+	}
+
 	return session({
-		secret: process.env.SESSION_SECRET!,
-		store: sessionStore,
+		secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
+		...(store ? { store } : {}),
 		resave: false,
 		saveUninitialized: false,
 		cookie: {
 			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
+			secure: isProduction ? "auto" as const : false,
+			sameSite: "lax",
 			maxAge: sessionTtl,
 		},
 	});

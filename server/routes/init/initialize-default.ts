@@ -92,46 +92,10 @@ export async function initializeDefaultRolesAndSite(deps: Deps) {
       });
     }
 
-    // Check if default site exists
-    const defaultSite = await deps.models.sites.findDefaultSite();
-
-    if (!defaultSite) {
-      console.log('Creating default site...');
-
-      // Get the first user to be the site owner, or create a system user
-      let ownerId: string;
-      const users = await deps.models.users.findMany();
-
-      if (users.length === 0) {
-        // Create a system user for the site
-        const systemUser = await deps.models.users.create({
-          username: 'system',
-          email: 'system@nextpress.local',
-          firstName: 'System',
-          lastName: 'User',
-          status: 'active',
-        });
-        ownerId = systemUser.id;
-      } else {
-        ownerId = users[0].id;
-      }
-
-      const site = await deps.models.sites.create({
-        name: 'Default Site',
-        description: 'The default site for NextPress',
-        siteUrl: 'http://localhost:3000',
-        ownerId: ownerId,
-        settings: {
-          title: 'NextPress Site',
-          tagline: 'A modern content management system',
-          timezone: 'UTC',
-          dateFormat: 'Y-m-d',
-          timeFormat: 'H:i',
-        },
-      });
-
-      console.log('Default site created:', site.name);
-    }
+    // NOTE: Default site and user creation is now handled by the Setup Wizard.
+    // This allows fresh installations to go through a guided setup process
+    // where the user configures their admin account and site details.
+    // See: /api/setup routes and /setup frontend page.
   } catch (error) {
     console.error('Error initializing default roles and site:', error);
   }

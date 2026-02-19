@@ -34,3 +34,6 @@ logs/
 themes/nextjs-theme/.next/
 backup
 trash
+
+# PGlite local development database
+data/pglite/

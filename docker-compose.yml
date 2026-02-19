@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: nextpress
+    volumes:
+      - dev_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nextpress_dev
+
+  app:
+    build: .
+    restart: always
+    ports:
+      - '5000:5000'
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/nextpress
+      SESSION_SECRET: ${SESSION_SECRET}
+      SITE_URL: ${SITE_URL:-http://localhost:5000}
+      PORT: 5000
+      NODE_ENV: production
+    volumes:
+      - dev_caddy_config:/etc/caddy
+      - dev_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nextpress_dev
+
+  caddy:
+    image: caddy:2.7-alpine
+    restart: always
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - dev_caddy_config:/etc/caddy
+      - dev_caddy_data:/data
+      - dev_caddy_config_files:/config
+    command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    depends_on:
+      - app
+    networks:
+      - nextpress_dev
+
+volumes:
+  dev_db_data:
+    driver: local
+  dev_caddy_config:
+    driver: local
+  dev_caddy_data:
+    driver: local
+  dev_caddy_config_files:
+    driver: local
+  dev_uploads:
+    driver: local
+
+networks:
+  nextpress_dev:
+    driver: bridge

@@ -8,7 +8,7 @@ export default defineConfig({
   platform: 'node',
   target: 'node18',
   sourcemap: true,
-  clean: true,
+  clean: false, // Don't clean dist folder - vite builds to dist/public first
   splitting: false,
   skipNodeModulesBundle: true,
   tsconfig: 'tsconfig.server.json',

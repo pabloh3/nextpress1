@@ -262,7 +262,7 @@ print_info "Waiting for app to be ready (max ${HEALTH_TIMEOUT}s)..."
 elapsed=0
 healthy=false
 while [[ $elapsed -lt $HEALTH_TIMEOUT ]]; do
-  if curl -sf "http://localhost:${PORT}${HEALTH_ENDPOINT}" >/dev/null 2>&1; then
+  if docker compose exec app wget -qO- http://127.0.0.1:${PORT}${HEALTH_ENDPOINT} >/dev/null 2>&1; then
     healthy=true
     break
   fi
@@ -273,7 +273,7 @@ done
 echo ""
 
 if [[ "$healthy" == true ]]; then
-  HEALTH_RESPONSE=$(curl -sf "http://localhost:${PORT}${HEALTH_ENDPOINT}")
+  HEALTH_RESPONSE=$(docker compose exec app wget -qO- http://127.0.0.1:${PORT}${HEALTH_ENDPOINT})
   print_success "Health check passed: ${HEALTH_RESPONSE}"
 else
   print_error "Health check failed after ${HEALTH_TIMEOUT}s"

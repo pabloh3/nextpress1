@@ -41,6 +41,17 @@ export default function Setup() {
 
   // Check if already setup on mount
   useEffect(() => {
+    // Attempt to pre-fill domain using current window hostname
+    try {
+      const hostname = window.location.hostname;
+      // Skip generic localhosts since they usually aren't real domains, unless it's IP
+      if (hostname && hostname !== 'localhost') {
+        setFormData(prev => ({ ...prev, domain: hostname }));
+      }
+    } catch (e) {
+      // Ignore window object errors in edge cases
+    }
+
     const checkSetupStatus = async () => {
       try {
         const res = await fetch('/api/setup/status');

@@ -172,12 +172,6 @@ cat > caddy_config/Caddyfile <<EOF
 
 # Default HTTP catch-all on port 80
 :80 {
-  root * /usr/share/caddy
-  file_server
-}
-
-# App Domain
-${DEFAULT_DOMAIN} {
   reverse_proxy app:5000
 }
 EOF
@@ -213,8 +207,13 @@ fi
 # 11. Wait for services to be ready
 run_with_spinner "Waiting for services to initialize" sleep 10
 
-# 12. Get server IP
-SERVER_IP=$(hostname -I | awk '{print $1}')
+# 12. Get server IP (prioritize external IP for instructions)
+EXTERNAL_IP=$(curl -s --max-time 3 ipv4.icanhazip.com || echo "")
+if [ -z "$EXTERNAL_IP" ]; then
+  SERVER_IP=$(hostname -I | awk '{print $1}')
+else
+  SERVER_IP=$EXTERNAL_IP
+fi
 
 echo ""
 echo -e "${GREEN}============================================${NC}"
@@ -224,9 +223,7 @@ echo ""
 echo -e "NextPress ${GREEN}${NEXTPRESS_VERSION}${NC} is now running!"
 echo ""
 echo -e "Open your browser and visit:"
-echo -e "  - ${GREEN}http://${SERVER_IP}:5000${NC}              (Direct app access)"
-echo -e "  - ${GREEN}http://nextpress.localhost:5000${NC}       (Local domain)"
-echo -e "  - ${GREEN}http://${SERVER_IP}${NC}                   (Caddy default page)"
+echo -e "  - ${GREEN}http://${SERVER_IP}${NC}                (Setup wizard)"
 echo ""
 echo -e "Complete the setup wizard to configure your:"
 echo -e "  - Site name"

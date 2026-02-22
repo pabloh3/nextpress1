@@ -78,7 +78,7 @@ export default function PageBuilder({
   const isTemplate = false;
 
   const initialBlocks =
-    propBlocks || (data ? ((data as any).blocks as BlockConfig[]) || [] : []);
+    propBlocks || (data ? (data.blocks as BlockConfig[]) || [] : []);
 
   // Use undo/redo for blocks state
   const { currentState, pushState, undo, redo, canUndo, canRedo } =
@@ -156,17 +156,14 @@ export default function PageBuilder({
 
   const handleSave = useCallback(() => {
     if (!isTemplate && data && 'menuOrder' in data && data.id) {
-      savePageDraftWithHistory(
-        data.id as string,
-        {
-          ...(data as any),
-          blocks,
-          updatedAt: new Date().toISOString(),
-        } as any,
-      );
+      savePageDraftWithHistory(data.id as string, {
+        ...data,
+        blocks,
+        updatedAt: new Date(),
+      });
     }
     saveMutation.mutate(blocks);
-    onSave?.(data as any);
+    onSave?.(data);
   }, [blocks, saveMutation, onSave, data]);
 
   useEffect(() => {
@@ -265,7 +262,7 @@ export default function PageBuilder({
         <DragDropContext
           onDragEnd={(result: DndDropResult) => {
             console.log('[DND] PageBuilder onDragEnd (received)', result);
-            return handleDragEnd(result as any);
+            return handleDragEnd(result);
           }}
           onDragStart={() => console.log('Drag started, id:', selectedBlockId)}
           renderOverlay={({ id }) => {

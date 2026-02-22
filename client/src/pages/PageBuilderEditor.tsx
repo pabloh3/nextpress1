@@ -30,6 +30,7 @@ export default function PageBuilderEditor({
 }: PageBuilderEditorProps) {
   const [, setLocation] = useLocation();
   const [blocks, setBlocks] = useState<BlockConfig[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [pageTitle, setPageTitle] = useState<string>("");
   const [pageSlug, setPageSlug] = useState<string>("");
@@ -75,6 +76,7 @@ export default function PageBuilderEditor({
         clearTimeout(draftSaveRef.current);
       }
       // Reset state
+      setIsInitialized(false);
       setBlocks([]);
       setPageTitle("");
       setPageSlug("");
@@ -131,6 +133,7 @@ export default function PageBuilderEditor({
     }
 
     savePageDraft(page.id, source);
+    setIsInitialized(true);
   }, [data, resolvedPageId, postId]);
 
   useEffect(() => {
@@ -200,7 +203,7 @@ export default function PageBuilderEditor({
     queuePageDraftSave(meta);
   };
 
-  if (isLoading) {
+  if (isLoading || (data && !isInitialized)) {
     return (
       <div className="flex h-screen">
         <AdminSidebar />

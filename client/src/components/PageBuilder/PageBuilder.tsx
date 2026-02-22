@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { BlockConfig, Page } from '@shared/schema-types';
+import type { BlockConfig, Page, Post, Template } from '@shared/schema-types';
 import { DragDropContext } from '@/lib/dnd';
 import type { DropResult as DndDropResult } from '@/lib/dnd';
 import { generateBlockId } from './utils';
@@ -163,7 +163,9 @@ export default function PageBuilder({
       });
     }
     saveMutation.mutate(blocks);
-    onSave?.(data);
+    if (data) {
+      onSave?.(data);
+    }
   }, [blocks, saveMutation, onSave, data]);
 
   useEffect(() => {

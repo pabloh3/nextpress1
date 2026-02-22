@@ -89,6 +89,24 @@ function extractContentProps(
 		return {};
 	}
 
+	// Handle markdown block specially - stores content at content.content (not content.value)
+	// This is different from the "markdown" kind which expects content.value
+	if (blockName === "core/markdown") {
+		// Content can be directly stored as { content: "...", className: "..." }
+		const markdownContent = (content as any).content;
+		if (typeof markdownContent === "string") {
+			return {
+				content: markdownContent,
+				className: (content as any).className || "",
+			};
+		}
+		// Fallback: try content.value for "markdown" kind
+		return {
+			content: (content as any).value || "",
+			className: (content as any).className || "",
+		};
+	}
+
 	// Handle different content kinds
 	switch (content.kind) {
 		case "text": {

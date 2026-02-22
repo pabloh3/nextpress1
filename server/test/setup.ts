@@ -1,7 +1,7 @@
-import { drizzle } from "drizzle-orm/pglite";
-import { PGlite } from "@electric-sql/pglite";
-import { beforeAll, afterAll } from "vitest";
-import * as schema from "@shared/schema";
+import { drizzle } from 'drizzle-orm/pglite';
+import { PGlite } from '@electric-sql/pglite';
+import { beforeAll, afterAll } from 'vitest';
+import * as schema from '@shared/schema';
 
 // Create in-memory PostgreSQL database using PGlite
 const client = new PGlite();
@@ -9,8 +9,8 @@ export const testDb = drizzle(client, { schema });
 
 // Run migrations before all tests
 beforeAll(async () => {
-	// Create tables manually for PGlite
-	await client.exec(`
+  // Create tables manually for PGlite
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS users (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			email VARCHAR UNIQUE,
@@ -26,7 +26,7 @@ beforeAll(async () => {
 		)
 	`);
 
-	await client.exec(`
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS blogs (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			name VARCHAR NOT NULL,
@@ -42,7 +42,7 @@ beforeAll(async () => {
 		)
 	`);
 
-	await client.exec(`
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS posts (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			title VARCHAR NOT NULL,
@@ -65,7 +65,7 @@ beforeAll(async () => {
 		)
 	`);
 
-	await client.exec(`
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS comments (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			post_id UUID NOT NULL REFERENCES posts(id),
@@ -81,11 +81,30 @@ beforeAll(async () => {
 		)
 	`);
 
-	await client.exec(`
+  await client.exec(`
+		CREATE TABLE IF NOT EXISTS sites (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name VARCHAR,
+			description TEXT,
+			logo_url VARCHAR,
+			favicon_url VARCHAR,
+			site_url VARCHAR,
+			owner_id UUID NOT NULL REFERENCES users(id),
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW(),
+			settings JSONB DEFAULT '{}',
+			active_theme_id UUID,
+			is_default BOOLEAN DEFAULT false,
+			other JSONB DEFAULT '{}'
+		)
+	`);
+
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS pages (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			title VARCHAR NOT NULL,
 			slug VARCHAR NOT NULL,
+			site_id UUID NOT NULL REFERENCES sites(id),
 			status VARCHAR DEFAULT 'draft',
 			author_id UUID NOT NULL REFERENCES users(id),
 			featured_image VARCHAR,
@@ -104,7 +123,7 @@ beforeAll(async () => {
 		)
 	`);
 
-	await client.exec(`
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS media (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			filename VARCHAR NOT NULL,
@@ -121,7 +140,7 @@ beforeAll(async () => {
 		)
 	`);
 
-	await client.exec(`
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS themes (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			name VARCHAR NOT NULL,
@@ -141,7 +160,7 @@ beforeAll(async () => {
 		)
 	`);
 
-	await client.exec(`
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS plugins (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			name VARCHAR NOT NULL,
@@ -161,7 +180,7 @@ beforeAll(async () => {
 		)
 	`);
 
-	await client.exec(`
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS options (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			name VARCHAR NOT NULL,
@@ -172,7 +191,7 @@ beforeAll(async () => {
 		)
 	`);
 
-	await client.exec(`
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS templates (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			name VARCHAR NOT NULL,
@@ -187,24 +206,7 @@ beforeAll(async () => {
 		)
 	`);
 
-	await client.exec(`
-		CREATE TABLE IF NOT EXISTS sites (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			name VARCHAR,
-			description TEXT,
-			logo_url VARCHAR,
-			favicon_url VARCHAR,
-			site_url VARCHAR,
-			owner_id UUID NOT NULL REFERENCES users(id),
-			created_at TIMESTAMP DEFAULT NOW(),
-			updated_at TIMESTAMP DEFAULT NOW(),
-			settings JSONB DEFAULT '{}',
-			active_theme_id UUID,
-			other JSONB DEFAULT '{}'
-		)
-	`);
-
-	await client.exec(`
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS roles (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			name VARCHAR NOT NULL,
@@ -217,7 +219,7 @@ beforeAll(async () => {
 		)
 	`);
 
-	await client.exec(`
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS user_roles (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			user_id UUID NOT NULL REFERENCES users(id),
@@ -230,6 +232,6 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-	// Close the PGlite client
-	await client.close();
+  // Close the PGlite client
+  await client.close();
 });

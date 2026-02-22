@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
-import BlockLibrary from "./BlockLibrary";
-import BlockSettings from "./BlockSettings";
-import PageSettings from "./PageSettings";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
-import { Plus, Settings, Sidebar, FileText, Palette } from "lucide-react";
-import type { Post, Template } from "@shared/schema-types";
+import React, { useState, useEffect, useRef } from 'react';
+import BlockLibrary from './BlockLibrary';
+import BlockSettings from './BlockSettings';
+import PageSettings from './PageSettings';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { Plus, Settings, Sidebar, FileText, Palette } from 'lucide-react';
+import type { Post, Template, Page } from '@shared/schema-types';
 
 export function BuilderSidebar({
   activeTab,
@@ -22,21 +22,21 @@ export function BuilderSidebar({
   onPageUpdate,
   onPageMetaChange,
 }: {
-  activeTab: "blocks" | "settings";
-  setActiveTab: (tab: "blocks" | "settings") => void;
+  activeTab: 'blocks' | 'settings';
+  setActiveTab: (tab: 'blocks' | 'settings') => void;
   selectedBlock: any;
   updateBlock: (blockId: string, updates: any) => void;
-  setHoverHighlight: (area: "padding" | "margin" | null) => void;
+  setHoverHighlight: (area: 'padding' | 'margin' | null) => void;
   sidebarVisible: boolean;
   onToggleSidebar: () => void;
-  page?: Post | Template;
+  page?: Post | Template | Page;
   isTemplate?: boolean;
-  onPageUpdate?: (updatedPage: Post | Template) => void;
+  onPageUpdate?: (updatedPage: Post | Template | Page) => void;
   onPageMetaChange?: (
-    meta: Partial<{ title: string; slug: string; status: string }>
+    meta: Partial<{ title: string; slug: string; status: string }>,
   ) => void;
 }) {
-  const [settingsView, setSettingsView] = useState<"page" | "block">("page");
+  const [settingsView, setSettingsView] = useState<'page' | 'block'>('page');
   const [userManuallyChangedView, setUserManuallyChangedView] = useState(false);
   const prevHasBlockRef = useRef<boolean>(false);
 
@@ -58,9 +58,9 @@ export function BuilderSidebar({
       !userManuallyChangedView
     ) {
       if (hasBlock) {
-        setSettingsView("block");
+        setSettingsView('block');
       } else {
-        setSettingsView("page");
+        setSettingsView('page');
       }
     }
 
@@ -76,27 +76,23 @@ export function BuilderSidebar({
           variant="ghost"
           size="sm"
           onClick={onToggleSidebar}
-          className="p-1 h-auto hover:bg-gray-100 text-gray-600 hover:text-gray-900"
-        >
+          className="p-1 h-auto hover:bg-gray-100 text-gray-600 hover:text-gray-900">
           <Sidebar className="w-5 h-5" />
         </Button>
       </div>
       <Tabs
         value={activeTab}
-        onValueChange={(value) => setActiveTab(value as "blocks" | "settings")}
-        className="flex-1 flex flex-col p-4 min-h-0"
-      >
+        onValueChange={(value) => setActiveTab(value as 'blocks' | 'settings')}
+        className="flex-1 flex flex-col p-4 min-h-0">
         <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
           <TabsTrigger
             value="blocks"
-            className="flex items-center gap-2 text-gray-600 data-[state=active]:text-white data-[state=active]:bg-black data-[state=active]:shadow-sm font-medium px-4 py-2.5 rounded-md transition-all"
-          >
+            className="flex items-center gap-2 text-gray-600 data-[state=active]:text-white data-[state=active]:bg-black data-[state=active]:shadow-sm font-medium px-4 py-2.5 rounded-md transition-all">
             <Plus className="w-4 h-4" /> Blocks
           </TabsTrigger>
           <TabsTrigger
             value="settings"
-            className="flex items-center gap-2 text-gray-600 data-[state=active]:text-white data-[state=active]:bg-black data-[state=active]:shadow-sm font-medium px-4 py-2.5 rounded-md transition-all"
-          >
+            className="flex items-center gap-2 text-gray-600 data-[state=active]:text-white data-[state=active]:bg-black data-[state=active]:shadow-sm font-medium px-4 py-2.5 rounded-md transition-all">
             <Settings className="w-4 h-4" /> Settings
           </TabsTrigger>
         </TabsList>
@@ -118,27 +114,25 @@ export function BuilderSidebar({
                 <div className="mb-4 w-full">
                   <ButtonGroup className="w-full">
                     <Button
-                      variant={settingsView === "page" ? "default" : "outline"}
+                      variant={settingsView === 'page' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => {
-                        setSettingsView("page");
+                        setSettingsView('page');
                         setUserManuallyChangedView(true);
                       }}
-                      className="flex-1"
-                    >
+                      className="flex-1">
                       <FileText className="w-4 h-4 mr-2" />
                       Page
                     </Button>
                     <Button
-                      variant={settingsView === "block" ? "default" : "outline"}
+                      variant={settingsView === 'block' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => {
-                        setSettingsView("block");
+                        setSettingsView('block');
                         setUserManuallyChangedView(true);
                       }}
                       className="flex-1"
-                      disabled={!selectedBlock}
-                    >
+                      disabled={!selectedBlock}>
                       <Palette className="w-4 h-4 mr-2" />
                       Block
                     </Button>
@@ -146,7 +140,7 @@ export function BuilderSidebar({
                 </div>
 
                 {/* Show PageSettings when view is 'page' or no block selected */}
-                {settingsView === "page" || !selectedBlock ? (
+                {settingsView === 'page' || !selectedBlock ? (
                   <PageSettings
                     page={page}
                     isTemplate={isTemplate}

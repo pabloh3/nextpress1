@@ -95,5 +95,8 @@ Always examine existing codebase patterns before implementing new solutions - us
 - Always prefer concise and contextual clarity than verbosity of explanation, be brief as needed.
 - Always avoid hacky ways around problems, avoid shortcuts and stubs and being lazy on tasks and taking just the easy way around, we working on production grade stuff, so we have to do real things as they should be, we don't skip stuff or instead of fundamentally fixing things and we just make shims, resolvers or quick ways that don't fix the root problem, in doubt where you think we may need to take the easy way, first ask.
 - Never rush to implementing or changing things while we still working, I have to approve first.
+- Never use git without my supervision, always ask me before any git commands.
+- You don't skip any failing tests or types saying they don't relate to this, you instead raise them forward and we agree on how to approach them.
+- Always use project's package manager not npm, it's usually pnpm or bun now days, you check project.
 
 Always remember these rules before working on any new tasks.

@@ -53,6 +53,7 @@ export const BLOCK_COMPONENTS: Record<string, React.FC<BlockData>> = {
   "core/pullquote": AdvancedBlocks.PullquoteBlock,
   "core/preformatted": AdvancedBlocks.PreformattedBlock,
   "core/table": AdvancedBlocks.TableBlock,
+  "core/markdown": AdvancedBlocks.MarkdownBlock,
 
   // Legacy/Special blocks
   "core/counter": CounterBlock,

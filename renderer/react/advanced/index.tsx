@@ -1,6 +1,8 @@
 import * as React from "react";
 import type { BlockData } from "../block-types";
 
+export * from "./MarkdownBlock";
+
 /**
  * Quote Block Component
  * Renders a blockquote with optional citation

@@ -23,9 +23,10 @@ import HtmlBlock from "./html/HtmlBlock";
 import PullquoteBlock from "./pullquote/PullquoteBlock";
 import PreformattedBlock from "./preformatted/PreformattedBlock";
 import TableBlock from "./table/TableBlock";
+import MarkdownBlock from "./markdown/MarkdownBlock";
 
 if (import.meta.env.DEBUG_BUILDER) {
-  console.log('Imported Blocks:', { HeadingBlock, TextBlock, ButtonBlock, ImageBlock, VideoBlock, AudioBlock, SpacerBlock, DividerBlock, ColumnsBlock, QuoteBlock, ListBlock, MediaTextBlock, SeparatorBlock, GroupBlock, ButtonsBlock, GalleryBlock, CoverBlock, FileBlock, CodeBlock, HtmlBlock, PullquoteBlock, PreformattedBlock, TableBlock });
+  console.log('Imported Blocks:', { HeadingBlock, TextBlock, ButtonBlock, ImageBlock, VideoBlock, AudioBlock, SpacerBlock, DividerBlock, ColumnsBlock, QuoteBlock, ListBlock, MediaTextBlock, SeparatorBlock, GroupBlock, ButtonsBlock, GalleryBlock, CoverBlock, FileBlock, CodeBlock, HtmlBlock, PullquoteBlock, PreformattedBlock, TableBlock, MarkdownBlock });
 }
 
 export const blockRegistry: Record<string, BlockDefinition> = {
@@ -52,6 +53,7 @@ export const blockRegistry: Record<string, BlockDefinition> = {
   "core/pullquote": PullquoteBlock,
   "core/preformatted": PreformattedBlock,
   "core/table": TableBlock,
+  "core/markdown": MarkdownBlock,
 };
 
 export function getDefaultBlock(type: string, id: string): BlockConfig | null {

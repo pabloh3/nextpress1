@@ -214,6 +214,11 @@ interface TableConfig extends BaseBlockData {
 	hasFixedLayout?: boolean;
 }
 
+interface MarkdownConfig extends BaseBlockData {
+	blockName: "core/markdown";
+	content: string;
+}
+
 // ============================================================================
 // LEGACY/SPECIAL BLOCKS
 // ============================================================================
@@ -250,4 +255,5 @@ export type BlockData =
 	| PullquoteConfig
 	| PreformattedConfig
 	| TableConfig
+	| MarkdownConfig
 	| CounterConfig;

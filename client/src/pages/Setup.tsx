@@ -107,6 +107,14 @@ export default function Setup() {
         throw new Error(data.message || data.error || 'Setup failed');
       }
 
+      // Warn if Caddy configuration failed (SSL may not work until restart)
+      if (data.caddySuccess === false) {
+        setError(`Setup complete but domain configuration had an issue: ${data.caddyStatus}. You may need to restart the server for HTTPS to work.`);
+        // Still redirect after a delay so user can read the warning
+        setTimeout(() => { window.location.href = '/login'; }, 5000);
+        return;
+      }
+
       // Redirect to login
       window.location.href = '/login';
     } catch (err: unknown) {

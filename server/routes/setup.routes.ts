@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Deps } from './shared/deps';
 import { asyncHandler } from './shared/async-handler';
 import { updateCaddyConfig } from '../utils/caddy';
+import { validateDomain } from '../utils/validate-domain';
 
 /**
  * Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 number
@@ -78,6 +79,15 @@ export function createSetupRoutes(deps: Deps): Router {
       });
     }
 
+    // Validate domain resolves (blocks real domains without DNS, skips localhost/IPs)
+    const domainCheck = await validateDomain(domain);
+    if (!domainCheck.valid) {
+      return res.status(400).json({
+        error: 'Domain validation failed',
+        message: domainCheck.message,
+      });
+    }
+
     // Check if already setup
     const existingSites = await deps.models.sites.findMany();
     if (existingSites.length > 0) {
@@ -137,7 +147,7 @@ export function createSetupRoutes(deps: Deps): Router {
       settings: {
         general: {
           siteName,
-          siteUrl: domain,
+          siteUrl,
         },
       },
     });
@@ -159,6 +169,7 @@ export function createSetupRoutes(deps: Deps): Router {
       success: true,
       message: 'Setup complete! You can now log in.',
       redirect: '/login',
+      caddySuccess: caddyResult.success,
       caddyStatus: caddyResult.message,
     });
   }));

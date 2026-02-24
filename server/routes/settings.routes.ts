@@ -4,6 +4,7 @@ import { asyncHandler } from './shared/async-handler';
 import { safeTryAsync } from '../utils';
 import { partialSettingsSchema } from '@shared/settings-schema';
 import { updateCaddyConfig } from '../utils/caddy';
+import { validateDomain } from '../utils/validate-domain';
 
 /**
  * Creates settings routes for site-wide configuration management
@@ -75,15 +76,25 @@ export function createSettingsRoutes(deps: Deps): Router {
       }
 
       const { err, result } = await safeTryAsync(async () => {
-        // If updating siteUrl, we also need to update the Caddyfile
+        // If updating siteUrl, validate domain resolves then update Caddyfile
         if (validationResult.data.general?.siteUrl) {
           const oldSettings = await models.sites.getSettings();
           const oldUrl = oldSettings.general?.siteUrl;
           const newUrl = validationResult.data.general.siteUrl;
           
           if (oldUrl !== newUrl && newUrl) {
-             const caddyResult = await updateCaddyConfig(newUrl);
-             console.log('Settings Caddy update:', caddyResult.message);
+            // Validate domain before updating Caddy config
+            const domainCheck = await validateDomain(newUrl);
+            if (!domainCheck.valid) {
+              return { status: false, message: domainCheck.message };
+            }
+
+            const caddyResult = await updateCaddyConfig(newUrl);
+            console.log('Settings Caddy update:', caddyResult.message);
+
+            if (!caddyResult.success) {
+              return { status: false, message: `Domain saved but Caddy configuration failed: ${caddyResult.message}` };
+            }
           }
         }
 
@@ -100,6 +111,11 @@ export function createSettingsRoutes(deps: Deps): Router {
           status: false,
           message: 'Failed to update settings',
         });
+      }
+
+      // Domain validation or Caddy config failures are returned as { status: false }
+      if (result && !result.status) {
+        return res.status(400).json(result);
       }
 
       res.json(result);

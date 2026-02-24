@@ -40,9 +40,11 @@ ${caddyHost} {
       if (response.ok) {
         return { success: true, message: 'Caddy configuration updated and reloaded' };
       }
-      return { success: true, message: 'Caddy configuration saved, will apply on restart' };
+
+      const errorBody = await response.text().catch(() => 'unknown error');
+      return { success: false, message: `Caddy reload failed (${response.status}): ${errorBody}` };
     } catch {
-      // Fallback: Caddy will pick up changes on container restart
+      // Fallback: Caddy Admin API unreachable, config saved to disk for next restart
       return { success: true, message: 'Caddy configuration saved, will apply on restart' };
     }
   } catch (err) {

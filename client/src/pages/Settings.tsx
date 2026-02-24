@@ -257,6 +257,12 @@ export default function Settings() {
         if (jsonStart !== -1) {
           const jsonPart = errorMessage.substring(jsonStart);
           const errorData = JSON.parse(jsonPart);
+
+          // Domain validation or Caddy config failure
+          if (errorData.message && !errorData.errors) {
+            toast.error(errorData.message);
+            return;
+          }
           
           if (errorData.errors) {
             const errorMap: Record<string, string> = {};

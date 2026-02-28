@@ -144,17 +144,6 @@ export default function Login() {
                 Register here
               </Link>
             </p>
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600 mb-2">Or continue with</p>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  window.location.href = '/api/login';
-                }}>
-                Login with Replit
-              </Button>
-            </div>
           </div>
         </CardContent>
       </Card>

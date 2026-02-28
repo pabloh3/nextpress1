@@ -84,15 +84,15 @@ export function BuilderSidebar({
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as 'blocks' | 'settings')}
         className="flex-1 flex flex-col p-4 min-h-0">
-        <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
+        <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg h-auto min-h-10">
           <TabsTrigger
             value="blocks"
-            className="flex items-center gap-2 text-gray-600 data-[state=active]:text-white data-[state=active]:bg-black data-[state=active]:shadow-sm font-medium px-4 py-2.5 rounded-md transition-all">
+            className="flex items-center gap-2 text-gray-600 data-[state=active]:text-white data-[state=active]:bg-black data-[state=active]:shadow-sm font-medium px-4 py-2.5 rounded-md transition-all min-h-9">
             <Plus className="w-4 h-4" /> Blocks
           </TabsTrigger>
           <TabsTrigger
             value="settings"
-            className="flex items-center gap-2 text-gray-600 data-[state=active]:text-white data-[state=active]:bg-black data-[state=active]:shadow-sm font-medium px-4 py-2.5 rounded-md transition-all">
+            className="flex items-center gap-2 text-gray-600 data-[state=active]:text-white data-[state=active]:bg-black data-[state=active]:shadow-sm font-medium px-4 py-2.5 rounded-md transition-all min-h-9">
             <Settings className="w-4 h-4" /> Settings
           </TabsTrigger>
         </TabsList>

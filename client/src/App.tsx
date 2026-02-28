@@ -19,6 +19,7 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import PageBuilderEditor from '@/pages/PageBuilderEditor';
 import Templates from '@/pages/Templates';
+import Plugins from '@/pages/Plugins';
 import PreviewPage from '@/pages/PreviewPage';
 import { Spinner } from '@/components/ui/spinner';
 import PublicPageView from '@/pages/PublicPageView';
@@ -130,6 +131,7 @@ function Router() {
           <Route path="/comments" component={Comments} />
           <Route path="/themes" component={Themes} />
           <Route path="/templates" component={Templates} />
+          <Route path="/plugins" component={Plugins} />
           <Route path="/users" component={Users} />
           <Route path="/settings" component={Settings} />
            <Route path="/home" component={Home} />

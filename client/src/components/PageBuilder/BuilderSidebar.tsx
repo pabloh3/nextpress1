@@ -97,7 +97,7 @@ export function BuilderSidebar({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="blocks" className="flex-1 mt-4 overflow-hidden">
-          <div className="h-full overflow-x-hidden bg-gray-50 rounded-lg p-4">
+          <div className="h-full overflow-x-hidden bg-gray-50 rounded-lg">
             <ScrollArea className="h-full">
               <div className="max-w-full pr-2">
                 <BlockLibrary />
@@ -107,7 +107,7 @@ export function BuilderSidebar({
           </div>
         </TabsContent>
         <TabsContent value="settings" className="flex-1 mt-4 overflow-hidden">
-          <div className="h-full overflow-x-hidden bg-gray-50 rounded-lg p-4">
+          <div className="h-full overflow-x-hidden bg-gray-50 rounded-lg">
             <ScrollArea className="h-full">
               <div className="max-w-full pr-2">
                 {/* Toggle between Page and Block Settings */}

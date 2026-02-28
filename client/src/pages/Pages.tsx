@@ -101,12 +101,11 @@ export default function Pages() {
   };
 
   const handleView = (page: Page) => {
-    // For published pages, use the site-based route
+    // Published pages: open public URL. Draft/preview: open preview by ID so content is visible.
     if (page.status === 'publish' && page.siteId && page.slug) {
       window.open(`/sites/${page.siteId}/${page.slug}`, '_blank');
     } else {
-      // Fallback to old route for non-published pages
-      window.open(`/pages/${page.id}`, '_blank');
+      window.open(`/preview/page/${page.id}`, '_blank');
     }
   };
 
@@ -209,8 +208,7 @@ export default function Pages() {
                               variant="ghost" 
                               size="sm"
                               onClick={() => handleView(page)}
-                              title="View Page"
-                              disabled={page.status !== 'publish'}
+                              title={page.status === 'publish' ? 'View published page' : 'Preview page'}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>

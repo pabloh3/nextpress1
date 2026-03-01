@@ -9,15 +9,24 @@ const LOCALHOST_REGEX = /^(localhost|.*\.localhost)$/;
  * since these are used during initial self-hosting setup before DNS is configured.
  */
 function shouldSkipValidation(domain: string): boolean {
-  return IPV4_REGEX.test(domain) || LOCALHOST_REGEX.test(domain);
+  const host = stripPort(domain);
+  return IPV4_REGEX.test(host) || LOCALHOST_REGEX.test(host);
 }
 
 /**
- * Strips protocol prefix from a domain/URL string.
- * Handles both http:// and https:// prefixes.
+ * Strips protocol prefix and port from a domain/URL string.
+ * Handles both http:// and https:// prefixes and port numbers.
  */
 function stripProtocol(input: string): string {
   return input.replace(/^https?:\/\//, '');
+}
+
+/**
+ * Extracts hostname without port from a domain string.
+ * E.g., "localhost:5000" -> "localhost"
+ */
+function stripPort(domain: string): string {
+  return domain.replace(/:\d+$/, '');
 }
 
 /**

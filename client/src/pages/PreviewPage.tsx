@@ -64,18 +64,19 @@ export default function PreviewPage({ postId, templateId, type }: PreviewPagePro
     blocks = (template.blocks as BlockConfig[]) || [];
     title = template.name;
   } else {
-    const post = data as Post;
-    blocks = (post.builderData as BlockConfig[]) || [];
-    title = post.title;
+    const item = data as Post & { blocks?: BlockConfig[] };
+    // Pages return `blocks`; posts may use `builderData` or `blocks`
+    blocks = (item.blocks ?? (item as any).builderData) as BlockConfig[] ?? [];
+    title = item.title ?? '';
     
     // If post doesn't use page builder, show traditional content
-    if (!post.usePageBuilder && post.content) {
+    if (!(item as any).usePageBuilder && (item as any).content) {
       return (
         <div className="min-h-screen bg-white">
           <div className="max-w-4xl mx-auto px-6 py-12">
             <article className="prose prose-lg max-w-none">
-              <h1>{post.title}</h1>
-              <div dangerouslySetInnerHTML={{ __html: post.content }} />
+              <h1>{item.title}</h1>
+              <div dangerouslySetInnerHTML={{ __html: (item as any).content }} />
             </article>
           </div>
         </div>

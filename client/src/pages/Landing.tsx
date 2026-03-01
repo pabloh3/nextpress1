@@ -77,19 +77,12 @@ export default function Landing() {
                 <BookOpen className="w-4 h-4 mr-2" />
                 Docs
               </Button>
-              <div className="flex items-center space-x-2">
-                <a href="/login">
-                  <Button variant="outline" className="border-wp-blue text-wp-blue hover:bg-wp-blue hover:text-white">
-                    NextPress Login
-                  </Button>
-                </a>
-                <a href="/api/login">
-                  <Button className="bg-wp-blue hover:bg-wp-blue-dark text-white">
-                    Login with Replit
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </a>
-              </div>
+              <a href="/login">
+                <Button className="bg-wp-blue hover:bg-wp-blue-dark text-white">
+                  NextPress Login
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </a>
             </div>
           </div>
         </div>
@@ -279,7 +272,7 @@ export default function Landing() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-            <a href="/api/login">
+            <a href="/login">
               <Button size="lg" className="bg-white text-wp-blue hover:bg-gray-100 px-8 py-3">
                 Access Admin Panel
                 <ArrowRight className="w-5 h-5 ml-2" />

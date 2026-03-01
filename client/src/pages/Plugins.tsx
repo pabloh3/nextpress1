@@ -1,11 +1,11 @@
 import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
-import { Layout } from "lucide-react";
+import { Plug } from "lucide-react";
 
 /**
- * Placeholder page for Templates. Functionality not yet supported; shows coming-soon banner.
+ * Placeholder page for Plugins. Functionality not yet supported; shows coming-soon banner.
  */
-export default function Templates() {
+export default function Plugins() {
   return (
     <div className="min-h-screen bg-wp-gray-light">
       <AdminTopBar />
@@ -13,7 +13,7 @@ export default function Templates() {
 
       <div className="ml-40 pt-8">
         <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <h1 className="text-2xl font-semibold text-wp-gray">Templates</h1>
+          <h1 className="text-2xl font-semibold text-wp-gray">Plugins</h1>
         </div>
 
         <div className="p-6">
@@ -22,8 +22,8 @@ export default function Templates() {
             role="status"
             aria-live="polite"
           >
-            <Layout className="h-5 w-5 shrink-0 text-amber-600" />
-            <p className="font-medium">Templates functionality is coming soon.</p>
+            <Plug className="h-5 w-5 shrink-0 text-amber-600" />
+            <p className="font-medium">Plugins functionality is coming soon.</p>
           </div>
         </div>
       </div>

@@ -23,7 +23,14 @@ interface AnimationPickerProps {
   onChange: (animation: BlockAnimation | undefined) => void;
 }
 
-/** Applies Animate.css classes to the block element in the editor canvas for preview */
+/**
+ * Temporarily applies Animate.css classes to the target block element in the
+ * editor canvas for preview purposes.
+ *
+ * - Non-loop: classes are removed automatically via `animationend` event.
+ * - Loop: classes persist until `stopLoopPreview` is called (e.g., on preset
+ *   change or when the animation category is cleared).
+ */
 function previewOnBlock(blockId: string, animName: string, isLoop = false) {
   const el = document.querySelector(`.block-${blockId}`) as HTMLElement | null;
   if (!el) return;
@@ -42,7 +49,7 @@ function previewOnBlock(blockId: string, animName: string, isLoop = false) {
   }
 }
 
-/** Removes loop animation preview classes from the block element */
+/** Removes loop animation preview classes from the block element when a loop preset is deselected */
 function stopLoopPreview(blockId: string, animName: string) {
   const el = document.querySelector(`.block-${blockId}`) as HTMLElement | null;
   if (!el) return;

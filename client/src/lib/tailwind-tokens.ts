@@ -6,7 +6,8 @@
  * without any runtime Tailwind dependency on published pages.
  */
 import resolveConfig from "tailwindcss/resolveConfig";
-// @ts-ignore - tailwind.config.ts is at project root, outside TS strict boundary
+// tailwind.config.ts is at project root, outside the TS strict boundary.
+// resolveConfig accepts any valid Tailwind config object.
 import tailwindConfig from "../../../tailwind.config";
 import type { TokenEntry } from "@shared/schema-types";
 

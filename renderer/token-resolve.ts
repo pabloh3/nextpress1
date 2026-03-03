@@ -8,10 +8,13 @@
  */
 import resolveConfig from "tailwindcss/resolveConfig";
 // tailwind.config.ts is at project root — accessible from renderer/
+// resolveConfig accepts any valid Tailwind config — the type assertion is intentional
+// because the project config uses CSS variable values (shadcn pattern) that don't
+// match the strict tailwindcss Config type while still being fully valid at runtime.
 import tailwindConfig from "../tailwind.config";
 import type { TokenEntry, BlockConfig, EntryAnimation } from "@shared/schema-types";
 
-const fullConfig = resolveConfig(tailwindConfig as any);
+const fullConfig = resolveConfig(tailwindConfig);
 const theme = fullConfig.theme as any;
 
 /** Maps pseudo-class modifier names to CSS selector suffixes */

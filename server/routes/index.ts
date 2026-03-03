@@ -9,6 +9,7 @@ import { createAuthRoutes } from './auth.routes';
 import { createUsersRoutes } from './users.routes';
 import { createPostsRoutes } from './posts.routes';
 import { createPagesRoutes } from './pages.routes';
+import { createBlogsRoutes } from './blogs.routes';
 import { createCommentsRoutes } from './comments.routes';
 import { createMediaRoutes } from './media.routes';
 import { createTemplatesRoutes } from './templates.routes';
@@ -74,6 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.use('/api/posts', createPostsRoutes(deps));
   app.use('/api/pages', createPagesRoutes(deps));
+  app.use('/api/blogs', createBlogsRoutes(deps));
 
   app.use('/api/comments', createCommentsRoutes(deps));
   app.use('/api/media', createMediaRoutes(deps));

@@ -2,7 +2,7 @@
 import type { BlockConfig } from "@shared/schema-types";
 import type React from "react";
 
-export type BlockCategory = 'basic' | 'media' | 'layout' | 'advanced';
+export type BlockCategory = 'basic' | 'media' | 'layout' | 'advanced' | 'post';
 
 /**
  * Props for block components using the new component pattern.

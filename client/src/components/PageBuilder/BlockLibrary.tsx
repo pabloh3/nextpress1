@@ -52,6 +52,11 @@ let categories = [
     name: 'Advanced',
     blocks: allBlocks.filter((b: any) => b.category === 'advanced'),
   },
+  {
+    id: 'post',
+    name: 'Post',
+    blocks: allBlocks.filter((b: any) => b.category === 'post'),
+  },
 ].filter((c) => c.blocks.length > 0);
 
 // Fallback when blocks have no categories (e.g., in tests with mocked registry)

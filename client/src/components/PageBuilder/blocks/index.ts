@@ -25,8 +25,21 @@ import PreformattedBlock from "./preformatted/PreformattedBlock";
 import TableBlock from "./table/TableBlock";
 import MarkdownBlock from "./markdown/MarkdownBlock";
 
+// Post blocks
+import PostTitleBlock from "./post-title/PostTitleBlock";
+import PostExcerptBlock from "./post-excerpt/PostExcerptBlock";
+import PostFeaturedImageBlock from "./post-featured-image/PostFeaturedImageBlock";
+import PostListBlock from "./post-list/PostListBlock";
+import PostNewBlock from "./post-new/PostNewBlock";
+import PostTocBlock from "./post-toc/PostTocBlock";
+import PostAuthorBoxBlock from "./post-author-box/PostAuthorBoxBlock";
+import PostCommentsBlock from "./post-comments/PostCommentsBlock";
+import PostNavigationBlock from "./post-navigation/PostNavigationBlock";
+import PostInfoBlock from "./post-info/PostInfoBlock";
+import PostProgressBlock from "./post-progress/PostProgressBlock";
+
 if (import.meta.env.DEBUG_BUILDER) {
-  console.log('Imported Blocks:', { HeadingBlock, TextBlock, ButtonBlock, ImageBlock, VideoBlock, AudioBlock, SpacerBlock, DividerBlock, ColumnsBlock, QuoteBlock, ListBlock, MediaTextBlock, SeparatorBlock, GroupBlock, ButtonsBlock, GalleryBlock, CoverBlock, FileBlock, CodeBlock, HtmlBlock, PullquoteBlock, PreformattedBlock, TableBlock, MarkdownBlock });
+  console.log('Imported Blocks:', { HeadingBlock, TextBlock, ButtonBlock, ImageBlock, VideoBlock, AudioBlock, SpacerBlock, DividerBlock, ColumnsBlock, QuoteBlock, ListBlock, MediaTextBlock, SeparatorBlock, GroupBlock, ButtonsBlock, GalleryBlock, CoverBlock, FileBlock, CodeBlock, HtmlBlock, PullquoteBlock, PreformattedBlock, TableBlock, MarkdownBlock, PostTitleBlock, PostExcerptBlock, PostFeaturedImageBlock, PostListBlock, PostNewBlock, PostTocBlock, PostAuthorBoxBlock, PostCommentsBlock, PostNavigationBlock, PostInfoBlock, PostProgressBlock });
 }
 
 export const blockRegistry: Record<string, BlockDefinition> = {
@@ -54,6 +67,19 @@ export const blockRegistry: Record<string, BlockDefinition> = {
   "core/preformatted": PreformattedBlock,
   "core/table": TableBlock,
   "core/markdown": MarkdownBlock,
+
+  // Post blocks
+  "post/title": PostTitleBlock,
+  "post/excerpt": PostExcerptBlock,
+  "post/featured-image": PostFeaturedImageBlock,
+  "post/list": PostListBlock,
+  "post/new": PostNewBlock,
+  "post/toc": PostTocBlock,
+  "post/author-box": PostAuthorBoxBlock,
+  "post/comments": PostCommentsBlock,
+  "post/navigation": PostNavigationBlock,
+  "post/info": PostInfoBlock,
+  "post/progress": PostProgressBlock,
 };
 
 export function getDefaultBlock(type: string, id: string): BlockConfig | null {

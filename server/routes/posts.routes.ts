@@ -101,30 +101,32 @@ export function createPostsRoutes(deps: Deps): Router {
           throw new Error('User not authenticated');
         }
 
-        // Include authorId in the data before validation
-        const parsedData = postSchemas.insert.parse({
-          ...req.body,
-          authorId: userId,
-        });
-
-        // Generate slug if not provided
-        const title = parsedData.title;
+        // Validate title before parse so we can generate slug
+        const title = req.body.title;
         if (!title || typeof title !== 'string') {
           throw new Error('Title is required and must be a string');
         }
 
+        // Generate slug before validation so the required field is present
         const titleStr = String(title);
-        const slugValue = parsedData.slug 
-          ? String(parsedData.slug)
+        const slugValue = req.body.slug 
+          ? String(req.body.slug)
           : titleStr
               .toLowerCase()
               .replace(/[^a-z0-9]+/g, '-')
               .replace(/^-|-$/g, '');
+
+        // Include authorId and slug in the data before validation
+        const parsedData = postSchemas.insert.parse({
+          ...req.body,
+          slug: slugValue,
+          authorId: userId,
+        });
         
         const postData = {
           ...parsedData,
-          title: titleStr,
-          slug: slugValue,
+          title: String(parsedData.title),
+          slug: String(parsedData.slug),
           authorId: String(parsedData.authorId),
         };
 

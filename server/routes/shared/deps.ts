@@ -23,6 +23,7 @@ export type Schemas = {
   media: ReturnType<typeof getZodSchema>;
   templates: ReturnType<typeof getZodSchema>;
   users: ReturnType<typeof getZodSchema>;
+  blogs: ReturnType<typeof getZodSchema>;
 };
 
 /**
@@ -94,6 +95,7 @@ export async function buildDeps(): Promise<Deps> {
     media: getZodSchema('media'),
     templates: getZodSchema('templates'),
     users: getZodSchema('users'),
+    blogs: getZodSchema('blogs'),
   };
 
   const { upload, uploadDir } = await buildUpload(CONFIG);

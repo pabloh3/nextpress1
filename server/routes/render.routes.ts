@@ -10,6 +10,8 @@ import { renderBlocksToHtml, getHydrationScript } from "../../renderer/to-html";
 import { PageTemplate } from "../../renderer/templates/page";
 import type { BlockConfig } from "@shared/schema-types";
 import type { BlockData } from "../../renderer/react/block-types";
+import { resolveBlockTokens } from "../../renderer/token-resolve";
+import { collectPageAnimationCSS } from "../../renderer/animation-css";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -259,7 +261,7 @@ export function createRenderRoutes(deps: Deps): Router {
 					Array.isArray(page.blocks) ? page.blocks : []
 				) as BlockConfig[];
 
-				// Adapt BlockConfig to BlockData
+				// Adapt BlockConfig to BlockData (resolves tokenMap, adds data-aos-* attrs)
 				const adaptedBlocks = blocks
 					.map((block) => adaptBlockConfigToBlockData(block))
 					.filter((block): block is BlockData => block !== null);
@@ -267,27 +269,62 @@ export function createRenderRoutes(deps: Deps): Router {
 				// Render blocks to HTML
 				const blockContentHtml = renderBlocksToHtml(adaptedBlocks);
 
-				// Collect all custom CSS from blocks
+				// Collect all custom CSS and token modifier CSS from blocks
 				const allCustomCss = blocks
-					.map((block) =>
-						[block.customCss, block.other?.css].filter(Boolean).join("\n"),
-					)
+					.map((block) => {
+						const { modifierCss } = resolveBlockTokens(block);
+						return [block.customCss, block.other?.css, modifierCss]
+							.filter(Boolean)
+							.join("\n");
+					})
 					.filter(Boolean)
 					.join("\n");
+
+				// Determine which animation assets are needed (conditional injection)
+				const hasAnimations = blocks.some((b) => b.other?.animation);
+				const hasEntryAnimations = blocks.some(
+					(b) => b.other?.animation?.entry,
+				);
+
+				// Collect hover/loop animation CSS rules
+				const animationCss = collectPageAnimationCSS(blocks);
+
+				// Build headScripts: custom CSS + token modifier CSS + animate.css + animation rules
+				const headParts: string[] = [];
+				if (allCustomCss) headParts.push(`<style>${allCustomCss}</style>`);
+				if (hasAnimations) {
+					headParts.push(
+						`<link rel="stylesheet" href="/vendor/animate.min.css">`,
+					);
+				}
+				if (hasEntryAnimations) {
+					headParts.push(
+						`<link rel="stylesheet" href="/vendor/aos.css">`,
+					);
+				}
+				if (animationCss) {
+					headParts.push(`<style>${animationCss}</style>`);
+				}
+
+				// Build bodyScripts: AOS initialization (only when entry animations exist)
+				let bodyScripts = "";
+				if (hasEntryAnimations) {
+					bodyScripts = `<script src="/vendor/aos.js"></script>
+<script>AOS.init({useClassNames:true,initClassName:false,animatedClassName:"animate__animated",once:true,duration:1000,offset:120,easing:"ease"});</script>`;
+				}
 
 				// Get hydration script
 				const hydrateScript = getHydrationScript();
 
 				// Build full HTML page
-				// Pages don't have description field, use empty string or extract from blocks if needed
 				const pageDescription = "";
 				const html = PageTemplate(
 					page.title || "Untitled Page",
 					pageDescription,
 					`${req.protocol}://${req.get("host")}${req.originalUrl}`,
-					allCustomCss ? `<style>${allCustomCss}</style>` : "", // headScripts (CSS injection)
+					headParts.join("\n"),
 					blockContentHtml,
-					"", // bodyScripts
+					bodyScripts,
 					hydrateScript,
 				);
 

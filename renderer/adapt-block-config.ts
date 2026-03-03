@@ -1,5 +1,6 @@
 import type { BlockConfig, BlockContent } from "@shared/schema-types";
 import type { BlockData } from "./react/block-types";
+import { resolveBlockTokens, buildEntryAnimationAttributes } from "./token-resolve";
 
 /**
  * Transforms BlockConfig from database to BlockData for renderer
@@ -34,16 +35,29 @@ export function adaptBlockConfigToBlockData(
 		return null;
 	}
 
-	// Merge styles
+	// Resolve tokenMap into inline styles + modifier CSS (backward compat: falls back to block.styles)
+	const { style: resolvedStyle } = resolveBlockTokens(block);
+
+	// Merge styles: resolved token styles take priority over legacy block.styles,
+	// content-specific styles (e.g. textAlign from content props) are merged on top
 	const mergedStyles = {
-		...block.styles,
+		...resolvedStyle,
 		...(contentProps.style || {}),
 	};
 
-	// Merge classNames
-	const mergedClassName = [block.other?.classNames, contentProps.className]
+	// Merge classNames — always include block-{id} so modifier CSS rules target correctly
+	const mergedClassName = [
+		`block-${block.id}`,
+		block.other?.classNames,
+		contentProps.className,
+	]
 		.filter(Boolean)
 		.join(" ");
+
+	// Translate animation.entry to data-aos-* attributes if present
+	const entryAttrs = buildEntryAnimationAttributes(
+		block.other?.animation?.entry,
+	);
 
 	// Recursively adapt children for container blocks
 	const adaptedChildren = block.children
@@ -62,6 +76,7 @@ export function adaptBlockConfigToBlockData(
 		userCss: block.other?.css,
 		attributes: {
 			...block.other?.attributes,
+			...entryAttrs,
 			...(contentProps.attributes || {}),
 		},
 		// Merge settings into props

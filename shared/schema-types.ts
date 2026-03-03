@@ -90,6 +90,60 @@ export type NewSession = typeof sessions.$inferInsert;
 // Block configuration types
 
 /**
+ * A single design token entry stored on block.other.tokenMap.
+ * Represents either a Tailwind token selection (value + variant) or a custom raw value (style).
+ */
+export interface TokenEntry {
+  /** CSS property name in camelCase: "backgroundColor", "paddingTop", "fontSize" */
+  property: string;
+  /** Base token key: "blue", "5", "lg". Empty string when custom mode is active. */
+  value: string;
+  /** Shade or variant: "500", null for single-value tokens */
+  variant: string | null;
+  /** Tailwind utility prefix hint for UI display: "bg", "pt", "text" */
+  alias: string;
+  /** Optional state or responsive modifier: "hover", "md", "focus" */
+  modifier?: string;
+  /** Catch-all for values that don't fit the structured fields */
+  other?: string;
+  /** Custom raw value set when user picks custom mode: "23", "#ff5500", "1.5" */
+  style?: string;
+  /** Category for unit resolution: "spacing", "font", "dimension", "border" */
+  unitCategory?: string;
+}
+
+/** Entry animation driven by AOS scroll detection + Animate.css keyframes */
+export interface EntryAnimation {
+  /** Animate.css class name without prefix: "fadeInUp", "bounceIn", "zoomIn" */
+  name: string;
+  /** Animation duration in ms (default: 1000) */
+  duration?: number;
+  /** Animation delay in ms (default: 0) */
+  delay?: number;
+  /** Play the animation only once (default: true) */
+  once?: boolean;
+}
+
+/** Hover animation triggered by CSS :hover, using Animate.css keyframes */
+export interface HoverAnimation {
+  /** Animate.css class name without prefix: "pulse", "rubberBand", "tada" */
+  name: string;
+}
+
+/** Continuous loop animation using Animate.css keyframes with infinite iteration */
+export interface LoopAnimation {
+  /** Animate.css class name without prefix: "bounce", "heartBeat", "swing" */
+  name: string;
+}
+
+/** Container for all animation categories on a single block */
+export interface BlockAnimation {
+  entry?: EntryAnimation;
+  hover?: HoverAnimation;
+  loop?: LoopAnimation;
+}
+
+/**
  * Discriminated union for block content
  * Each content type has a unique 'kind' discriminator for type-safe handling
  */
@@ -156,5 +210,11 @@ export interface BlockConfig {
 		html?: string; // Custom HTML override
 		attributes?: Record<string, any>; // HTML attributes
 		metadata?: Record<string, any>; // Any additional custom data
+		/** Design token selections keyed by property name (or "modifier:property" for modifier entries) */
+		tokenMap?: Record<string, TokenEntry>;
+		/** Active unit per category: { spacing: "px", font: "rem" } */
+		units?: Record<string, string>;
+		/** Animation configuration for entry (scroll), hover, and loop categories */
+		animation?: BlockAnimation;
 	};
 }

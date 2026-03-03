@@ -5,6 +5,7 @@ import type { BlockConfig } from "@shared/schema-types";
 import { blockRegistry } from "./blocks";
 import { Droppable, Draggable } from "@/lib/dnd";
 import { useBlockActions } from "./BlockActionsContext";
+import { resolveTokenMap, generateBlockModifierCSS } from "@/lib/tailwind-tokens";
 
 export function ContainerChildren({ block, isPreview, onBlockChange }: { block: BlockConfig; isPreview: boolean; onBlockChange?: (updated: BlockConfig) => void }) {
   const children = Array.isArray(block.children) ? block.children : [];
@@ -127,7 +128,23 @@ export default function BlockRenderer({
   const effectiveSelected = isSelected || actions?.selectedBlockId === block.id;
   const effectiveHoverHighlight = effectiveSelected ? (hoverHighlight ?? actions?.hoverHighlight ?? null) : null;
 
-  const marginString: string = (block.styles?.margin as string) || '0px';
+  // Resolve tokenMap to inline style + collect modifier CSS rules
+  const tokenMap = block.other?.tokenMap;
+  const units = block.other?.units ?? {};
+  const { style: tokenStyle, modifierEntries } = tokenMap
+    ? resolveTokenMap(tokenMap, units)
+    : { style: {} as React.CSSProperties, modifierEntries: [] };
+
+  // Merge token-resolved styles on top of legacy block.styles
+  const resolvedStyle: React.CSSProperties = { ...block.styles, ...tokenStyle };
+
+  // Generate modifier CSS (hover, responsive) for this block
+  const modifierCss =
+    modifierEntries.length > 0
+      ? generateBlockModifierCSS(block.id, modifierEntries)
+      : "";
+
+  const marginString: string = (resolvedStyle?.margin as string) || '0px';
   const parseMargin = (value: string): [string, string, string, string] => {
     const parts = value.trim().split(/\s+/);
     if (parts.length === 1) return [parts[0], parts[0], parts[0], parts[0]];
@@ -136,12 +153,12 @@ export default function BlockRenderer({
     return [parts[0], parts[1], parts[2], parts[3]];
   };
   const [mTop, mRight, mBottom, mLeft] = parseMargin(marginString);
-  const paddingString: string = (block.styles?.padding as string) || '0px';
+  const paddingString: string = (resolvedStyle?.padding as string) || '0px';
   const parsePadding = parseMargin;
   const [pTop, pRight, pBottom, pLeft] = parsePadding(paddingString);
 
-  const horizontal = (block.styles as any)?.contentAlignHorizontal as 'left' | 'center' | 'right' | undefined;
-  const vertical = (block.styles as any)?.contentAlignVertical as 'top' | 'middle' | 'bottom' | undefined;
+  const horizontal = (resolvedStyle as any)?.contentAlignHorizontal as 'left' | 'center' | 'right' | undefined;
+  const vertical = (resolvedStyle as any)?.contentAlignVertical as 'top' | 'middle' | 'bottom' | undefined;
   const justifyContent = horizontal === 'center' ? 'center' : horizontal === 'right' ? 'flex-end' : 'flex-start';
   const alignItems = vertical === 'middle' ? 'center' : vertical === 'bottom' ? 'flex-end' : 'flex-start';
 
@@ -191,7 +208,7 @@ export default function BlockRenderer({
 
   return (
     <div
-      className="relative group"
+      className={`relative group block-${block.id}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => { 
@@ -201,6 +218,10 @@ export default function BlockRenderer({
         } 
       }}
     >
+      {/* Inject modifier CSS (hover, responsive) for this block into the document head */}
+      {modifierCss && (
+        <style dangerouslySetInnerHTML={{ __html: modifierCss }} />
+      )}
       {!isPreview && (
         <>
           {/* Toolbar visible when hovered or selected */}

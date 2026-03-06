@@ -5,16 +5,19 @@
  * because the server build (tsup) excludes the client/ directory. Both modules
  * share the same logic — client uses React types for type safety, this module
  * uses plain objects for compatibility with the Node renderer.
+ *
+ * NOTE: We do NOT import the project's tailwind.config.ts here because it uses
+ * CJS require() for plugins which is incompatible with the server's ESM context.
+ * Project-specific customisations in tailwind.config.ts are shadcn/ui CSS variable
+ * references (e.g. primary: "var(--primary)") that cannot be resolved to hex values
+ * at runtime anyway. Using an empty config gives us the full standard Tailwind
+ * palette and spacing scale — exactly what token resolution needs.
  */
 import resolveConfig from "tailwindcss/resolveConfig";
-// tailwind.config.ts is at project root — accessible from renderer/
-// resolveConfig accepts any valid Tailwind config — the type assertion is intentional
-// because the project config uses CSS variable values (shadcn pattern) that don't
-// match the strict tailwindcss Config type while still being fully valid at runtime.
-import tailwindConfig from "../tailwind.config";
 import type { TokenEntry, BlockConfig, EntryAnimation } from "@shared/schema-types";
 
-const fullConfig = resolveConfig(tailwindConfig);
+// Use the standard Tailwind defaults — no project config import to avoid CJS require() errors
+const fullConfig = resolveConfig({ content: [] });
 const theme = fullConfig.theme as any;
 
 /** Maps pseudo-class modifier names to CSS selector suffixes */

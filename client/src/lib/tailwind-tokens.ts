@@ -4,17 +4,22 @@
  * Uses resolveConfig to derive the full merged Tailwind theme at build time,
  * giving the editor access to all design tokens (colors, spacing, font sizes, etc.)
  * without any runtime Tailwind dependency on published pages.
+ *
+ * NOTE: We use an empty config (rather than importing the project's tailwind.config.ts)
+ * because that file uses CJS require() for plugins which is incompatible with the
+ * Vite/ESM browser context. The project-specific customisations in tailwind.config.ts
+ * are shadcn/ui CSS variable references (e.g. primary: "var(--primary)") that cannot
+ * be resolved to hex swatches anyway. The standard Tailwind palette and spacing scale
+ * — all the token picker needs — are fully available via the default config.
  */
 import resolveConfig from "tailwindcss/resolveConfig";
-// tailwind.config.ts is at project root, outside the TS strict boundary.
-// resolveConfig accepts any valid Tailwind config object.
-import tailwindConfig from "../../../tailwind.config";
 import type { TokenEntry } from "@shared/schema-types";
 
-const fullConfig = resolveConfig(tailwindConfig as any);
+// Use the standard Tailwind defaults — no project config import to avoid CJS require() errors
+const fullConfig = resolveConfig({ content: [] });
 
 /** All color families from the resolved Tailwind theme */
-export const tokenColors = fullConfig.theme.colors as Record<
+export const tokenColors = (fullConfig.theme.colors as unknown) as Record<
   string,
   string | Record<string, string>
 >;

@@ -174,6 +174,7 @@ export const blogs = pgTable("blogs", {
 	authorId: uuid("author_id")
 		.references(() => users.id)
 		.notNull(),
+	pageId: uuid("page_id").references(() => pages.id),
 	settings: jsonb("settings").default({}),
 	other: jsonb("other").default({}),
 });

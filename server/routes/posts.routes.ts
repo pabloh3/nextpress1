@@ -23,7 +23,7 @@ export function createPostsRoutes(deps: Deps): Router {
   const postSchemas = schemas.posts;
 
   /**
-   * GET /api/posts - List posts with pagination and status filter
+   * GET /api/posts - List posts with pagination, status and blog_id filter
    */
   router.get(
     '/',
@@ -33,22 +33,26 @@ export function createPostsRoutes(deps: Deps): Router {
           req.query,
           CONFIG.PAGINATION.DEFAULT_POSTS_PER_PAGE
         );
-        const { status = CONFIG.STATUS.PUBLISH } = req.query;
+        const { status = CONFIG.STATUS.PUBLISH, blog_id } = req.query;
 
         // Handle 'any' status to show all posts (for admin interface)
         const actualStatus = parseStatusParam(status as string);
 
-        const posts = await models.posts.findMany({
-          where: 'status',
-          equals: actualStatus,
-          limit,
-          offset,
-        });
+        // Build combined filter array for status + blogId
+        const filters: Array<{ where: string; equals: unknown }> = [];
+        if (actualStatus) {
+          filters.push({ where: 'status', equals: actualStatus });
+        }
+        if (blog_id && typeof blog_id === 'string') {
+          filters.push({ where: 'blogId', equals: blog_id });
+        }
+
+        const posts = filters.length > 0
+          ? await models.posts.findManyWhere(filters, { limit, offset })
+          : await models.posts.findMany({ limit, offset });
 
         const total = await models.posts.count({
-          where: actualStatus
-            ? [{ where: 'status', equals: actualStatus }]
-            : undefined,
+          where: filters.length > 0 ? filters : undefined,
         });
 
         return {

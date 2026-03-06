@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { LayoutList, Settings, Wrench, Calendar, User, Image as ImageIcon } from "lucide-react";
+import { LayoutList, Settings, Wrench, Calendar, User, Image as ImageIcon, Pencil } from "lucide-react";
 
 // ============================================================================
 // TYPES
@@ -29,7 +29,7 @@ export type PostListContent = {
 };
 
 type PostItem = {
-  id: number;
+  id: string | number;
   title: string;
   slug: string;
   excerpt?: string;
@@ -79,9 +79,18 @@ function formatDate(iso?: string): string {
 // ============================================================================
 
 /**
+ * Dispatches a custom event to signal the page builder to inline-edit a post.
+ * The PageBuilderEditor listens for this event and swaps the canvas content.
+ */
+function dispatchEditPost(postId: string) {
+  window.dispatchEvent(new CustomEvent('np:edit-post', { detail: { postId } }));
+}
+
+/**
  * Renders the post list in the chosen layout.
  * In preview mode (isPreview=true) it fetches real posts from the API.
- * In editor mode it displays placeholder cards so the user can see the layout.
+ * In editor mode it fetches real posts when blogId is set (for inline editing),
+ * otherwise falls back to placeholder cards.
  */
 function PostListRenderer({ content, styles, isPreview }: {
   content: PostListContent;
@@ -93,8 +102,11 @@ function PostListRenderer({ content, styles, isPreview }: {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch real posts when in preview mode OR when in editor mode with a blogId
+  const shouldFetchReal = isPreview || !!cfg.blogId;
+
   useEffect(() => {
-    if (!isPreview) {
+    if (!shouldFetchReal) {
       setPosts(buildPlaceholderPosts(cfg.postsPerPage));
       return;
     }
@@ -102,12 +114,14 @@ function PostListRenderer({ content, styles, isPreview }: {
     setLoading(true);
     setError(null);
 
-    const params = new URLSearchParams({ per_page: String(cfg.postsPerPage), status: "publish" });
+    // In editor mode, fetch all statuses so draft posts are visible too
+    const statusParam = isPreview ? "publish" : "any";
+    const params = new URLSearchParams({ per_page: String(cfg.postsPerPage), status: statusParam });
     if (cfg.blogId) params.set("blog_id", cfg.blogId);
     if (cfg.orderBy) params.set("order_by", cfg.orderBy);
     if (cfg.order) params.set("order", cfg.order);
 
-    fetch(`/api/posts?${params.toString()}`)
+    fetch(`/api/posts?${params.toString()}`, { credentials: "include" })
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to fetch posts (${res.status})`);
         return res.json();
@@ -129,7 +143,7 @@ function PostListRenderer({ content, styles, isPreview }: {
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [isPreview, cfg.postsPerPage, cfg.blogId, cfg.orderBy, cfg.order]);
+  }, [shouldFetchReal, isPreview, cfg.postsPerPage, cfg.blogId, cfg.orderBy, cfg.order]);
 
   const wrapperClass = ["np-post-list", `np-post-list--${cfg.layout}`, cfg.className].filter(Boolean).join(" ");
 
@@ -174,8 +188,30 @@ function PostCard({ post, layout, cfg, isPreview }: {
   cfg: Required<PostListContent>;
   isPreview?: boolean;
 }) {
+  const isEditorWithRealPosts = !isPreview && typeof post.id === "string";
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    if (!isEditorWithRealPosts) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dispatchEditPost(String(post.id));
+  };
+
   const Wrapper = isPreview ? "a" : "div";
   const wrapperProps = isPreview ? { href: `/post/${post.slug}` } : {};
+
+  /** Overlay shown in editor mode on real posts — indicates they are clickable for inline editing */
+  const editOverlay = isEditorWithRealPosts ? (
+    <div
+      className="absolute inset-0 bg-black/0 hover:bg-black/5 flex items-center justify-center opacity-0 hover:opacity-100 transition-all cursor-pointer z-10 rounded-lg"
+      onClick={handleEditClick}
+      title="Click to edit this post"
+    >
+      <span className="bg-white/90 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full shadow flex items-center gap-1.5">
+        <Pencil className="w-3 h-3" /> Edit Post
+      </span>
+    </div>
+  ) : null;
 
   const imagePlaceholder = (size: string) => (
     <div className={`${size} flex-shrink-0 rounded bg-gray-100 overflow-hidden flex items-center justify-center`}>
@@ -187,32 +223,38 @@ function PostCard({ post, layout, cfg, isPreview }: {
 
   if (layout === "list") {
     return (
-      <Wrapper {...wrapperProps} className="flex items-start gap-4 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors" style={{ textDecoration: "none", color: "inherit" }}>
-        {cfg.showFeaturedImage && imagePlaceholder("w-24 h-24")}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-base leading-tight mb-1 truncate">{post.title}</h3>
-          {cfg.showExcerpt && post.excerpt && <p className="text-sm text-gray-500 line-clamp-2">{post.excerpt}</p>}
-          <PostMeta post={post} cfg={cfg} />
-        </div>
-      </Wrapper>
+      <div className="relative">
+        {editOverlay}
+        <Wrapper {...wrapperProps} className="flex items-start gap-4 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors" style={{ textDecoration: "none", color: "inherit" }}>
+          {cfg.showFeaturedImage && imagePlaceholder("w-24 h-24")}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-base leading-tight mb-1 truncate">{post.title}</h3>
+            {cfg.showExcerpt && post.excerpt && <p className="text-sm text-gray-500 line-clamp-2">{post.excerpt}</p>}
+            <PostMeta post={post} cfg={cfg} />
+          </div>
+        </Wrapper>
+      </div>
     );
   }
 
   return (
-    <Wrapper {...wrapperProps} className="flex flex-col rounded-lg border border-gray-200 overflow-hidden hover:border-gray-300 transition-colors" style={{ textDecoration: "none", color: "inherit" }}>
-      {cfg.showFeaturedImage && (
-        <div className="w-full bg-gray-100 flex items-center justify-center" style={{ height: layout === "cards" ? 180 : 140 }}>
-          {post.featuredImage
-            ? <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" />
-            : <ImageIcon className="w-8 h-8 text-gray-300" />}
+    <div className="relative">
+      {editOverlay}
+      <Wrapper {...wrapperProps} className="flex flex-col rounded-lg border border-gray-200 overflow-hidden hover:border-gray-300 transition-colors" style={{ textDecoration: "none", color: "inherit" }}>
+        {cfg.showFeaturedImage && (
+          <div className="w-full bg-gray-100 flex items-center justify-center" style={{ height: layout === "cards" ? 180 : 140 }}>
+            {post.featuredImage
+              ? <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" />
+              : <ImageIcon className="w-8 h-8 text-gray-300" />}
+          </div>
+        )}
+        <div className="p-4 flex flex-col flex-1">
+          <h3 className="font-semibold text-base leading-tight mb-1">{post.title}</h3>
+          {cfg.showExcerpt && post.excerpt && <p className="text-sm text-gray-500 line-clamp-3 mb-2">{post.excerpt}</p>}
+          <PostMeta post={post} cfg={cfg} />
         </div>
-      )}
-      <div className="p-4 flex flex-col flex-1">
-        <h3 className="font-semibold text-base leading-tight mb-1">{post.title}</h3>
-        {cfg.showExcerpt && post.excerpt && <p className="text-sm text-gray-500 line-clamp-3 mb-2">{post.excerpt}</p>}
-        <PostMeta post={post} cfg={cfg} />
-      </div>
-    </Wrapper>
+      </Wrapper>
+    </div>
   );
 }
 

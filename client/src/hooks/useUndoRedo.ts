@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 /**
  * Hook for managing undo/redo functionality with state history.
@@ -62,6 +62,16 @@ export function useUndoRedo<T>(initialState: T) {
     }
   };
   
-  return { currentState, pushState, undo, redo, canUndo, canRedo };
+  /**
+   * Replaces the entire history with a new state, effectively resetting
+   * undo/redo. Useful when external code swaps the data source entirely
+   * (e.g. inline post editing in the page builder).
+   */
+  const resetState = useCallback((nextState: T) => {
+    setHistory([nextState]);
+    setCurrentIndex(0);
+  }, []);
+
+  return { currentState, pushState, undo, redo, canUndo, canRedo, resetState };
 }
 

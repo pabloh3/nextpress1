@@ -5,6 +5,35 @@ import { safeTryAsync } from '../utils';
 import { generateSlug } from './shared/slug';
 
 /**
+ * Builds a PostList block config pre-configured for a specific blog.
+ * This block is placed on the auto-created blog page so it lists that blog's posts.
+ */
+function buildBlogPostListBlock(blogId: string) {
+  return {
+    id: crypto.randomUUID(),
+    name: 'post/list',
+    label: 'Post List',
+    type: 'block' as const,
+    parentId: null,
+    category: 'post' as const,
+    content: {
+      layout: 'cards',
+      postsPerPage: 6,
+      showExcerpt: true,
+      showFeaturedImage: true,
+      showDate: true,
+      showAuthor: true,
+      blogId,
+      orderBy: 'date',
+      order: 'desc',
+      className: '',
+    },
+    styles: { padding: '20px', margin: '0px' },
+    settings: {},
+  };
+}
+
+/**
  * Creates Blog CRUD routes for the NextPress API.
  *
  * Endpoints:
@@ -86,6 +115,8 @@ export function createBlogsRoutes(deps: Deps): Router {
 
   /**
    * POST /api/blogs — Create a new blog (requires authentication).
+   * Also auto-creates a corresponding page in the pages table with a
+   * pre-configured PostList block, so the blog has a browsable index page.
    */
   router.post(
     '/',
@@ -122,9 +153,38 @@ export function createBlogsRoutes(deps: Deps): Router {
         };
 
         const blog = await models.blogs.create(blogData);
-        hooks.doAction('save_blog', blog);
 
-        return blog;
+        // Resolve siteId: use blog's siteId or fall back to default site
+        let siteId = blog.siteId ? String(blog.siteId) : null;
+        if (!siteId) {
+          const defaultSite = await models.sites.findDefaultSite();
+          if (!defaultSite?.id) {
+            console.warn('No default site found — blog page will not be created');
+            hooks.doAction('save_blog', blog);
+            return blog;
+          }
+          siteId = String(defaultSite.id);
+        }
+
+        // Auto-create the blog's index page with a PostList block
+        const blogPage = await models.pages.create({
+          title: String(blog.name),
+          slug: `blog-${String(blog.slug)}`,
+          siteId,
+          authorId: String(userId),
+          status: 'draft',
+          blocks: [buildBlogPostListBlock(blog.id)],
+          other: { isBlogPage: true, blogId: blog.id },
+        } as any);
+
+        // Link the page back to the blog
+        const updatedBlog = await models.blogs.update(blog.id, {
+          pageId: blogPage.id,
+        } as any);
+
+        hooks.doAction('save_blog', updatedBlog);
+
+        return updatedBlog;
       });
 
       if (err) {
@@ -164,7 +224,7 @@ export function createBlogsRoutes(deps: Deps): Router {
   );
 
   /**
-   * DELETE /api/blogs/:id — Delete a blog (requires authentication).
+   * DELETE /api/blogs/:id — Delete a blog and its associated page (requires authentication).
    */
   router.delete(
     '/:id',
@@ -176,6 +236,17 @@ export function createBlogsRoutes(deps: Deps): Router {
 
         if (!blog) {
           return res.status(404).json({ message: 'Blog not found' });
+        }
+
+        // Delete associated blog page if it exists
+        const pageId = (blog as any).pageId;
+        if (pageId) {
+          const { err } = await safeTryAsync(async () => {
+            await models.pages.delete(pageId);
+          });
+          if (err) {
+            console.warn(`Failed to delete blog page ${pageId}:`, err);
+          }
         }
 
         await models.blogs.delete(id);

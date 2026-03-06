@@ -81,13 +81,28 @@ export default function PageBuilder({
     propBlocks || (data ? (data.blocks as BlockConfig[]) || [] : []);
 
   // Use undo/redo for blocks state
-  const { currentState, pushState, undo, redo, canUndo, canRedo } =
+  const { currentState, pushState, undo, redo, canUndo, canRedo, resetState } =
     useUndoRedo<BlockConfig[]>(initialBlocks);
   const [blocks, setBlocks] = useState<BlockConfig[]>(currentState);
 
   useEffect(() => {
     setBlocks(currentState);
   }, [currentState]);
+
+  /**
+   * Detect when the parent swaps propBlocks externally (e.g. inline post editing).
+   * We track the last propBlocks ref we emitted via onBlocksChange to distinguish
+   * "our own update bouncing back" from "a genuinely new external array".
+   */
+  const lastEmittedRef = useRef<BlockConfig[] | null>(null);
+  useEffect(() => {
+    if (!propBlocks) return;
+    // Skip if this is our own change bouncing back through the parent
+    if (propBlocks === lastEmittedRef.current) return;
+    // External reset — new blocks from outside, reset undo/redo history
+    resetState(propBlocks);
+    setSelectedBlockId(null);
+  }, [propBlocks, resetState]);
 
   const commitBlocks = useCallback(
     (next: BlockConfig[] | ((prev: BlockConfig[]) => BlockConfig[])) => {
@@ -145,6 +160,7 @@ export default function PageBuilder({
 
   // Notify parent of blocks changes without onBlocksChange in deps
   useEffect(() => {
+    lastEmittedRef.current = blocks;
     onBlocksChangeRef.current?.(blocks);
   }, [blocks]);
 

@@ -263,8 +263,6 @@ export interface DraggableProvided {
   draggableProps: {
     'data-rfd-draggable-id': string;
     style?: React.CSSProperties;
-    onMouseDown?: (e: React.MouseEvent) => void;
-    onTouchStart?: (e: React.TouchEvent) => void;
   };
   dragHandleProps: {
     'data-rfd-drag-handle-draggable-id': string;
@@ -457,8 +455,10 @@ export function Draggable({ draggableId, index, children, isDragDisabled = false
     draggableProps: {
       'data-rfd-draggable-id': draggableId,
       style: isDragging ? { opacity: 0.5 } : undefined,
-      onMouseDown: isDragDisabled ? undefined : handleDragStart,
-      onTouchStart: isDragDisabled ? undefined : handleDragStart,
+      // NOTE: onMouseDown/onTouchStart intentionally omitted from draggableProps.
+      // Drag is initiated only via dragHandleProps (the grip icon) so that
+      // contentEditable elements and other interactive content inside blocks
+      // can receive focus and handle clicks normally.
     },
     dragHandleProps: isDragDisabled ? null : {
       'data-rfd-drag-handle-draggable-id': draggableId,

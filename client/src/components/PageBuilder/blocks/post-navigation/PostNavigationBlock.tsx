@@ -1,14 +1,22 @@
-import * as React from "react";
-import { useState, useEffect } from "react";
-import { useBlockState } from "../useBlockState";
-import { getBlockStateAccessor } from "../blockStateRegistry";
-import type { BlockDefinition, BlockComponentProps } from "../types.ts";
-import type { BlockConfig, BlockContent } from "@shared/schema-types";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { ArrowLeftRight, ChevronLeft, ChevronRight, Eye, Tag, Wrench } from "lucide-react";
+import * as React from 'react';
+import { useState, useEffect } from 'react';
+import { useBlockState } from '../useBlockState';
+import { getBlockStateAccessor } from '../blockStateRegistry';
+import type { BlockDefinition, BlockComponentProps } from '../types.ts';
+import type { BlockConfig, BlockContent } from '@shared/schema-types';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { CollapsibleCard } from '@/components/ui/collapsible-card';
+import {
+  ArrowLeftRight,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Tag,
+  Wrench,
+} from 'lucide-react';
 
 // ============================================================================
 // TYPES & CONSTANTS
@@ -23,21 +31,30 @@ export type PostNavigationContent = {
   className?: string;
 };
 
-type AdjacentPost = { id: string; title: string; slug: string; featuredImage?: string };
+type AdjacentPost = {
+  id: string;
+  title: string;
+  slug: string;
+  featuredImage?: string;
+};
 type AdjacentPostsData = { prev?: AdjacentPost; next?: AdjacentPost };
 
 const DEFAULT_CONTENT: PostNavigationContent = {
-  postId: "",
+  postId: '',
   showThumbnail: false,
   showLabel: true,
-  prevLabel: "Previous Post",
-  nextLabel: "Next Post",
-  className: "",
+  prevLabel: 'Previous Post',
+  nextLabel: 'Next Post',
+  className: '',
 };
 
 const PLACEHOLDER_ADJACENT: AdjacentPostsData = {
-  prev: { id: "prev-placeholder", title: "Previous Post Title", slug: "previous-post" },
-  next: { id: "next-placeholder", title: "Next Post Title", slug: "next-post" },
+  prev: {
+    id: 'prev-placeholder',
+    title: 'Previous Post Title',
+    slug: 'previous-post',
+  },
+  next: { id: 'next-placeholder', title: 'Next Post Title', slug: 'next-post' },
 };
 
 // ============================================================================
@@ -45,7 +62,10 @@ const PLACEHOLDER_ADJACENT: AdjacentPostsData = {
 // ============================================================================
 
 /** Fetch adjacent posts from the API in preview mode. Returns placeholder data in editor. */
-function useAdjacentPosts(postId: string | undefined, isPreview: boolean): AdjacentPostsData | null {
+function useAdjacentPosts(
+  postId: string | undefined,
+  isPreview: boolean,
+): AdjacentPostsData | null {
   const [data, setData] = useState<AdjacentPostsData | null>(null);
 
   useEffect(() => {
@@ -58,7 +78,7 @@ function useAdjacentPosts(postId: string | undefined, isPreview: boolean): Adjac
 
     fetch(`/api/posts/${postId}/adjacent`)
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch adjacent posts");
+        if (!res.ok) throw new Error('Failed to fetch adjacent posts');
         return res.json();
       })
       .then((result: AdjacentPostsData) => {
@@ -90,19 +110,23 @@ interface PostNavigationRendererProps {
  * Pure presentational renderer for post navigation.
  * Preview mode fetches real adjacent posts; editor mode shows placeholders.
  */
-function PostNavigationRenderer({ content, styles, isPreview }: PostNavigationRendererProps) {
+function PostNavigationRenderer({
+  content,
+  styles,
+  isPreview,
+}: PostNavigationRendererProps) {
   const showThumbnail = content?.showThumbnail ?? false;
   const showLabel = content?.showLabel ?? true;
-  const prevLabel = content?.prevLabel || "Previous Post";
-  const nextLabel = content?.nextLabel || "Next Post";
+  const prevLabel = content?.prevLabel || 'Previous Post';
+  const nextLabel = content?.nextLabel || 'Next Post';
 
-  const className = [
-    "wp-block-post-navigation",
-    content?.className || "",
-  ].filter(Boolean).join(" ");
+  const className = ['wp-block-post-navigation', content?.className || '']
+    .filter(Boolean)
+    .join(' ');
 
   const adjacentData = useAdjacentPosts(content?.postId, !!isPreview);
-  const displayData: AdjacentPostsData = isPreview && adjacentData ? adjacentData : PLACEHOLDER_ADJACENT;
+  const displayData: AdjacentPostsData =
+    isPreview && adjacentData ? adjacentData : PLACEHOLDER_ADJACENT;
 
   const hasPrev = !!displayData.prev;
   const hasNext = !!displayData.next;
@@ -110,7 +134,9 @@ function PostNavigationRenderer({ content, styles, isPreview }: PostNavigationRe
   if (!hasPrev && !hasNext) {
     return (
       <div className={className} style={styles}>
-        <p className="text-sm text-gray-400 text-center py-4">No adjacent posts found.</p>
+        <p className="text-sm text-gray-400 text-center py-4">
+          No adjacent posts found.
+        </p>
       </div>
     );
   }
@@ -156,7 +182,7 @@ function PostNavigationRenderer({ content, styles, isPreview }: PostNavigationRe
 
 interface NavigationLinkProps {
   post: AdjacentPost;
-  direction: "prev" | "next";
+  direction: 'prev' | 'next';
   label: string;
   showLabel: boolean;
   showThumbnail: boolean;
@@ -164,10 +190,17 @@ interface NavigationLinkProps {
 }
 
 /** Renders a single prev/next navigation link with optional thumbnail and label. */
-function NavigationLink({ post, direction, label, showLabel, showThumbnail, isPreview }: NavigationLinkProps) {
-  const isPrev = direction === "prev";
-  const alignment = isPrev ? "text-left" : "text-right";
-  const flexDirection = isPrev ? "flex-row" : "flex-row-reverse";
+function NavigationLink({
+  post,
+  direction,
+  label,
+  showLabel,
+  showThumbnail,
+  isPreview,
+}: NavigationLinkProps) {
+  const isPrev = direction === 'prev';
+  const alignment = isPrev ? 'text-left' : 'text-right';
+  const flexDirection = isPrev ? 'flex-row' : 'flex-row-reverse';
 
   const innerContent = (
     <div className={`flex items-center gap-3 ${flexDirection}`}>
@@ -202,30 +235,32 @@ function NavigationLink({ post, direction, label, showLabel, showThumbnail, isPr
   );
 
   const sharedClassName =
-    "flex-1 p-3 rounded-md border border-gray-200 transition-colors hover:border-gray-300 hover:bg-gray-50";
+    'flex-1 p-3 rounded-md border border-gray-200 transition-colors hover:border-gray-300 hover:bg-gray-50';
 
   // Preview mode: render as real links
   if (isPreview) {
     return (
-      <a href={`/post/${post.slug}`} className={`${sharedClassName} no-underline`}>
+      <a
+        href={`/post/${post.slug}`}
+        className={`${sharedClassName} no-underline`}>
         {innerContent}
       </a>
     );
   }
 
   // Editor mode: render as non-interactive div
-  return (
-    <div className={sharedClassName}>
-      {innerContent}
-    </div>
-  );
+  return <div className={sharedClassName}>{innerContent}</div>;
 }
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
-export function PostNavigationBlockComponent({ value, onChange, isPreview }: BlockComponentProps) {
+export function PostNavigationBlockComponent({
+  value,
+  onChange,
+  isPreview,
+}: BlockComponentProps) {
   const { content, styles } = useBlockState<PostNavigationContent>({
     value,
     getDefaultContent: () => DEFAULT_CONTENT,
@@ -233,7 +268,11 @@ export function PostNavigationBlockComponent({ value, onChange, isPreview }: Blo
   });
 
   return (
-    <PostNavigationRenderer content={content} styles={styles} isPreview={isPreview} />
+    <PostNavigationRenderer
+      content={content}
+      styles={styles}
+      isPreview={isPreview}
+    />
   );
 }
 
@@ -247,31 +286,37 @@ interface PostNavigationSettingsProps {
 }
 
 /** Sidebar settings panel for the post navigation block. */
-function PostNavigationSettings({ block, onUpdate }: PostNavigationSettingsProps) {
+function PostNavigationSettings({
+  block,
+  onUpdate,
+}: PostNavigationSettingsProps) {
   const accessor = getBlockStateAccessor(block.id);
-  const [, setUpdateTrigger] = React.useState(0);
+  const [localContent, setLocalContent] = React.useState<PostNavigationContent>(
+    (block.content as PostNavigationContent) || DEFAULT_CONTENT,
+  );
 
-  const content = accessor
-    ? (accessor.getContent() as PostNavigationContent)
-    : (block.content as PostNavigationContent) || DEFAULT_CONTENT;
+  React.useEffect(() => {
+    setLocalContent(
+      (block.content as PostNavigationContent) || DEFAULT_CONTENT,
+    );
+  }, [block.content]);
 
   const updateContent = (updates: Partial<PostNavigationContent>) => {
+    const updated = { ...localContent, ...updates };
+    setLocalContent(updated);
     if (accessor) {
-      const current = accessor.getContent() as PostNavigationContent;
-      accessor.setContent({ ...current, ...updates });
-      setUpdateTrigger((prev) => prev + 1);
+      accessor.setContent(updated);
     } else if (onUpdate) {
       onUpdate({
         content: {
-          ...(block.content as Record<string, unknown>),
-          ...updates,
+          ...updated,
         } as unknown as BlockContent,
       });
     }
   };
 
-  const currentShowThumbnail = content?.showThumbnail ?? false;
-  const currentShowLabel = content?.showLabel ?? true;
+  const currentShowThumbnail = localContent?.showThumbnail ?? false;
+  const currentShowLabel = localContent?.showLabel ?? true;
 
   return (
     <div className="space-y-4">
@@ -279,23 +324,31 @@ function PostNavigationSettings({ block, onUpdate }: PostNavigationSettingsProps
       <CollapsibleCard title="Display" icon={Eye} defaultOpen>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label htmlFor="nav-show-thumbnail" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="nav-show-thumbnail"
+              className="text-sm font-medium text-gray-700">
               Show Thumbnail
             </Label>
             <Switch
               id="nav-show-thumbnail"
               checked={currentShowThumbnail}
-              onCheckedChange={(checked) => updateContent({ showThumbnail: checked })}
+              onCheckedChange={(checked) =>
+                updateContent({ showThumbnail: checked })
+              }
             />
           </div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="nav-show-label" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="nav-show-label"
+              className="text-sm font-medium text-gray-700">
               Show Label
             </Label>
             <Switch
               id="nav-show-label"
               checked={currentShowLabel}
-              onCheckedChange={(checked) => updateContent({ showLabel: checked })}
+              onCheckedChange={(checked) =>
+                updateContent({ showLabel: checked })
+              }
             />
           </div>
         </div>
@@ -305,24 +358,28 @@ function PostNavigationSettings({ block, onUpdate }: PostNavigationSettingsProps
       <CollapsibleCard title="Labels" icon={Tag} defaultOpen={false}>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="nav-prev-label" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="nav-prev-label"
+              className="text-sm font-medium text-gray-700">
               Previous Label
             </Label>
             <Input
               id="nav-prev-label"
-              value={content?.prevLabel || ""}
+              value={localContent?.prevLabel || ''}
               onChange={(e) => updateContent({ prevLabel: e.target.value })}
               placeholder="Previous Post"
               className="mt-1 h-9 text-sm"
             />
           </div>
           <div>
-            <Label htmlFor="nav-next-label" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="nav-next-label"
+              className="text-sm font-medium text-gray-700">
               Next Label
             </Label>
             <Input
               id="nav-next-label"
-              value={content?.nextLabel || ""}
+              value={localContent?.nextLabel || ''}
               onChange={(e) => updateContent({ nextLabel: e.target.value })}
               placeholder="Next Post"
               className="mt-1 h-9 text-sm"
@@ -331,15 +388,43 @@ function PostNavigationSettings({ block, onUpdate }: PostNavigationSettingsProps
         </div>
       </CollapsibleCard>
 
+      {/* Post */}
+      <CollapsibleCard title="Post" icon={Tag} defaultOpen={false}>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-gray-700">Post ID</Label>
+          {localContent?.postId ? (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="font-mono text-xs truncate">
+                {localContent.postId}
+              </Badge>
+              <button
+                onClick={() => updateContent({ postId: '' })}
+                className="text-xs text-gray-400 hover:text-red-500">
+                clear
+              </button>
+            </div>
+          ) : (
+            <Input
+              value={localContent?.postId || ''}
+              onChange={(e) => updateContent({ postId: e.target.value })}
+              placeholder="Auto-set when added to a post"
+              className="h-9 text-sm"
+            />
+          )}
+        </div>
+      </CollapsibleCard>
+
       {/* Advanced / CSS Class */}
       <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
         <div>
-          <Label htmlFor="nav-class" className="text-sm font-medium text-gray-700">
+          <Label
+            htmlFor="nav-class"
+            className="text-sm font-medium text-gray-700">
             Additional CSS Class(es)
           </Label>
           <Input
             id="nav-class"
-            value={content?.className || ""}
+            value={localContent?.className || ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-nav"
             className="mt-1 h-9 text-sm"
@@ -379,13 +464,13 @@ function LegacyPostNavigationRenderer({
  * Displays previous/next post navigation links with optional thumbnails and labels.
  */
 const PostNavigationBlock: BlockDefinition = {
-  id: "post/navigation",
-  label: "Post Navigation",
+  id: 'post/navigation',
+  label: 'Post Navigation',
   icon: ArrowLeftRight,
-  description: "Navigate between previous and next posts",
-  category: "post",
+  description: 'Navigate between previous and next posts',
+  category: 'post',
   defaultContent: DEFAULT_CONTENT,
-  defaultStyles: { margin: "2em 0" },
+  defaultStyles: { margin: '2em 0' },
   component: PostNavigationBlockComponent,
   renderer: LegacyPostNavigationRenderer,
   settings: PostNavigationSettings,

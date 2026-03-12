@@ -1,21 +1,21 @@
 // blocks/post-toc/PostTocBlock.tsx
-import * as React from "react";
-import { ListOrdered, Settings, Wrench, Type } from "lucide-react";
-import type { BlockDefinition, BlockComponentProps } from "../types.ts";
-import type { BlockConfig, BlockContent } from "@shared/schema-types";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import * as React from 'react';
+import { ListOrdered, Settings, Wrench, Type } from 'lucide-react';
+import type { BlockDefinition, BlockComponentProps } from '../types.ts';
+import type { BlockConfig, BlockContent } from '@shared/schema-types';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { getBlockStateAccessor } from "../blockStateRegistry";
-import { useBlockState } from "../useBlockState";
+} from '@/components/ui/select';
+import { getBlockStateAccessor } from '../blockStateRegistry';
+import { useBlockState } from '../useBlockState';
 
 // ============================================================================
 // TYPES
@@ -39,21 +39,21 @@ type HeadingEntry = {
 // ============================================================================
 
 const DEFAULT_CONTENT: PostTocContent = {
-  title: "Table of Contents",
+  title: 'Table of Contents',
   maxDepth: 3,
   ordered: false,
-  className: "",
+  className: '',
 };
 
 const DEPTH_OPTIONS = [1, 2, 3, 4, 5, 6] as const;
 
 /** Sample entries shown in the editor when live headings aren't available. */
 const PLACEHOLDER_HEADINGS: HeadingEntry[] = [
-  { id: "intro", text: "Introduction", level: 1 },
-  { id: "getting-started", text: "Getting Started", level: 2 },
-  { id: "prerequisites", text: "Prerequisites", level: 3 },
-  { id: "overview", text: "Overview", level: 2 },
-  { id: "conclusion", text: "Conclusion", level: 1 },
+  { id: 'intro', text: 'Introduction', level: 1 },
+  { id: 'getting-started', text: 'Getting Started', level: 2 },
+  { id: 'prerequisites', text: 'Prerequisites', level: 3 },
+  { id: 'overview', text: 'Overview', level: 2 },
+  { id: 'conclusion', text: 'Conclusion', level: 1 },
 ];
 
 // ============================================================================
@@ -62,7 +62,7 @@ const PLACEHOLDER_HEADINGS: HeadingEntry[] = [
 
 /** Build a heading selector string like "h1, h2, h3" up to maxDepth. */
 function buildHeadingSelector(maxDepth: number): string {
-  return Array.from({ length: maxDepth }, (_, i) => `h${i + 1}`).join(", ");
+  return Array.from({ length: maxDepth }, (_, i) => `h${i + 1}`).join(', ');
 }
 
 /**
@@ -76,12 +76,16 @@ function collectPageHeadings(maxDepth: number): HeadingEntry[] {
   const entries: HeadingEntry[] = [];
 
   nodes.forEach((node) => {
-    const text = (node.textContent || "").trim();
+    const text = (node.textContent || '').trim();
     if (!text) return;
 
     const level = Number.parseInt(node.tagName.charAt(1), 10);
     const id =
-      node.id || text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      node.id ||
+      text
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
 
     entries.push({ id, text, level });
   });
@@ -102,7 +106,7 @@ function computeNumbering(entries: HeadingEntry[]): string[] {
     // Shrink counters when going back up to a shallower level
     counters.length = depth;
     counters[depth - 1] = (counters[depth - 1] || 0) + 1;
-    return counters.join(".");
+    return counters.join('.');
   });
 }
 
@@ -133,7 +137,7 @@ function PostTocRenderer({ content, styles, isPreview }: PostTocRendererProps) {
   const [headings, setHeadings] = React.useState<HeadingEntry[]>([]);
   const maxDepth = content?.maxDepth ?? 3;
   const ordered = content?.ordered ?? false;
-  const title = content?.title ?? "";
+  const title = content?.title ?? '';
 
   // In preview mode, scan the DOM for real headings
   React.useEffect(() => {
@@ -143,71 +147,71 @@ function PostTocRenderer({ content, styles, isPreview }: PostTocRendererProps) {
     setHeadings(entries);
   }, [isPreview, maxDepth]);
 
-  const entries = isPreview ? headings : PLACEHOLDER_HEADINGS.filter((h) => h.level <= maxDepth);
+  const entries = isPreview
+    ? headings
+    : PLACEHOLDER_HEADINGS.filter((h) => h.level <= maxDepth);
   const numbering = computeNumbering(entries);
-  const ListTag = ordered ? "ol" : "ul";
+  const ListTag = ordered ? 'ol' : 'ul';
 
-  const containerClassName = [
-    "wp-block-post-toc",
-    content?.className || "",
-  ]
+  const containerClassName = ['wp-block-post-toc', content?.className || '']
     .filter(Boolean)
-    .join(" ");
+    .join(' ');
 
   return (
     <nav
       className={containerClassName}
       style={{
-        border: "1px solid #e2e8f0",
-        borderRadius: "0.5rem",
-        padding: "1.25rem 1.5rem",
-        backgroundColor: "#fafbfc",
+        border: '1px solid #e2e8f0',
+        borderRadius: '0.5rem',
+        padding: '1.25rem 1.5rem',
+        backgroundColor: '#fafbfc',
         ...styles,
       }}
-      aria-label="Table of contents"
-    >
+      aria-label="Table of contents">
       {title && (
         <p
           style={{
             fontWeight: 600,
-            fontSize: "0.95rem",
-            marginBottom: "0.75rem",
-            color: "#334155",
-          }}
-        >
+            fontSize: '0.95rem',
+            marginBottom: '0.75rem',
+            color: '#334155',
+          }}>
           {title}
         </p>
       )}
 
       {entries.length === 0 ? (
-        <p style={{ color: "#94a3b8", fontSize: "0.875rem", fontStyle: "italic" }}>
+        <p
+          style={{
+            color: '#94a3b8',
+            fontSize: '0.875rem',
+            fontStyle: 'italic',
+          }}>
           No headings found.
         </p>
       ) : (
-        <ListTag style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        <ListTag style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {entries.map((entry, idx) => (
             <li
               key={`${entry.id}-${idx}`}
               style={{
                 paddingLeft: indentForLevel(entry.level),
-                marginBottom: "0.35rem",
-              }}
-            >
+                marginBottom: '0.35rem',
+              }}>
               {isPreview ? (
                 <a
                   href={`#${entry.id}`}
                   style={{
-                    color: "#2563eb",
-                    textDecoration: "none",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  {ordered ? `${numbering[idx]} ` : ""}
+                    color: '#2563eb',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                  }}>
+                  {ordered ? `${numbering[idx]} ` : ''}
                   {entry.text}
                 </a>
               ) : (
-                <span style={{ color: "#475569", fontSize: "0.875rem" }}>
-                  {ordered ? `${numbering[idx]} ` : "• "}
+                <span style={{ color: '#475569', fontSize: '0.875rem' }}>
+                  {ordered ? `${numbering[idx]} ` : '• '}
                   {entry.text}
                 </span>
               )}
@@ -254,22 +258,23 @@ interface PostTocSettingsProps {
  */
 function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
   const accessor = getBlockStateAccessor(block.id);
-  const [, setUpdateTrigger] = React.useState(0);
+  const [localContent, setLocalContent] = React.useState<PostTocContent>(
+    (block.content as PostTocContent) || DEFAULT_CONTENT,
+  );
 
-  const content = accessor
-    ? (accessor.getContent() as PostTocContent)
-    : (block.content as PostTocContent) || DEFAULT_CONTENT;
+  React.useEffect(() => {
+    setLocalContent((block.content as PostTocContent) || DEFAULT_CONTENT);
+  }, [block.content]);
 
   const updateContent = (updates: Partial<PostTocContent>) => {
+    const updated = { ...localContent, ...updates };
+    setLocalContent(updated);
     if (accessor) {
-      const current = accessor.getContent() as PostTocContent;
-      accessor.setContent({ ...current, ...updates });
-      setUpdateTrigger((prev) => prev + 1);
+      accessor.setContent(updated);
     } else if (onUpdate) {
       onUpdate({
         content: {
-          ...(block.content as Record<string, unknown>),
-          ...updates,
+          ...updated,
         } as unknown as BlockContent,
       });
     }
@@ -280,13 +285,15 @@ function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
       {/* Content Section */}
       <CollapsibleCard title="Content" icon={Type} defaultOpen>
         <div>
-          <Label htmlFor="toc-title" className="text-sm font-medium text-gray-700">
+          <Label
+            htmlFor="toc-title"
+            className="text-sm font-medium text-gray-700">
             Title
           </Label>
           <Input
             id="toc-title"
             aria-label="TOC title"
-            value={content?.title ?? ""}
+            value={localContent?.title ?? ''}
             onChange={(e) => updateContent({ title: e.target.value })}
             placeholder='e.g. "Table of Contents"'
             className="mt-1 h-9 text-sm"
@@ -299,20 +306,21 @@ function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
         <div className="space-y-4">
           {/* Max Depth */}
           <div>
-            <Label htmlFor="toc-depth" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="toc-depth"
+              className="text-sm font-medium text-gray-700">
               Max Heading Depth
             </Label>
             <Select
-              value={String(content?.maxDepth ?? 3)}
-              onValueChange={(val) => updateContent({ maxDepth: Number(val) })}
-            >
+              value={String(localContent?.maxDepth ?? 3)}
+              onValueChange={(val) => updateContent({ maxDepth: Number(val) })}>
               <SelectTrigger id="toc-depth" className="mt-1 h-9 text-sm">
                 <SelectValue placeholder="Select depth" />
               </SelectTrigger>
               <SelectContent>
                 {DEPTH_OPTIONS.map((depth) => (
                   <SelectItem key={depth} value={String(depth)}>
-                    H1{depth > 1 ? ` – H${depth}` : " only"}
+                    H1{depth > 1 ? ` – H${depth}` : ' only'}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -321,12 +329,14 @@ function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
 
           {/* Ordered Toggle */}
           <div className="flex items-center justify-between">
-            <Label htmlFor="toc-ordered" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="toc-ordered"
+              className="text-sm font-medium text-gray-700">
               Numbered List
             </Label>
             <Switch
               id="toc-ordered"
-              checked={content?.ordered ?? false}
+              checked={localContent?.ordered ?? false}
               onCheckedChange={(checked) => updateContent({ ordered: checked })}
             />
           </div>
@@ -336,13 +346,15 @@ function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
       {/* Advanced */}
       <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
         <div>
-          <Label htmlFor="toc-class" className="text-sm font-medium text-gray-700">
+          <Label
+            htmlFor="toc-class"
+            className="text-sm font-medium text-gray-700">
             Additional CSS Class(es)
           </Label>
           <Input
             id="toc-class"
             aria-label="CSS Classes"
-            value={content?.className ?? ""}
+            value={localContent?.className ?? ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-toc"
             className="mt-1 h-9 text-sm"
@@ -384,13 +396,13 @@ function LegacyPostTocRenderer({
  * displays sample placeholder entries.
  */
 const PostTocBlock: BlockDefinition = {
-  id: "post/toc",
-  label: "Table of Contents",
+  id: 'post/toc',
+  label: 'Table of Contents',
   icon: ListOrdered,
-  description: "Auto-generated table of contents from page headings",
-  category: "post",
+  description: 'Auto-generated table of contents from page headings',
+  category: 'post',
   defaultContent: DEFAULT_CONTENT,
-  defaultStyles: { margin: "1em 0" },
+  defaultStyles: { margin: '1em 0' },
   component: PostTocComponent,
   renderer: LegacyPostTocRenderer,
   settings: PostTocSettings,

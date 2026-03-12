@@ -1,12 +1,12 @@
-import * as React from "react";
-import type { BlockDefinition, BlockComponentProps } from "../types.ts";
-import type { BlockConfig, BlockContent } from "@shared/schema-types";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Type, Settings, Wrench } from "lucide-react";
-import { getBlockStateAccessor } from "../blockStateRegistry";
-import { useBlockState } from "../useBlockState";
+import * as React from 'react';
+import type { BlockDefinition, BlockComponentProps } from '../types.ts';
+import type { BlockConfig, BlockContent } from '@shared/schema-types';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { CollapsibleCard } from '@/components/ui/collapsible-card';
+import { Type, Settings, Wrench } from 'lucide-react';
+import { getBlockStateAccessor } from '../blockStateRegistry';
+import { useBlockState } from '../useBlockState';
 
 // ============================================================================
 // TYPES
@@ -14,20 +14,20 @@ import { useBlockState } from "../useBlockState";
 
 export type PostTitleContent = {
   text?: string;
-  tag?: "h1" | "h2" | "h3";
+  tag?: 'h1' | 'h2' | 'h3';
   className?: string;
 };
 
 const DEFAULT_CONTENT: PostTitleContent = {
-  text: "Post Title",
-  tag: "h1",
-  className: "",
+  text: 'Post Title',
+  tag: 'h1',
+  className: '',
 };
 
 const HEADING_TAG_OPTIONS = [
-  { value: "h1" as const, label: "H1" },
-  { value: "h2" as const, label: "H2" },
-  { value: "h3" as const, label: "H3" },
+  { value: 'h1' as const, label: 'H1' },
+  { value: 'h2' as const, label: 'H2' },
+  { value: 'h3' as const, label: 'H3' },
 ] as const;
 
 // ============================================================================
@@ -38,19 +38,19 @@ const HEADING_TAG_OPTIONS = [
  * Build className string for the post title element.
  */
 function buildTitleClassName(content: PostTitleContent): string {
-  return ["wp-block-post-title", content?.className || ""]
+  return ['wp-block-post-title', content?.className || '']
     .filter(Boolean)
-    .join(" ");
+    .join(' ');
 }
 
 /**
  * Get button className for tag-level toggle buttons.
  */
 function getTagButtonClassName(isActive: boolean): string {
-  const base = "h-9 px-3 text-sm font-semibold rounded-md transition-all";
-  const active = "bg-gray-200 text-gray-800 hover:bg-gray-300";
+  const base = 'h-9 px-3 text-sm font-semibold rounded-md transition-all';
+  const active = 'bg-gray-200 text-gray-800 hover:bg-gray-300';
   const inactive =
-    "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300";
+    'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300';
   return `${base} ${isActive ? active : inactive}`;
 }
 
@@ -61,90 +61,33 @@ function getTagButtonClassName(isActive: boolean): string {
 interface PostTitleRendererProps {
   content: PostTitleContent;
   styles?: React.CSSProperties;
-  isPreview?: boolean;
-  onChange?: (text: string) => void;
 }
 
 /**
  * Pure presentational renderer for the post title.
- * In preview mode: renders as a static heading element.
- * In editor mode: renders a contentEditable heading for inline editing.
+ * Renders a static heading element in both editor and preview mode.
+ * Content is edited via the sidebar settings panel.
  */
-function PostTitleRenderer({ content, styles, isPreview, onChange }: PostTitleRendererProps) {
-  const text = content?.text || "";
-  const tag = content?.tag || "h1";
+function PostTitleRenderer({ content, styles }: PostTitleRendererProps) {
+  const text = content?.text || 'Post Title';
+  const tag = content?.tag || 'h1';
   const className = buildTitleClassName(content);
 
-  // Preview: static heading output
-  if (isPreview) {
-    return React.createElement(tag, { className, style: styles }, text);
-  }
-
-  // Editor: inline-editable heading
-  return React.createElement(tag, {
-    className: `${className} outline-none border border-transparent hover:border-gray-200 focus:border-blue-400 rounded-md transition-colors cursor-text`,
-    style: styles,
-    contentEditable: true,
-    suppressContentEditableWarning: true,
-    "data-placeholder": "Enter post title…",
-    onBlur: (e: React.FocusEvent<HTMLElement>) => {
-      const newText = e.currentTarget.textContent || "";
-      if (newText !== text) {
-        onChange?.(newText);
-      }
-    },
-    onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => {
-      // Prevent newlines — title should be a single line
-      if (e.key === "Enter") {
-        e.preventDefault();
-        e.currentTarget.blur();
-      }
-    },
-    dangerouslySetInnerHTML: { __html: text },
-  });
+  return React.createElement(tag, { className, style: styles }, text);
 }
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
-export function PostTitleComponent({
-  value,
-  onChange,
-  isPreview,
-}: BlockComponentProps) {
+export function PostTitleComponent({ value, onChange }: BlockComponentProps) {
   const { content, styles } = useBlockState<PostTitleContent>({
     value,
     getDefaultContent: () => DEFAULT_CONTENT,
     onChange,
   });
 
-  const handleTextChange = (newText: string) => {
-    const accessor = getBlockStateAccessor(value.id);
-    const updated = { ...(content as PostTitleContent), text: newText };
-
-    if (accessor) {
-      accessor.setContent(updated);
-    }
-
-    // Propagate to parent so PageBuilder captures the edit
-    onChange({
-      ...value,
-      content: {
-        ...(value.content as Record<string, unknown>),
-        text: newText,
-      } as unknown as BlockContent,
-    });
-  };
-
-  return (
-    <PostTitleRenderer
-      content={content}
-      styles={styles}
-      isPreview={isPreview}
-      onChange={handleTextChange}
-    />
-  );
+  return <PostTitleRenderer content={content} styles={styles} />;
 }
 
 // ============================================================================
@@ -162,35 +105,56 @@ interface PostTitleSettingsProps {
  */
 function PostTitleSettings({ block, onUpdate }: PostTitleSettingsProps) {
   const accessor = getBlockStateAccessor(block.id);
-  const [, setUpdateTrigger] = React.useState(0);
+  const [localContent, setLocalContent] = React.useState<PostTitleContent>(
+    (block.content as PostTitleContent) || DEFAULT_CONTENT,
+  );
 
-  const content = accessor
-    ? (accessor.getContent() as PostTitleContent)
-    : (block.content as PostTitleContent) || DEFAULT_CONTENT;
+  React.useEffect(() => {
+    setLocalContent((block.content as PostTitleContent) || DEFAULT_CONTENT);
+  }, [block.content]);
 
   const updateContent = (updates: Partial<PostTitleContent>) => {
+    const updated = { ...localContent, ...updates };
+    setLocalContent(updated);
     if (accessor) {
-      const current = accessor.getContent() as PostTitleContent;
-      accessor.setContent({ ...current, ...updates });
-      setUpdateTrigger((prev) => prev + 1);
+      accessor.setContent(updated);
     } else if (onUpdate) {
       onUpdate({
         content: {
-          ...(block.content as Record<string, unknown>),
-          ...updates,
+          ...updated,
         } as unknown as BlockContent,
       });
     }
   };
 
-  const currentTag = content?.tag || "h1";
+  const currentTag = localContent?.tag || 'h1';
 
   return (
     <div className="space-y-4">
+      {/* Content */}
+      <CollapsibleCard title="Content" icon={Type} defaultOpen>
+        <div>
+          <Label
+            htmlFor="post-title-text"
+            className="text-sm font-medium text-gray-700">
+            Title Text
+          </Label>
+          <Input
+            id="post-title-text"
+            value={localContent?.text || ''}
+            onChange={(e) => updateContent({ text: e.target.value })}
+            placeholder="Enter post title"
+            className="mt-1 h-9 text-sm"
+          />
+        </div>
+      </CollapsibleCard>
+
       {/* Heading Tag Level */}
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen>
         <div className="space-y-3">
-          <Label className="text-sm font-medium text-gray-700">Heading Level</Label>
+          <Label className="text-sm font-medium text-gray-700">
+            Heading Level
+          </Label>
           <div className="flex flex-wrap gap-2">
             {HEADING_TAG_OPTIONS.map((option) => (
               <button
@@ -198,8 +162,7 @@ function PostTitleSettings({ block, onUpdate }: PostTitleSettingsProps) {
                 type="button"
                 onClick={() => updateContent({ tag: option.value })}
                 className={getTagButtonClassName(currentTag === option.value)}
-                aria-label={`Use ${option.label} tag`}
-              >
+                aria-label={`Use ${option.label} tag`}>
                 {option.label}
               </button>
             ))}
@@ -210,12 +173,14 @@ function PostTitleSettings({ block, onUpdate }: PostTitleSettingsProps) {
       {/* Advanced / CSS Class */}
       <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
         <div>
-          <Label htmlFor="post-title-class" className="text-sm font-medium text-gray-700">
+          <Label
+            htmlFor="post-title-class"
+            className="text-sm font-medium text-gray-700">
             Additional CSS Class(es)
           </Label>
           <Input
             id="post-title-class"
-            value={content?.className || ""}
+            value={localContent?.className || ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-title"
             className="mt-1 h-9 text-sm"
@@ -232,7 +197,6 @@ function PostTitleSettings({ block, onUpdate }: PostTitleSettingsProps) {
 
 function LegacyPostTitleRenderer({
   block,
-  isPreview,
 }: {
   block: BlockConfig;
   isPreview: boolean;
@@ -241,7 +205,6 @@ function LegacyPostTitleRenderer({
     <PostTitleRenderer
       content={(block.content as PostTitleContent) || DEFAULT_CONTENT}
       styles={block.styles}
-      isPreview={isPreview}
     />
   );
 }
@@ -257,13 +220,13 @@ function LegacyPostTitleRenderer({
  * as a static heading.
  */
 const PostTitleBlock: BlockDefinition = {
-  id: "post/title",
-  label: "Post Title",
+  id: 'post/title',
+  label: 'Post Title',
   icon: Type,
-  description: "Display the post title as a heading",
-  category: "post",
+  description: 'Display the post title as a heading',
+  category: 'post',
   defaultContent: DEFAULT_CONTENT,
-  defaultStyles: { margin: "0 0 1em 0" },
+  defaultStyles: { margin: '0 0 1em 0' },
   component: PostTitleComponent,
   renderer: LegacyPostTitleRenderer,
   settings: PostTitleSettings,

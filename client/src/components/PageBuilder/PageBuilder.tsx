@@ -62,6 +62,8 @@ interface PageBuilderProps {
   onPageMetaChange?: (
     meta: Partial<{ title: string; slug: string; status: string }>,
   ) => void;
+  currentPostId?: string;
+  contentType?: 'post' | 'page';
 }
 
 export default function PageBuilder({
@@ -73,6 +75,8 @@ export default function PageBuilder({
   onPreview,
   pageMeta,
   onPageMetaChange,
+  currentPostId,
+  contentType,
 }: PageBuilderProps) {
   const data = post;
   const isTemplate = false;
@@ -84,6 +88,7 @@ export default function PageBuilder({
   const { currentState, pushState, undo, redo, canUndo, canRedo, resetState } =
     useUndoRedo<BlockConfig[]>(initialBlocks);
   const [blocks, setBlocks] = useState<BlockConfig[]>(currentState);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
 
   useEffect(() => {
     setBlocks(currentState);
@@ -95,13 +100,23 @@ export default function PageBuilder({
    * "our own update bouncing back" from "a genuinely new external array".
    */
   const lastEmittedRef = useRef<BlockConfig[] | null>(null);
+  const selectedBlockIdRef = useRef<string | null>(selectedBlockId);
+  selectedBlockIdRef.current = selectedBlockId;
+
   useEffect(() => {
     if (!propBlocks) return;
     // Skip if this is our own change bouncing back through the parent
-    if (propBlocks === lastEmittedRef.current) return;
+    if (propBlocks === lastEmittedRef.current) {
+      return;
+    }
     // External reset — new blocks from outside, reset undo/redo history
     resetState(propBlocks);
-    setSelectedBlockId(null);
+    // Only deselect if the currently selected block no longer exists in the new blocks
+    // (e.g. switching to a different post). Preserves selection during internal round-trips.
+    const currentSelectedId = selectedBlockIdRef.current;
+    if (currentSelectedId && !findBlock(propBlocks, currentSelectedId)) {
+      setSelectedBlockId(null);
+    }
   }, [propBlocks, resetState]);
 
   const commitBlocks = useCallback(
@@ -112,8 +127,15 @@ export default function PageBuilder({
             ? (next as (p: BlockConfig[]) => BlockConfig[])(prev)
             : next;
         if (resolved === prev) {
+          console.log('[COMMIT-DEBUG] No change (same ref), skipping');
           return prev;
         }
+        console.log(
+          '[COMMIT-DEBUG] Committing blocks:',
+          prev.length,
+          '->',
+          resolved.length,
+        );
         pushState(resolved);
         return resolved;
       });
@@ -133,15 +155,23 @@ export default function PageBuilder({
 
   const handleBlockChange = useCallback(
     (updated: BlockConfig) => {
+      console.log(
+        '[BLOCKCHANGE-DEBUG] handleBlockChange called for',
+        updated.id,
+        'content:',
+        JSON.stringify(updated.content)?.slice(0, 100),
+      );
       commitBlocks((prev) => {
         const { found, next } = updateBlockDeep(prev, updated.id, updated);
+        console.log('[BLOCKCHANGE-DEBUG] updateBlockDeep result:', {
+          found,
+          sameRef: next === prev,
+        });
         return found ? next : prev;
       });
     },
     [commitBlocks],
   );
-
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [deviceView, setDeviceView] = useState<'desktop' | 'tablet' | 'mobile'>(
     'desktop',
   );
@@ -216,6 +246,7 @@ export default function PageBuilder({
     setBlocksFromDnD,
     setSelectedBlockId,
     setActiveTab,
+    currentPostId,
   );
 
   const handleDuplicate = useCallback(

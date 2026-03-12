@@ -1,31 +1,31 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ArrowLeft, Eye, Save, FileText } from "lucide-react";
-import AdminTopBar from "@/components/AdminTopBar";
-import AdminSidebar from "@/components/AdminSidebar";
-import PageBuilder from "@/components/PageBuilder/PageBuilder";
-import PublishDialog from "@/components/PageBuilder/PublishDialog";
-import { useToast } from "@/hooks/use-toast";
-import type { BlockConfig, Page, Post } from "@shared/schema-types";
-import { storeSlugToIdMapping, getPageIdFromSlug } from "@/lib/editorStorage";
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Eye, Save, FileText } from 'lucide-react';
+import AdminTopBar from '@/components/AdminTopBar';
+import AdminSidebar from '@/components/AdminSidebar';
+import PageBuilder from '@/components/PageBuilder/PageBuilder';
+import PublishDialog from '@/components/PageBuilder/PublishDialog';
+import { useToast } from '@/hooks/use-toast';
+import type { BlockConfig, Page, Post } from '@shared/schema-types';
+import { storeSlugToIdMapping, getPageIdFromSlug } from '@/lib/editorStorage';
 import {
   clearPageDraft,
   loadPageDraft,
   savePageDraft,
   savePageDraftWithHistory,
-} from "@/lib/pageDraftStorage";
+} from '@/lib/pageDraftStorage';
 import {
   clearPostDraft,
   loadPostDraft,
   savePostDraft,
-} from "@/lib/postDraftStorage";
+} from '@/lib/postDraftStorage';
 
 /** Unified editor type — supports both pages and posts */
-type EditorContentType = "page" | "post";
+type EditorContentType = 'page' | 'post';
 
 /**
  * Common shape used internally so PageBuilder receives a consistent interface.
@@ -44,35 +44,36 @@ interface PageBuilderEditorProps {
  * Adapts a Post object to the Page shape expected by PageBuilder.
  * Adds safe defaults for page-only fields (siteId, version, history, menuOrder).
  */
-const adaptPostToEditorData = (post: Post): EditorData => ({
-  ...post,
-  siteId: "",
-  version: 0,
-  history: [],
-  menuOrder: 0,
-  // Post doesn't have these page-only fields but the type requires them
-} as EditorData);
+const adaptPostToEditorData = (post: Post): EditorData =>
+  ({
+    ...post,
+    siteId: '',
+    version: 0,
+    history: [],
+    menuOrder: 0,
+    // Post doesn't have these page-only fields but the type requires them
+  }) as EditorData;
 
 export default function PageBuilderEditor({
   postId,
   isSlug = false,
-  type = "page",
+  type = 'page',
 }: PageBuilderEditorProps) {
-  const isPost = type === "post";
+  const isPost = type === 'post';
   const [, setLocation] = useLocation();
   const [blocks, setBlocks] = useState<BlockConfig[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [pageTitle, setPageTitle] = useState<string>("");
-  const [pageSlug, setPageSlug] = useState<string>("");
-  const [pageStatus, setPageStatus] = useState<string>("draft");
+  const [pageTitle, setPageTitle] = useState<string>('');
+  const [pageSlug, setPageSlug] = useState<string>('');
+  const [pageStatus, setPageStatus] = useState<string>('draft');
   const draftSaveRef = useRef<NodeJS.Timeout>();
   const latestPageStateRef = useRef<{
     blocks: BlockConfig[];
     title: string;
     slug: string;
     status: string;
-  }>({ blocks: [], title: "", slug: "", status: "draft" });
+  }>({ blocks: [], title: '', slug: '', status: 'draft' });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -92,11 +93,11 @@ export default function PageBuilderEditor({
   } | null>(null);
 
   /** API base path driven by content type */
-  const apiBase = isPost ? "/api/posts" : "/api/pages";
+  const apiBase = isPost ? '/api/posts' : '/api/pages';
 
   // Resolve page ID from slug if needed (only applicable for pages)
   const [resolvedPageId, setResolvedPageId] = useState<string | undefined>(
-    postId
+    postId,
   );
 
   useEffect(() => {
@@ -112,7 +113,11 @@ export default function PageBuilderEditor({
     }
   }, [postId, isSlug, isPost]);
 
-  const { data: rawData, isLoading, error } = useQuery<Page | Post>({
+  const {
+    data: rawData,
+    isLoading,
+    error,
+  } = useQuery<Page | Post>({
     queryKey: [`${apiBase}/${resolvedPageId || postId}`],
     enabled: !!(resolvedPageId || postId),
   });
@@ -132,14 +137,14 @@ export default function PageBuilderEditor({
       }
       setIsInitialized(false);
       setBlocks([]);
-      setPageTitle("");
-      setPageSlug("");
-      setPageStatus("draft");
+      setPageTitle('');
+      setPageSlug('');
+      setPageStatus('draft');
       latestPageStateRef.current = {
         blocks: [],
-        title: "",
-        slug: "",
-        status: "draft",
+        title: '',
+        slug: '',
+        status: 'draft',
       };
     }
   }, [resolvedPageId, postId]);
@@ -168,9 +173,9 @@ export default function PageBuilderEditor({
     const source = useLocal ? localDraft : data;
 
     const initialBlocks = Array.isArray(source.blocks) ? source.blocks : [];
-    const initialTitle = source.title || "Untitled";
-    const initialSlug = source.slug || "";
-    const initialStatus = source.status || "draft";
+    const initialTitle = source.title || 'Untitled';
+    const initialSlug = source.slug || '';
+    const initialStatus = source.status || 'draft';
 
     setBlocks(initialBlocks);
     setPageTitle(initialTitle);
@@ -204,16 +209,16 @@ export default function PageBuilderEditor({
       const slugPath = `/page-builder/page/${data.slug}`;
       const isUUIDPath =
         /^\/page-builder\/page\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-          currentPath
+          currentPath,
         );
       if (isUUIDPath && currentPath !== slugPath) {
-        window.history.replaceState({}, "", slugPath);
+        window.history.replaceState({}, '', slugPath);
       }
     }
   }, [data, postId, isSlug, isPost]);
 
   const queueDraftSave = (
-    override?: Partial<typeof latestPageStateRef.current>
+    override?: Partial<typeof latestPageStateRef.current>,
   ) => {
     if (!data?.id) return;
     const next = {
@@ -254,7 +259,7 @@ export default function PageBuilderEditor({
             blocks: next.blocks,
             version: data.version ?? 0,
           },
-          3
+          3,
         );
       }
     }, 300);
@@ -289,35 +294,36 @@ export default function PageBuilderEditor({
       };
 
       try {
-        const { apiRequest } = await import("@/lib/queryClient");
-        const response = await apiRequest("GET", `/api/posts/${detail.postId}`);
+        const { apiRequest } = await import('@/lib/queryClient');
+        const response = await apiRequest('GET', `/api/posts/${detail.postId}`);
         const post: Post = await response.json();
 
         const postBlocks = Array.isArray(post.blocks) ? post.blocks : [];
         setInlinePostId(post.id);
         setInlinePostData(post);
         setBlocks(postBlocks);
-        setPageTitle(post.title || "Untitled Post");
-        setPageSlug(post.slug || "");
-        setPageStatus(post.status || "draft");
+        setPageTitle(post.title || 'Untitled Post');
+        setPageSlug(post.slug || '');
+        setPageStatus(post.status || 'draft');
         latestPageStateRef.current = {
           blocks: postBlocks,
-          title: post.title || "Untitled Post",
-          slug: post.slug || "",
-          status: post.status || "draft",
+          title: post.title || 'Untitled Post',
+          slug: post.slug || '',
+          status: post.status || 'draft',
         };
       } catch (err) {
-        console.error("Failed to load post for inline editing:", err);
+        console.error('Failed to load post for inline editing:', err);
         toast({
-          title: "Error",
-          description: "Failed to load post for editing",
-          variant: "destructive",
+          title: 'Error',
+          description: 'Failed to load post for editing',
+          variant: 'destructive',
         });
       }
     };
 
-    window.addEventListener("np:edit-post", handleEditPostEvent);
-    return () => window.removeEventListener("np:edit-post", handleEditPostEvent);
+    window.addEventListener('np:edit-post', handleEditPostEvent);
+    return () =>
+      window.removeEventListener('np:edit-post', handleEditPostEvent);
   }, [data, blocks, pageTitle, pageSlug, pageStatus, toast]);
 
   /** Restore the blog page state after inline post editing */
@@ -356,7 +362,7 @@ export default function PageBuilderEditor({
   };
 
   const handlePageMetaChange = (
-    meta: Partial<{ title: string; slug: string; status: string }>
+    meta: Partial<{ title: string; slug: string; status: string }>,
   ) => {
     if (meta.title !== undefined) setPageTitle(meta.title);
     if (meta.slug !== undefined) setPageSlug(meta.slug);
@@ -394,14 +400,13 @@ export default function PageBuilderEditor({
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  {isPost ? "Post" : "Page"} not found or failed to load.
+                  {isPost ? 'Post' : 'Page'} not found or failed to load.
                 </p>
                 <Button
-                  onClick={() => setLocation(isPost ? "/posts" : "/pages")}
-                  className="w-full"
-                >
+                  onClick={() => setLocation(isPost ? '/posts' : '/pages')}
+                  className="w-full">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to {isPost ? "Posts" : "Pages"}
+                  Back to {isPost ? 'Posts' : 'Pages'}
                 </Button>
               </CardContent>
             </Card>
@@ -415,18 +420,20 @@ export default function PageBuilderEditor({
     // When inline-editing a post, show post-specific success message
     if (inlinePostId) {
       toast({
-        title: "Success",
-        description: "Post saved successfully",
+        title: 'Success',
+        description: 'Post saved successfully',
       });
       clearPostDraft(inlinePostId);
-      queryClient.invalidateQueries({ queryKey: [`/api/posts/${inlinePostId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/posts/${inlinePostId}`],
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
       return;
     }
 
     toast({
-      title: "Success",
-      description: `${isPost ? "Post" : "Page"} saved successfully`,
+      title: 'Success',
+      description: `${isPost ? 'Post' : 'Page'} saved successfully`,
     });
 
     if (isPost) {
@@ -443,7 +450,7 @@ export default function PageBuilderEditor({
 
     setIsSaving(true);
     try {
-      const { apiRequest } = await import("@/lib/queryClient");
+      const { apiRequest } = await import('@/lib/queryClient');
 
       // When inline-editing a post, save to the post API
       if (inlinePostId) {
@@ -454,9 +461,9 @@ export default function PageBuilderEditor({
           blocks,
         };
         const response = await apiRequest(
-          "PUT",
+          'PUT',
           `/api/posts/${inlinePostId}`,
-          postPayload
+          postPayload,
         );
         const updated = await response.json();
         savePostDraft(updated.id, updated);
@@ -477,9 +484,9 @@ export default function PageBuilderEditor({
           };
 
       const response = await apiRequest(
-        "PUT",
+        'PUT',
         `${apiBase}/${data.id}`,
-        payload
+        payload,
       );
       const updated = await response.json();
 
@@ -495,9 +502,9 @@ export default function PageBuilderEditor({
     } catch (err) {
       console.error(`Error saving ${type}:`, err);
       toast({
-        title: "Error",
+        title: 'Error',
         description: `Failed to save ${type}`,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsSaving(false);
@@ -507,18 +514,18 @@ export default function PageBuilderEditor({
   const handlePreview = () => {
     // When inline-editing a post, preview the post
     if (inlinePostId) {
-      window.open(`/preview/post/${inlinePostId}`, "_blank");
+      window.open(`/preview/post/${inlinePostId}`, '_blank');
       return;
     }
     if (!data) return;
     const previewPath = isPost
       ? `/preview/post/${data.id}`
       : `/preview/page/${data.id}`;
-    window.open(previewPath, "_blank");
+    window.open(previewPath, '_blank');
   };
 
   const handleBackToList = () => {
-    setLocation(isPost ? "/posts" : "/pages");
+    setLocation(isPost ? '/posts' : '/pages');
   };
 
   /** Determine the label and back behavior based on inline editing state */
@@ -534,11 +541,12 @@ export default function PageBuilderEditor({
             <Button
               variant="ghost"
               size="sm"
-              onClick={isInlineEditing ? handleBackToBlogPage : handleBackToList}
-              className="flex items-center gap-2"
-            >
+              onClick={
+                isInlineEditing ? handleBackToBlogPage : handleBackToList
+              }
+              className="flex items-center gap-2">
               <ArrowLeft className="w-4 h-4" />
-              {isInlineEditing ? "Back to Blog Page" : "Back"}
+              {isInlineEditing ? 'Back to Blog Page' : 'Back'}
             </Button>
             <div className="flex items-center gap-2 flex-1 max-w-md">
               {isInlineEditing && (
@@ -546,8 +554,8 @@ export default function PageBuilderEditor({
               )}
               <span className="text-sm text-gray-400 flex-shrink-0">
                 {isInlineEditing
-                  ? "Editing Post:"
-                  : `Editing ${isPost ? "Post" : "Page"}:`}
+                  ? 'Editing Post:'
+                  : `Editing ${isPost ? 'Post' : 'Page'}:`}
               </span>
               <Input
                 value={pageTitle}
@@ -564,8 +572,7 @@ export default function PageBuilderEditor({
               size="sm"
               onClick={handlePreview}
               className="flex items-center gap-2 text-gray-800"
-              data-testid="button-preview"
-            >
+              data-testid="button-preview">
               <Eye className="w-4 h-4" />
               Preview
             </Button>
@@ -575,10 +582,9 @@ export default function PageBuilderEditor({
               onClick={handlePageBuilderSave}
               disabled={isSaving}
               className="flex items-center gap-2"
-              data-testid="button-save"
-            >
+              data-testid="button-save">
               <Save className="w-4 h-4" />
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
             <PublishDialog
               post={data}
@@ -607,6 +613,8 @@ export default function PageBuilderEditor({
               version: isInlineEditing ? 0 : data.version,
             }}
             onPageMetaChange={handlePageMetaChange}
+            currentPostId={inlinePostId || (isPost ? data?.id : undefined)}
+            contentType={type}
           />
         </div>
       </div>

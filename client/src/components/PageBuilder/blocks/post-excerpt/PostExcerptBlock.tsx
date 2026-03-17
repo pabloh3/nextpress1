@@ -271,20 +271,6 @@ function PostExcerptSettings({ block, onUpdate }: PostExcerptSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyPostExcerptRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <PostExcerptRenderer
-      content={(block.content as PostExcerptContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -303,7 +289,6 @@ const PostExcerptBlock: BlockDefinition = {
   defaultContent: DEFAULT_CONTENT,
   defaultStyles: { margin: '0 0 1em 0' },
   component: PostExcerptComponent,
-  renderer: LegacyPostExcerptRenderer,
   settings: PostExcerptSettings,
   hasSettings: true,
 };

@@ -400,20 +400,6 @@ function GallerySettings({ block, onUpdate }: GallerySettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyGalleryRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <GalleryRenderer
-      content={(block.content as GalleryContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -438,7 +424,6 @@ const GalleryBlock: BlockDefinition = {
   },
   defaultStyles: {},
   component: GalleryBlockComponent,
-  renderer: LegacyGalleryRenderer,
   settings: GallerySettings,
   hasSettings: true,
 };

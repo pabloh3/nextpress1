@@ -414,15 +414,6 @@ function PostFeaturedImageSettings({
 // LEGACY RENDERER
 // ============================================================================
 
-function LegacyRenderer({ block }: { block: BlockConfig; isPreview: boolean }) {
-  return (
-    <PostFeaturedImageRenderer
-      content={(block.content as PostFeaturedImageContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -436,7 +427,6 @@ const PostFeaturedImageBlock: BlockDefinition = {
   defaultContent: { ...DEFAULT_CONTENT },
   defaultStyles: { width: '100%' },
   component: PostFeaturedImageComponent,
-  renderer: LegacyRenderer,
   settings: PostFeaturedImageSettings,
   hasSettings: true,
 };

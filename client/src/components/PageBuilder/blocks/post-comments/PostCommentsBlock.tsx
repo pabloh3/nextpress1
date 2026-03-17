@@ -454,27 +454,6 @@ function PostCommentsSettings({
 
 // --- Legacy Renderer ---
 
-function LegacyPostCommentsRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  const raw = block.content as any;
-  const content: PostCommentsContent =
-    raw?.kind === 'structured'
-      ? (raw.data as PostCommentsContent)
-      : ((raw as PostCommentsContent) ?? DEFAULT_CONTENT);
-  return (
-    <PostCommentsRenderer
-      content={content}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // --- Block Definition ---
 
 /**
@@ -491,7 +470,6 @@ const PostCommentsBlock: BlockDefinition = {
   defaultContent: DEFAULT_CONTENT,
   defaultStyles: {},
   component: PostCommentsBlockComponent,
-  renderer: LegacyPostCommentsRenderer,
   settings: PostCommentsSettings,
   hasSettings: true,
 };

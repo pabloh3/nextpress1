@@ -460,20 +460,6 @@ function CoverSettings({ block, onUpdate }: CoverSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyCoverRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <CoverRenderer
-      content={(block.content as CoverContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -502,7 +488,6 @@ const CoverBlock: BlockDefinition = {
   },
   defaultStyles: {},
   component: CoverBlockComponent,
-  renderer: LegacyCoverRenderer,
   settings: CoverSettings,
   hasSettings: true,
 };

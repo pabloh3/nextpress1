@@ -419,20 +419,6 @@ function MediaTextSettings({ block, onUpdate }: MediaTextSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyMediaTextRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <MediaTextRenderer
-      content={(block.content as MediaTextContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -466,7 +452,6 @@ const MediaTextBlock: BlockDefinition = {
   },
   defaultStyles: {},
   component: MediaTextBlockComponent,
-  renderer: LegacyMediaTextRenderer,
   settings: MediaTextSettings,
   hasSettings: true,
 };

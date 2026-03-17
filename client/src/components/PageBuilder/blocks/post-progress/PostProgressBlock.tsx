@@ -408,22 +408,6 @@ function PostProgressSettings({
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyPostProgressRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <PostProgressRenderer
-      content={(block.content as PostProgressContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -441,7 +425,6 @@ const PostProgressBlock: BlockDefinition = {
   defaultContent: DEFAULT_CONTENT,
   defaultStyles: {},
   component: PostProgressBlockComponent,
-  renderer: LegacyPostProgressRenderer,
   settings: PostProgressSettings,
   hasSettings: true,
 };

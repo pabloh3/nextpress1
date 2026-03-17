@@ -246,20 +246,6 @@ function TextSettings({ block, onUpdate }: TextSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyTextRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <TextRenderer
-      content={(block.content as TextBlockContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -284,7 +270,6 @@ const TextBlock: BlockDefinition = {
     color: '#333333',
   },
   component: TextBlockComponent,
-  renderer: LegacyTextRenderer,
   settings: TextSettings,
   hasSettings: true,
 };

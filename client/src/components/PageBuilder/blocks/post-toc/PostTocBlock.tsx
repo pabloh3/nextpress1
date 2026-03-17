@@ -369,22 +369,6 @@ function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyPostTocRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <PostTocRenderer
-      content={(block.content as PostTocContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -404,7 +388,6 @@ const PostTocBlock: BlockDefinition = {
   defaultContent: DEFAULT_CONTENT,
   defaultStyles: { margin: '1em 0' },
   component: PostTocComponent,
-  renderer: LegacyPostTocRenderer,
   settings: PostTocSettings,
   hasSettings: true,
 };

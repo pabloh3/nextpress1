@@ -416,22 +416,6 @@ function PostAuthorBoxSettings({
 // LEGACY RENDERER
 // ============================================================================
 
-function LegacyPostAuthorBoxRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <PostAuthorBoxRenderer
-      content={(block.content as PostAuthorBoxContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -449,7 +433,6 @@ const PostAuthorBoxBlock: BlockDefinition = {
   defaultContent: DEFAULT_CONTENT,
   defaultStyles: { margin: '0 0 1em 0' },
   component: PostAuthorBoxComponent,
-  renderer: LegacyPostAuthorBoxRenderer,
   settings: PostAuthorBoxSettings,
   hasSettings: true,
 };

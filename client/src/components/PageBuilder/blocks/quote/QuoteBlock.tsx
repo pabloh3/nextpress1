@@ -262,20 +262,6 @@ function QuoteSettings({ block, onUpdate }: QuoteSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyQuoteRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <QuoteRenderer
-      content={(block.content as QuoteContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -296,7 +282,6 @@ const QuoteBlock: BlockDefinition = {
   },
   defaultStyles: {},
   component: QuoteBlockComponent,
-  renderer: LegacyQuoteRenderer,
   settings: QuoteSettings,
   hasSettings: true,
 };

@@ -21,9 +21,9 @@ const mockBlockRegistry = vi.hoisted(() => ({
     id: 'core/paragraph',
     name: 'Paragraph',
     label: 'Paragraph',
-    renderer: ({ block }: { block: BlockConfig }) => (
-      <p className="wp-block-paragraph" style={block.styles as any}>
-        {getText(block.content)}
+    component: ({ value, onChange }: { value: BlockConfig; onChange: (updated: BlockConfig) => void }) => (
+      <p className="wp-block-paragraph" style={value.styles as any}>
+        {getText(value.content)}
       </p>
     ),
     isContainer: false,
@@ -32,10 +32,9 @@ const mockBlockRegistry = vi.hoisted(() => ({
     id: 'core/group',
     name: 'Group',
     label: 'Group',
-    renderer: ({ block, children }: { block: BlockConfig; children?: React.ReactNode }) => (
-      <div className="wp-block-group" data-testid="group-block" data-block-id={block.id}>
+    component: ({ value, onChange }: { value: BlockConfig; onChange: (updated: BlockConfig) => void }) => (
+      <div className="wp-block-group" data-testid="group-block" data-block-id={value.id}>
         Group Container
-        {children}
       </div>
     ),
     isContainer: true,

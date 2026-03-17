@@ -293,20 +293,6 @@ function ListSettings({ block, onUpdate }: ListSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyListRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <ListRenderer
-      content={(block.content as ListContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -328,7 +314,6 @@ const ListBlock: BlockDefinition = {
   },
   defaultStyles: {},
   component: ListBlockComponent,
-  renderer: LegacyListRenderer,
   settings: ListSettings,
   hasSettings: true,
 };

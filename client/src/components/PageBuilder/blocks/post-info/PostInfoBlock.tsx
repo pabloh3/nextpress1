@@ -492,22 +492,6 @@ function PostInfoSettings({ block, onUpdate }: PostInfoSettingsProps) {
 // LEGACY RENDERER
 // ============================================================================
 
-function LegacyPostInfoRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <PostInfoRenderer
-      content={(block.content as PostInfoContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -525,7 +509,6 @@ const PostInfoBlock: BlockDefinition = {
   defaultContent: DEFAULT_CONTENT,
   defaultStyles: { margin: '0.5em 0' },
   component: PostInfoBlockComponent,
-  renderer: LegacyPostInfoRenderer,
   settings: PostInfoSettings,
   hasSettings: true,
 };

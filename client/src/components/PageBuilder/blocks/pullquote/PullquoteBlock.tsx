@@ -272,20 +272,6 @@ function PullquoteSettings({ block, onUpdate }: PullquoteSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyPullquoteRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <PullquoteRenderer
-      content={(block.content as PullquoteContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -307,7 +293,6 @@ const PullquoteBlock: BlockDefinition = {
     color: '#000000',
   },
   component: PullquoteBlockComponent,
-  renderer: LegacyPullquoteRenderer,
   settings: PullquoteSettings,
   hasSettings: true,
 };

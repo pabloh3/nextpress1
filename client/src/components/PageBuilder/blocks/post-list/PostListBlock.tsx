@@ -589,27 +589,6 @@ function PostListSettings({
 // LEGACY RENDERER
 // ============================================================================
 
-function LegacyPostListRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  const raw = block.content as any;
-  const content: PostListContent =
-    raw?.kind === 'structured'
-      ? (raw.data as PostListContent)
-      : ((raw as PostListContent) ?? DEFAULT_CONTENT);
-  return (
-    <PostListRenderer
-      content={content}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -623,7 +602,6 @@ const PostListBlock: BlockDefinition = {
   defaultContent: DEFAULT_CONTENT,
   defaultStyles: {},
   component: PostListBlockComponent,
-  renderer: LegacyPostListRenderer,
   settings: PostListSettings,
   hasSettings: true,
 };

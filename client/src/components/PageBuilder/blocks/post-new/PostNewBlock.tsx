@@ -266,22 +266,6 @@ function PostNewSettings({ block, onUpdate }: PostNewSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyPostNewRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <PostNewRenderer
-      content={(block.content as PostNewContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -301,7 +285,6 @@ const PostNewBlock: BlockDefinition = {
   defaultContent: DEFAULT_CONTENT,
   defaultStyles: { margin: '0 0 1em 0' },
   component: PostNewComponent,
-  renderer: LegacyPostNewRenderer,
   settings: PostNewSettings,
   hasSettings: true,
 };

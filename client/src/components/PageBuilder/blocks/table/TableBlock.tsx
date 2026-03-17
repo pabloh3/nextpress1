@@ -481,20 +481,6 @@ function TableSettings({ block, onUpdate }: TableSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyTableRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <TableRenderer
-      content={(block.content as TableContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -520,7 +506,6 @@ const TableBlock: BlockDefinition = {
     margin: '1em 0',
   },
   component: TableBlockComponent,
-  renderer: LegacyTableRenderer,
   settings: TableSettings,
   hasSettings: true,
 };

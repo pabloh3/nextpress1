@@ -219,22 +219,6 @@ function ButtonSettings({ block, onUpdate }: ButtonSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyButtonRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <ButtonRenderer
-      content={(block.content as ButtonContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -266,7 +250,6 @@ const ButtonBlock: BlockDefinition = {
     cursor: 'pointer',
   },
   component: ButtonBlockComponent,
-  renderer: LegacyButtonRenderer,
   settings: ButtonSettings,
   hasSettings: true,
 };

@@ -195,20 +195,6 @@ function PostTitleSettings({ block, onUpdate }: PostTitleSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyPostTitleRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <PostTitleRenderer
-      content={(block.content as PostTitleContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -228,7 +214,6 @@ const PostTitleBlock: BlockDefinition = {
   defaultContent: DEFAULT_CONTENT,
   defaultStyles: { margin: '0 0 1em 0' },
   component: PostTitleComponent,
-  renderer: LegacyPostTitleRenderer,
   settings: PostTitleSettings,
   hasSettings: true,
 };

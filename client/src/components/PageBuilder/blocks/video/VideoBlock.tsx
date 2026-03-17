@@ -531,20 +531,6 @@ function VideoSettings({ block, onUpdate }: VideoSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyVideoRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <VideoRenderer
-      content={(block.content as VideoContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -574,7 +560,6 @@ const VideoBlock: BlockDefinition = {
   },
   defaultStyles: {},
   component: VideoBlockComponent,
-  renderer: LegacyVideoRenderer,
   settings: VideoSettings,
   hasSettings: true,
 };

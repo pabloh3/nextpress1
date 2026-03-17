@@ -439,22 +439,6 @@ function PostNavigationSettings({
 // LEGACY RENDERER
 // ============================================================================
 
-function LegacyPostNavigationRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <PostNavigationRenderer
-      content={(block.content as PostNavigationContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -472,7 +456,6 @@ const PostNavigationBlock: BlockDefinition = {
   defaultContent: DEFAULT_CONTENT,
   defaultStyles: { margin: '2em 0' },
   component: PostNavigationBlockComponent,
-  renderer: LegacyPostNavigationRenderer,
   settings: PostNavigationSettings,
   hasSettings: true,
 };

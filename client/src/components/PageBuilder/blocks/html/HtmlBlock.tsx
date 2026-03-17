@@ -173,22 +173,6 @@ function HtmlSettings({ block, onUpdate }: HtmlSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyHtmlRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <HtmlRenderer
-      content={(block.content as HtmlContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -207,7 +191,6 @@ const HtmlBlock: BlockDefinition = {
     margin: '1em 0',
   },
   component: HtmlBlockComponent,
-  renderer: LegacyHtmlRenderer,
   settings: HtmlSettings,
   hasSettings: true,
 };

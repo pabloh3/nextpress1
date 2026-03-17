@@ -208,11 +208,7 @@ export default function BlockRenderer({
       );
     }
 
-    // Legacy renderer pattern (backward compatibility)
-    if (def?.renderer) {
-      const Renderer = def.renderer;
-      return <Renderer block={block} isPreview={isPreview} />;
-    }
+
 
     // Fallback
     return (

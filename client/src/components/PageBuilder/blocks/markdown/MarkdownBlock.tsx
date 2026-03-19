@@ -170,22 +170,6 @@ function MarkdownSettings({ block, onUpdate }: MarkdownSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyMarkdownRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <MarkdownRenderer
-      content={(block.content as MarkdownContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -204,7 +188,6 @@ const MarkdownBlock: BlockDefinition = {
     margin: "1em 0",
   },
   component: MarkdownBlockComponent,
-  renderer: LegacyMarkdownRenderer,
   settings: MarkdownSettings,
   hasSettings: true,
 };

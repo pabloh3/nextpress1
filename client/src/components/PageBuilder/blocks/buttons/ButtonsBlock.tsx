@@ -364,20 +364,6 @@ function ButtonsSettings({ block, onUpdate }: ButtonsSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyButtonsRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <ButtonsRenderer
-      content={(block.content as ButtonsContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -410,7 +396,6 @@ const ButtonsBlock: BlockDefinition = {
   },
   defaultStyles: {},
   component: ButtonsBlockComponent,
-  renderer: LegacyButtonsRenderer,
   settings: ButtonsSettings,
   hasSettings: true,
 };

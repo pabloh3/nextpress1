@@ -63,12 +63,11 @@ export function BlogMenu({ children, currentPostId, blogId }: BlogMenuProps) {
       </DropdownMenu>
 
       {/* Command Palette for browsing posts */}
-      <CommandDialog 
-        open={showCommand} 
+      <CommandDialog
+        open={showCommand}
         onOpenChange={setShowCommand}
         title="Search Posts"
-        description="Search and select a post to edit"
-      >
+        description="Search and select a post to edit">
         <CommandInput placeholder="Search posts..." />
         <CommandList>
           <CommandEmpty>

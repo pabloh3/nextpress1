@@ -178,20 +178,6 @@ function DividerSettings({ block, onUpdate }: DividerSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyDividerRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <DividerRenderer
-      content={(block.content as DividerContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -211,7 +197,6 @@ const DividerBlock: BlockDefinition = {
     padding: '20px 0px',
   },
   component: DividerBlockComponent,
-  renderer: LegacyDividerRenderer,
   settings: DividerSettings,
   hasSettings: true,
 };

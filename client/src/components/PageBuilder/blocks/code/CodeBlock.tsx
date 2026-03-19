@@ -176,20 +176,6 @@ function CodeSettings({ block, onUpdate }: CodeSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyCodeRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <CodeRenderer
-      content={(block.content as CodeContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -209,7 +195,6 @@ const CodeBlock: BlockDefinition = {
     margin: '1em 0',
   },
   component: CodeBlockComponent,
-  renderer: LegacyCodeRenderer,
   settings: CodeSettings,
   hasSettings: true,
 };

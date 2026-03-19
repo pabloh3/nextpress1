@@ -309,24 +309,6 @@ function LegacyHeadingSettings({ block, onUpdate }: HeadingSettingsProps) {
 }
 
 // ============================================================================
-// LEGACY RENDERER (Backward Compatibility)
-// ============================================================================
-
-function LegacyHeadingRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <HeadingRenderer
-      content={(block.content as HeadingContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
-// ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
 
@@ -350,7 +332,6 @@ export const HeadingBlock: BlockDefinition = {
     margin: "1rem 0",
   },
   component: HeadingBlockComponent,
-  renderer: LegacyHeadingRenderer,
   settings: LegacyHeadingSettings,
   hasSettings: true,
 };

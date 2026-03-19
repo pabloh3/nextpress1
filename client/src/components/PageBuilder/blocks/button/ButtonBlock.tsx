@@ -53,7 +53,7 @@ function ButtonRenderer({ content, styles, isPreview }: ButtonRendererProps) {
   const anchorClass = "wp-block-button__link wp-element-button";
 
   return (
-    <div className={wrapperClass} onClick={(e) => (isPreview ? undefined : e.preventDefault())}>
+    <div className={wrapperClass} role="presentation" onClick={(e) => (isPreview ? undefined : e.preventDefault())}>
       <a
         href={url}
         target={linkTarget}
@@ -219,22 +219,6 @@ function ButtonSettings({ block, onUpdate }: ButtonSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyButtonRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <ButtonRenderer
-      content={(block.content as ButtonContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -266,7 +250,6 @@ const ButtonBlock: BlockDefinition = {
     cursor: 'pointer',
   },
   component: ButtonBlockComponent,
-  renderer: LegacyButtonRenderer,
   settings: ButtonSettings,
   hasSettings: true,
 };

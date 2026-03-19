@@ -186,20 +186,6 @@ function SeparatorSettings({ block, onUpdate }: SeparatorSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacySeparatorRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <SeparatorRenderer
-      content={(block.content as SeparatorContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -219,7 +205,6 @@ const SeparatorBlock: BlockDefinition = {
     margin: '2.5em auto',
   },
   component: SeparatorBlockComponent,
-  renderer: LegacySeparatorRenderer,
   settings: SeparatorSettings,
   hasSettings: true,
 };

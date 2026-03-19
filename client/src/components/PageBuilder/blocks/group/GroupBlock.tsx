@@ -388,23 +388,6 @@ function GroupSettings({ block, onUpdate }: GroupSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyGroupRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <GroupRenderer
-      content={(block.content as GroupContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      children={block.children}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -430,7 +413,6 @@ const GroupBlock: BlockDefinition = {
     padding: '1.25em 2.375em',
   },
   component: GroupBlockComponent,
-  renderer: LegacyGroupRenderer,
   settings: GroupSettings,
   hasSettings: true,
 };

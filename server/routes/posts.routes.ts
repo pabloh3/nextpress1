@@ -23,7 +23,7 @@ export function createPostsRoutes(deps: Deps): Router {
   const postSchemas = schemas.posts;
 
   /**
-   * GET /api/posts - List posts with pagination and status filter
+   * GET /api/posts - List posts with pagination, status and blog_id filter
    */
   router.get(
     '/',
@@ -33,22 +33,26 @@ export function createPostsRoutes(deps: Deps): Router {
           req.query,
           CONFIG.PAGINATION.DEFAULT_POSTS_PER_PAGE
         );
-        const { status = CONFIG.STATUS.PUBLISH } = req.query;
+        const { status = CONFIG.STATUS.PUBLISH, blog_id } = req.query;
 
         // Handle 'any' status to show all posts (for admin interface)
         const actualStatus = parseStatusParam(status as string);
 
-        const posts = await models.posts.findMany({
-          where: 'status',
-          equals: actualStatus,
-          limit,
-          offset,
-        });
+        // Build combined filter array for status + blogId
+        const filters: Array<{ where: string; equals: unknown }> = [];
+        if (actualStatus) {
+          filters.push({ where: 'status', equals: actualStatus });
+        }
+        if (blog_id && typeof blog_id === 'string') {
+          filters.push({ where: 'blogId', equals: blog_id });
+        }
+
+        const posts = filters.length > 0
+          ? await models.posts.findManyWhere(filters, { limit, offset })
+          : await models.posts.findMany({ limit, offset });
 
         const total = await models.posts.count({
-          where: actualStatus
-            ? [{ where: 'status', equals: actualStatus }]
-            : undefined,
+          where: filters.length > 0 ? filters : undefined,
         });
 
         return {
@@ -101,30 +105,32 @@ export function createPostsRoutes(deps: Deps): Router {
           throw new Error('User not authenticated');
         }
 
-        // Include authorId in the data before validation
-        const parsedData = postSchemas.insert.parse({
-          ...req.body,
-          authorId: userId,
-        });
-
-        // Generate slug if not provided
-        const title = parsedData.title;
+        // Validate title before parse so we can generate slug
+        const title = req.body.title;
         if (!title || typeof title !== 'string') {
           throw new Error('Title is required and must be a string');
         }
 
+        // Generate slug before validation so the required field is present
         const titleStr = String(title);
-        const slugValue = parsedData.slug 
-          ? String(parsedData.slug)
+        const slugValue = req.body.slug 
+          ? String(req.body.slug)
           : titleStr
               .toLowerCase()
               .replace(/[^a-z0-9]+/g, '-')
               .replace(/^-|-$/g, '');
+
+        // Include authorId and slug in the data before validation
+        const parsedData = postSchemas.insert.parse({
+          ...req.body,
+          slug: slugValue,
+          authorId: userId,
+        });
         
         const postData = {
           ...parsedData,
-          title: titleStr,
-          slug: slugValue,
+          title: String(parsedData.title),
+          slug: String(parsedData.slug),
           authorId: String(parsedData.authorId),
         };
 

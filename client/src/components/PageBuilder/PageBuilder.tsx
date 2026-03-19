@@ -19,6 +19,11 @@ import {
   duplicateBlockDeep,
 } from '@/lib/handlers/treeUtils';
 
+function useMountEffect(effect: () => void | (() => void)) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(effect, []);
+}
+
 function isDescendant(
   blocks: BlockConfig[],
   ancestorId: string,
@@ -62,6 +67,8 @@ interface PageBuilderProps {
   onPageMetaChange?: (
     meta: Partial<{ title: string; slug: string; status: string }>,
   ) => void;
+  currentPostId?: string;
+  contentType?: 'post' | 'page';
 }
 
 export default function PageBuilder({
@@ -73,6 +80,8 @@ export default function PageBuilder({
   onPreview,
   pageMeta,
   onPageMetaChange,
+  currentPostId,
+  contentType,
 }: PageBuilderProps) {
   const data = post;
   const isTemplate = false;
@@ -80,28 +89,61 @@ export default function PageBuilder({
   const initialBlocks =
     propBlocks || (data ? (data.blocks as BlockConfig[]) || [] : []);
 
-  // Use undo/redo for blocks state
-  const { currentState, pushState, undo, redo, canUndo, canRedo } =
+  // Use undo/redo for blocks state - derive blocks directly from currentState
+  const { currentState, pushState, undo, redo, canUndo, canRedo, resetState } =
     useUndoRedo<BlockConfig[]>(initialBlocks);
-  const [blocks, setBlocks] = useState<BlockConfig[]>(currentState);
+  const blocks = currentState; // Direct derivation - no separate state
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setBlocks(currentState);
-  }, [currentState]);
+  /**
+   * Detect when the parent swaps propBlocks externally (e.g. inline post editing).
+   * We track the last propBlocks ref we emitted via onBlocksChange to distinguish
+   * "our own update bouncing back" from "a genuinely new external array".
+   *
+   * Uses the "adjusting state during render" pattern (no useEffect) —
+   * track previous propBlocks and reset if genuinely new.
+   */
+  const lastEmittedRef = useRef<BlockConfig[] | null>(null);
+  const selectedBlockIdRef = useRef<string | null>(selectedBlockId);
+  selectedBlockIdRef.current = selectedBlockId;
 
+  const [prevPropBlocks, setPrevPropBlocks] = useState<BlockConfig[] | undefined>(propBlocks);
+  if (propBlocks !== prevPropBlocks) {
+    setPrevPropBlocks(propBlocks);
+    if (propBlocks && propBlocks !== lastEmittedRef.current) {
+      // External reset — new blocks from outside, reset undo/redo history
+      resetState(propBlocks);
+      // Only deselect if the currently selected block no longer exists in the new blocks
+      const currentSelectedId = selectedBlockIdRef.current;
+      if (currentSelectedId && !findBlock(propBlocks, currentSelectedId)) {
+        setSelectedBlockId(null);
+      }
+    }
+  }
+
+  // Refs for stable callback identity in commitBlocks and handlers
+  const currentStateRef = useRef(currentState);
+  currentStateRef.current = currentState;
+
+  const onBlocksChangeRef = useRef(onBlocksChange);
+  onBlocksChangeRef.current = onBlocksChange;
+
+  /**
+   * Commit a blocks update to undo/redo history and notify parent.
+   * Uses refs for currentState and onBlocksChange so this callback
+   * has a stable identity (only depends on pushState which is stable).
+   */
   const commitBlocks = useCallback(
     (next: BlockConfig[] | ((prev: BlockConfig[]) => BlockConfig[])) => {
-      setBlocks((prev) => {
-        const resolved =
-          typeof next === 'function'
-            ? (next as (p: BlockConfig[]) => BlockConfig[])(prev)
-            : next;
-        if (resolved === prev) {
-          return prev;
-        }
-        pushState(resolved);
-        return resolved;
-      });
+      const current = currentStateRef.current;
+      const resolved =
+        typeof next === 'function'
+          ? (next as (p: BlockConfig[]) => BlockConfig[])(current)
+          : next;
+      if (resolved === current) return;
+      pushState(resolved);
+      lastEmittedRef.current = resolved;
+      onBlocksChangeRef.current?.(resolved);
     },
     [pushState],
   );
@@ -125,8 +167,6 @@ export default function PageBuilder({
     },
     [commitBlocks],
   );
-
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [deviceView, setDeviceView] = useState<'desktop' | 'tablet' | 'mobile'>(
     'desktop',
   );
@@ -137,16 +177,7 @@ export default function PageBuilder({
   >(null);
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
-  // Store onBlocksChange in a ref to avoid infinite loops when parent re-renders
-  const onBlocksChangeRef = useRef(onBlocksChange);
-  useEffect(() => {
-    onBlocksChangeRef.current = onBlocksChange;
-  });
-
-  // Notify parent of blocks changes without onBlocksChange in deps
-  useEffect(() => {
-    onBlocksChangeRef.current?.(blocks);
-  }, [blocks]);
+  // Parent notification is now done procedurally in commitBlocks
 
   const selectedBlock = selectedBlockId
     ? findBlock(blocks, selectedBlockId)
@@ -168,25 +199,35 @@ export default function PageBuilder({
     }
   }, [blocks, saveMutation, onSave, data]);
 
-  useEffect(() => {
+  // Refs for keyboard shortcut handlers so useMountEffect captures stable references
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+
+  const undoRef = useRef(undo);
+  undoRef.current = undo;
+
+  const redoRef = useRef(redo);
+  redoRef.current = redo;
+
+  useMountEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
 
       if (isMod && key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        undo();
+        undoRef.current();
       } else if (isMod && ((e.shiftKey && key === 'z') || key === 'y')) {
         e.preventDefault();
-        redo();
+        redoRef.current();
       } else if (isMod && key === 's') {
         e.preventDefault();
-        handleSave();
+        handleSaveRef.current();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, handleSave]);
+  });
 
   const setBlocksFromDnD = useCallback(
     (next: BlockConfig[]) => {
@@ -200,6 +241,7 @@ export default function PageBuilder({
     setBlocksFromDnD,
     setSelectedBlockId,
     setActiveTab,
+    currentPostId,
   );
 
   const handleDuplicate = useCallback(
@@ -262,11 +304,8 @@ export default function PageBuilder({
           hoverHighlight,
         }}>
         <DragDropContext
-          onDragEnd={(result: DndDropResult) => {
-            console.log('[DND] PageBuilder onDragEnd (received)', result);
-            return handleDragEnd(result);
-          }}
-          onDragStart={() => console.log('Drag started, id:', selectedBlockId)}
+          onDragEnd={(result: DndDropResult) => handleDragEnd(result)}
+          onDragStart={() => {/* DnD started */}}
           renderOverlay={({ id }) => {
             // id may refer directly to block definition id (library drag) or block instance id (canvas drag)
             // Attempt to resolve instance id by checking current blocks mapping name

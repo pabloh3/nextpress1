@@ -292,20 +292,6 @@ function AudioSettings({ block, onUpdate }: AudioSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyAudioRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <AudioRenderer
-      content={(block.content as AudioContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -332,7 +318,6 @@ const AudioBlock: BlockDefinition = {
   },
   defaultStyles: {},
   component: AudioBlockComponent,
-  renderer: LegacyAudioRenderer,
   settings: AudioSettings,
   hasSettings: true,
 };

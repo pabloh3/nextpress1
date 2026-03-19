@@ -1,19 +1,19 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Eye, Paintbrush } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
-import PostEditor from "@/components/PostEditor";
+import { CreatePostDialog } from "@/components/posts/CreatePostDialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Post } from "@shared/schema";
+import type { Post } from "@shared/schema-types";
 
 // API response type for posts endpoint
 interface PostsResponse {
@@ -26,9 +26,9 @@ interface PostsResponse {
 
 export default function Posts() {
   const [search, setSearch] = useState("");
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingPost, setEditingPost] = useState<number | undefined>();
   const [page, setPage] = useState(1);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [, setLocation] = useLocation();
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -38,7 +38,7 @@ export default function Posts() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       return await apiRequest('DELETE', `/api/posts/${id}`);
     },
     onSuccess: () => {
@@ -57,34 +57,20 @@ export default function Posts() {
     },
   });
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this post?")) {
       deleteMutation.mutate(id);
     }
   };
 
-  const handleEdit = (postId: number) => {
-    setEditingPost(postId);
-    setIsEditorOpen(true);
+  /** Navigate to the page builder to edit a post */
+  const handleEdit = (postId: string) => {
+    setLocation(`/page-builder/post/${postId}`);
   };
 
-  const handlePageBuilder = (postId: number) => {
-    window.location.href = `/page-builder/post/${postId}?mode=builder`;
-  };
-
+  /** Open the create post dialog (blog selection + title) */
   const handleNewPost = () => {
-    setEditingPost(undefined);
-    setIsEditorOpen(true);
-  };
-
-  const handleEditorSave = (post: Post) => {
-    setIsEditorOpen(false);
-    setEditingPost(undefined);
-  };
-
-  const handleEditorCancel = () => {
-    setIsEditorOpen(false);
-    setEditingPost(undefined);
+    setShowCreateDialog(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -212,24 +198,7 @@ export default function Posts() {
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Edit with classic text editor</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => handlePageBuilder(post.id)}
-                                  >
-                                    <Paintbrush className="w-4 h-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Edit with visual page builder</p>
+                                  <p>Edit in page builder</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -290,22 +259,10 @@ export default function Posts() {
         </div>
       </div>
 
-      {/* Post Editor Dialog */}
-      <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingPost ? 'Edit Post' : 'Add New Post'}
-            </DialogTitle>
-          </DialogHeader>
-          <PostEditor
-            postId={editingPost}
-            type="post"
-            onSave={handleEditorSave}
-            onCancel={handleEditorCancel}
-          />
-        </DialogContent>
-      </Dialog>
+      <CreatePostDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
     </div>
   );
 }

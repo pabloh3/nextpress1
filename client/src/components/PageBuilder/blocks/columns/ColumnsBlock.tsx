@@ -490,27 +490,6 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyColumnsRenderer({
-  block,
-  isPreview,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  const columnLayout = (block.settings?.columnLayout as ColumnLayout[] | undefined) || [
-    { columnId: "default-col-1", width: "100%", blockIds: [] },
-  ];
-  return (
-    <ColumnsRenderer
-      content={(block.content as ColumnsContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-      children={block.children}
-      columnLayout={columnLayout}
-      isPreview={isPreview}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -526,7 +505,6 @@ const ColumnsBlock: BlockDefinition = {
   defaultContent: { kind: "structured", data: { gap: "20px", verticalAlignment: "top", horizontalAlignment: "left", direction: "row" } },
   defaultStyles: {},
   component: ColumnsBlockComponent,
-  renderer: LegacyColumnsRenderer,
   settings: ColumnsSettings,
   hasSettings: true,
 };

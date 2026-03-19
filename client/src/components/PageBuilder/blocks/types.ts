@@ -2,7 +2,7 @@
 import type { BlockConfig } from "@shared/schema-types";
 import type React from "react";
 
-export type BlockCategory = 'basic' | 'media' | 'layout' | 'advanced';
+export type BlockCategory = 'basic' | 'media' | 'layout' | 'advanced' | 'post';
 
 /**
  * Props for block components using the new component pattern.
@@ -27,10 +27,9 @@ export interface BlockDefinition {
   handlesOwnChildren?: boolean; // renderer manages its own children
   hasSettings?: boolean; // indicates if the block has settings UI
   
-  // New component pattern (preferred)
-  component?: React.ComponentType<BlockComponentProps>;
-  
-  // Legacy pattern (for backward compatibility)
-  renderer?: (props: { block: BlockConfig; isPreview: boolean }) => JSX.Element;
-  settings?: (props: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) => JSX.Element;
+   // New component pattern (preferred)
+   component?: React.ComponentType<BlockComponentProps>;
+   
+   // Legacy pattern (for backward compatibility)
+   settings?: (props: { block: BlockConfig; onUpdate: (updates: Partial<BlockConfig>) => void }) => React.JSX.Element;
 }

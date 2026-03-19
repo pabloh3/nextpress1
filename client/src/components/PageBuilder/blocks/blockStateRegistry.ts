@@ -1,4 +1,5 @@
 // client/src/components/PageBuilder/blocks/blockStateRegistry.ts
+import { useSyncExternalStore } from "react";
 import type { BlockConfig } from "@shared/schema-types";
 import type React from "react";
 
@@ -25,32 +26,79 @@ export interface BlockStateAccessor {
 }
 
 /**
- * Global registry mapping block IDs to their state accessors.
- * Block components register themselves on mount and unregister on unmount.
+ * External store for block state accessors.
+ * Uses useSyncExternalStore pattern so consuming components automatically
+ * re-render when registry entries are added, removed, or replaced.
  */
 const blockStateRegistry = new Map<string, BlockStateAccessor>();
+const subscribers = new Set<() => void>();
+let version = 0;
+
+/** Notify all subscribers that the registry changed. */
+function emitChange(): void {
+	version += 1;
+	subscribers.forEach((callback) => callback());
+}
 
 /**
  * Register a block's state accessor in the global registry.
- * Called by block components on mount.
+ * Called by block components during render (synchronous registration).
  */
-export function registerBlockState(blockId: string, accessor: BlockStateAccessor): void {
-  blockStateRegistry.set(blockId, accessor);
+export function registerBlockState(
+	blockId: string,
+	accessor: BlockStateAccessor,
+): void {
+	blockStateRegistry.set(blockId, accessor);
+	emitChange();
 }
 
 /**
  * Unregister a block's state accessor from the global registry.
- * Called by block components on unmount.
+ * Called by block components on unmount via cleanup.
  */
 export function unregisterBlockState(blockId: string): void {
-  blockStateRegistry.delete(blockId);
+	blockStateRegistry.delete(blockId);
+	emitChange();
+}
+
+/**
+ * Subscribe to registry changes (for useSyncExternalStore).
+ * Returns an unsubscribe function.
+ */
+function subscribe(callback: () => void): () => void {
+	subscribers.add(callback);
+	return () => {
+		subscribers.delete(callback);
+	};
+}
+
+/** Snapshot of the current registry version (for useSyncExternalStore). */
+function getSnapshot(): number {
+	return version;
 }
 
 /**
  * Get a block's state accessor by block ID.
- * Used by settings components to access block state directly.
+ * Imperative getter for use outside React components (event handlers, etc).
  */
-export function getBlockStateAccessor(blockId: string): BlockStateAccessor | undefined {
-  return blockStateRegistry.get(blockId);
+export function getBlockStateAccessor(
+	blockId: string,
+): BlockStateAccessor | undefined {
+	return blockStateRegistry.get(blockId);
 }
 
+/**
+ * React hook that subscribes to registry changes and returns the accessor
+ * for the given block ID. Re-renders the consuming component whenever the
+ * registry is updated (block registered/unregistered/replaced).
+ *
+ * Uses useSyncExternalStore internally — this is a custom hook,
+ * so direct use of React primitives here is allowed per no-use-effect rules.
+ */
+export function useBlockAccessor(
+	blockId: string | undefined,
+): BlockStateAccessor | undefined {
+	useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+	if (!blockId) return undefined;
+	return blockStateRegistry.get(blockId);
+}

@@ -188,7 +188,12 @@ export default function Pages() {
                       <TableRow key={page.id}>
                         <TableCell>
                           <div>
-                            <div className="font-medium text-wp-gray">{page.title}</div>
+                            <div className="font-medium text-wp-gray flex items-center gap-2">
+                              {page.title}
+                              {(page.other as any)?.isBlogPage && (
+                                <Badge variant="outline" className="text-xs font-normal text-blue-600 border-blue-300">Blog</Badge>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>

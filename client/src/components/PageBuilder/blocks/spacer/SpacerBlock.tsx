@@ -167,20 +167,6 @@ function SpacerSettings({ block, onUpdate }: SpacerSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacySpacerRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <SpacerRenderer
-      content={(block.content as SpacerContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -199,7 +185,6 @@ const SpacerBlock: BlockDefinition = {
     margin: '0px',
   },
   component: SpacerBlockComponent,
-  renderer: LegacySpacerRenderer,
   settings: SpacerSettings,
   hasSettings: true,
 };

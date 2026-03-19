@@ -1,105 +1,190 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ArrowLeft, Eye, Save } from "lucide-react";
-import AdminTopBar from "@/components/AdminTopBar";
-import AdminSidebar from "@/components/AdminSidebar";
-import PageBuilder from "@/components/PageBuilder/PageBuilder";
-import PublishDialog from "@/components/PageBuilder/PublishDialog";
-import { useToast } from "@/hooks/use-toast";
-import type { BlockConfig, Page } from "@shared/schema-types";
-import { storeSlugToIdMapping, getPageIdFromSlug } from "@/lib/editorStorage";
+import { useState, useEffect, useRef, useCallback, useReducer } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Eye, Save, FileText } from 'lucide-react';
+import AdminTopBar from '@/components/AdminTopBar';
+import AdminSidebar from '@/components/AdminSidebar';
+import PageBuilder from '@/components/PageBuilder/PageBuilder';
+import PublishDialog from '@/components/PageBuilder/PublishDialog';
+import { useToast } from '@/hooks/use-toast';
+import type { BlockConfig, Page, Post } from '@shared/schema-types';
+import { storeSlugToIdMapping, getPageIdFromSlug } from '@/lib/editorStorage';
 import {
   clearPageDraft,
   loadPageDraft,
   savePageDraft,
   savePageDraftWithHistory,
-} from "@/lib/pageDraftStorage";
+} from '@/lib/pageDraftStorage';
+import {
+  clearPostDraft,
+  loadPostDraft,
+  savePostDraft,
+} from '@/lib/postDraftStorage';
+
+type PageState = {
+  blocks: BlockConfig[];
+  title: string;
+  slug: string;
+  status: string;
+  isInitialized: boolean;
+};
+
+type PageAction =
+  | { type: 'RESET' }
+  | { type: 'LOAD'; payload: { blocks: BlockConfig[]; title: string; slug: string; status: string } };
+
+const initialPageState: PageState = {
+  blocks: [],
+  title: '',
+  slug: '',
+  status: 'draft',
+  isInitialized: false,
+};
+
+function pageStateReducer(state: PageState, action: PageAction): PageState {
+  switch (action.type) {
+    case 'RESET':
+      return { ...initialPageState, isInitialized: false };
+    case 'LOAD':
+      return {
+        ...state,
+        blocks: action.payload.blocks,
+        title: action.payload.title,
+        slug: action.payload.slug,
+        status: action.payload.status,
+        isInitialized: true,
+      };
+    default:
+      return state;
+  }
+}
+
+function useMountEffect(effect: () => void | (() => void)) {
+  useEffect(effect, []);
+}
+
+/** Unified editor type — supports both pages and posts */
+type EditorContentType = 'page' | 'post';
+
+/**
+ * Common shape used internally so PageBuilder receives a consistent interface.
+ * Posts are adapted to this shape (missing page-only fields get safe defaults).
+ */
+type EditorData = Page;
 
 interface PageBuilderEditorProps {
   postId?: string;
   isSlug?: boolean;
+  /** Whether we are editing a page or a post. Defaults to 'page'. */
+  type?: EditorContentType;
 }
+
+/**
+ * Adapts a Post object to the Page shape expected by PageBuilder.
+ * Adds safe defaults for page-only fields (siteId, version, history, menuOrder).
+ */
+const adaptPostToEditorData = (post: Post): EditorData =>
+  ({
+    ...post,
+    siteId: '',
+    version: 0,
+    history: [],
+    menuOrder: 0,
+    // Post doesn't have these page-only fields but the type requires them
+  }) as EditorData;
 
 export default function PageBuilderEditor({
   postId,
   isSlug = false,
+  type = 'page',
 }: PageBuilderEditorProps) {
+  const isPost = type === 'post';
   const [, setLocation] = useLocation();
-  const [blocks, setBlocks] = useState<BlockConfig[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [pageState, dispatchPageState] = useReducer(pageStateReducer, initialPageState);
   const [isSaving, setIsSaving] = useState(false);
-  const [pageTitle, setPageTitle] = useState<string>("");
-  const [pageSlug, setPageSlug] = useState<string>("");
-  const [pageStatus, setPageStatus] = useState<string>("draft");
-  const draftSaveRef = useRef<NodeJS.Timeout>();
-  const latestPageStateRef = useRef<{
-    blocks: BlockConfig[];
-    title: string;
-    slug: string;
-    status: string;
-  }>({ blocks: [], title: "", slug: "", status: "draft" });
+  const draftSaveRef = useRef<NodeJS.Timeout | null>(null);
+  const latestPageStateRef = useRef<PageState>(initialPageState);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Resolve page ID from slug if needed
-  const [resolvedPageId, setResolvedPageId] = useState<string | undefined>(
-    postId
-  );
+  /**
+   * Inline post editing state.
+   * When a user clicks a post in the PostListBlock, we swap the canvas
+   * to show that post's blocks without navigating away from the blog page URL.
+   */
+  const [inlinePostId, setInlinePostId] = useState<string | null>(null);
+  const [inlinePostData, setInlinePostData] = useState<Post | null>(null);
+  const storedBlogPageStateRef = useRef<PageState & { data: EditorData } | null>(null);
 
-  useEffect(() => {
-    if (isSlug && postId) {
+  /** Refs for stable event handler identity in useMountEffect */
+  const dataRef = useRef<EditorData | undefined>(undefined);
+  const pageStateRef = useRef<PageState>(initialPageState);
+  const toastRef = useRef(toast);
+
+  /** API base path driven by content type */
+  const apiBase = isPost ? '/api/posts' : '/api/pages';
+
+  /** Derive resolvedPageId synchronously — getPageIdFromSlug is a sync localStorage call */
+  const resolvedPageId = (() => {
+    if (isSlug && postId && !isPost) {
       const mappingResult = getPageIdFromSlug(postId);
-      if (mappingResult.status && mappingResult.data) {
-        setResolvedPageId(mappingResult.data);
-      } else {
-        setResolvedPageId(postId);
-      }
-    } else {
-      setResolvedPageId(postId);
+      return mappingResult.status && mappingResult.data ? mappingResult.data : postId;
     }
-  }, [postId, isSlug]);
+    return postId;
+  })();
 
-  const { data, isLoading, error } = useQuery<Page>({
-    queryKey: [`/api/pages/${resolvedPageId || postId}`],
+  const {
+    data: rawData,
+    isLoading,
+    error,
+  } = useQuery<Page | Post>({
+    queryKey: [`${apiBase}/${resolvedPageId || postId}`],
     enabled: !!(resolvedPageId || postId),
   });
 
-  // Reset state when page ID changes (before data loads)
-  useEffect(() => {
-    if (resolvedPageId || postId) {
-      // Clear any pending draft saves
-      if (draftSaveRef.current) {
-        clearTimeout(draftSaveRef.current);
-      }
-      // Reset state
-      setIsInitialized(false);
-      setBlocks([]);
-      setPageTitle("");
-      setPageSlug("");
-      setPageStatus("draft");
-      latestPageStateRef.current = {
-        blocks: [],
-        title: "",
-        slug: "",
-        status: "draft",
-      };
+  /** Normalise raw API data into the EditorData shape */
+  const data: EditorData | undefined = rawData
+    ? isPost
+      ? adaptPostToEditorData(rawData as Post)
+      : (rawData as Page)
+    : undefined;
+
+  // Keep refs fresh every render for stable useMountEffect handlers
+  dataRef.current = data;
+  pageStateRef.current = pageState;
+  toastRef.current = toast;
+
+  /** Adjusting state during render: reset when page/post ID changes */
+  const currentId = resolvedPageId || postId;
+  const [prevId, setPrevId] = useState<string | undefined>(currentId);
+  if (currentId !== prevId) {
+    setPrevId(currentId);
+    if (draftSaveRef.current) {
+      clearTimeout(draftSaveRef.current);
     }
-  }, [resolvedPageId, postId]);
+    dispatchPageState({ type: 'RESET' });
+    latestPageStateRef.current = initialPageState;
+  }
 
-  useEffect(() => {
-    if (!data) return;
+  /**
+   * Adjusting state during render: initialize page state when data arrives or changes.
+   * Tracks prevDataId to detect when we have new data to load.
+   */
+  const [prevDataId, setPrevDataId] = useState<string | null>(null);
+  const dataId = data?.id ?? null;
+  const dataMatchesCurrent = dataId && dataId === currentId;
 
-    // Ensure data matches the current page ID to avoid stale data
-    const currentPageId = resolvedPageId || postId;
-    if (data.id !== currentPageId) return;
+  if (dataMatchesCurrent && dataId !== prevDataId && data) {
+    setPrevDataId(dataId);
 
-    const page = data;
-    const local = loadPageDraft(page.id);
-    const localDraft = local.status ? local.data : null;
+    // Load local draft — use post or page draft storage based on type
+    const localResult = isPost
+      ? loadPostDraft(dataId)
+      : loadPageDraft(dataId);
+    const localDraft = localResult.status ? localResult.data : null;
 
     const toTs = (value: unknown) => {
       if (!value) return 0;
@@ -107,51 +192,68 @@ export default function PageBuilderEditor({
       return Date.parse(String(value));
     };
 
-    const remoteTs = toTs(page.updatedAt);
+    const remoteTs = toTs(data.updatedAt);
     const localTs = toTs(localDraft?.updatedAt);
     const useLocal = localDraft && localTs > remoteTs;
-    const source = useLocal ? localDraft : page;
+    const source = useLocal ? localDraft : data;
 
     const initialBlocks = Array.isArray(source.blocks) ? source.blocks : [];
-    const initialTitle = source.title || "Untitled";
-    const initialSlug = source.slug || "";
-    const initialStatus = source.status || "draft";
+    const initialTitle = source.title || 'Untitled';
+    const initialSlug = source.slug || '';
+    const initialStatus = source.status || 'draft';
 
-    setBlocks(initialBlocks);
-    setPageTitle(initialTitle);
-    setPageSlug(initialSlug);
-    setPageStatus(initialStatus);
+    dispatchPageState({
+      type: 'LOAD',
+      payload: {
+        blocks: initialBlocks,
+        title: initialTitle,
+        slug: initialSlug,
+        status: initialStatus,
+      },
+    });
     latestPageStateRef.current = {
       blocks: initialBlocks,
       title: initialTitle,
       slug: initialSlug,
       status: initialStatus,
+      isInitialized: true,
     };
 
-    if (page.id && page.slug) {
-      storeSlugToIdMapping(page.slug, page.id);
+    // Store slug mapping for pages only
+    if (!isPost && data.id && data.slug) {
+      storeSlugToIdMapping(data.slug, data.id);
     }
 
-    savePageDraft(page.id, source);
-    setIsInitialized(true);
-  }, [data, resolvedPageId, postId]);
+    // Persist initial draft
+    if (isPost) {
+      savePostDraft(data.id, data);
+    } else {
+      savePageDraft(data.id, data);
+    }
+  }
 
-  useEffect(() => {
-    if (data && postId && !isSlug && data.slug) {
+  // Also reset prevDataId when currentId changes (so we re-load on navigation)
+  if (dataId && dataId !== currentId && prevDataId !== null) {
+    setPrevDataId(null);
+  }
+
+  // Replace URL with slug for pages (not applicable for posts) - mount-only
+  useMountEffect(() => {
+    if (!isPost && data && postId && !isSlug && data.slug) {
       const currentPath = window.location.pathname;
       const slugPath = `/page-builder/page/${data.slug}`;
       const isUUIDPath =
         /^\/page-builder\/page\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-          currentPath
+          currentPath,
         );
       if (isUUIDPath && currentPath !== slugPath) {
-        window.history.replaceState({}, "", slugPath);
+        window.history.replaceState({}, '', slugPath);
       }
     }
-  }, [data, postId, isSlug]);
+  });
 
-  const queuePageDraftSave = (
-    override?: Partial<typeof latestPageStateRef.current>
+  const queueDraftSave = (
+    override?: Partial<typeof latestPageStateRef.current>,
   ) => {
     if (!data?.id) return;
     const next = {
@@ -161,49 +263,161 @@ export default function PageBuilderEditor({
     latestPageStateRef.current = next;
     if (draftSaveRef.current) clearTimeout(draftSaveRef.current);
     draftSaveRef.current = setTimeout(() => {
-      savePageDraftWithHistory(
-        data.id,
-        {
+      // When inline-editing a post, save draft to post storage
+      if (inlinePostId && inlinePostData) {
+        savePostDraft(inlinePostId, {
+          ...inlinePostData,
+          title: next.title,
+          slug: next.slug,
+          status: next.status,
+          blocks: next.blocks,
+        });
+        return;
+      }
+
+      if (isPost) {
+        savePostDraft(data.id, {
           ...data,
           title: next.title,
           slug: next.slug,
           status: next.status,
           blocks: next.blocks,
-          version: data.version ?? 0,
-        },
-        3
-      );
+        });
+      } else {
+        savePageDraftWithHistory(
+          data.id,
+          {
+            ...data,
+            title: next.title,
+            slug: next.slug,
+            status: next.status,
+            blocks: next.blocks,
+            version: data.version ?? 0,
+          },
+          3,
+        );
+      }
     }, 300);
   };
 
   // Clear timeout on unmount
-  useEffect(() => {
+  useMountEffect(() => {
     return () => {
       if (draftSaveRef.current) {
         clearTimeout(draftSaveRef.current);
       }
     };
-  }, []);
+  });
+
+  /**
+   * Listen for `np:edit-post` custom events dispatched by PostListBlock.
+   * When received, store the current blog page state and swap the canvas
+   * to the clicked post's blocks for inline editing.
+   * Uses refs for stable handler identity — mount-only subscription.
+   */
+  useMountEffect(() => {
+    const handleEditPostEvent = async (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.postId || !dataRef.current) return;
+
+      // Store current blog page state so we can restore it later
+      storedBlogPageStateRef.current = {
+        ...pageStateRef.current,
+        data: dataRef.current,
+      };
+
+      try {
+        const { apiRequest } = await import('@/lib/queryClient');
+        const response = await apiRequest('GET', `/api/posts/${detail.postId}`);
+        const post: Post = await response.json();
+
+        const postBlocks = Array.isArray(post.blocks) ? post.blocks : [];
+        setInlinePostId(post.id);
+        setInlinePostData(post);
+        dispatchPageState({
+          type: 'LOAD',
+          payload: {
+            blocks: postBlocks,
+            title: post.title || 'Untitled Post',
+            slug: post.slug || '',
+            status: post.status || 'draft',
+          },
+        });
+        latestPageStateRef.current = {
+          blocks: postBlocks,
+          title: post.title || 'Untitled Post',
+          slug: post.slug || '',
+          status: post.status || 'draft',
+          isInitialized: true,
+        };
+      } catch (err) {
+        console.error('Failed to load post for inline editing:', err);
+        toastRef.current({
+          title: 'Error',
+          description: 'Failed to load post for editing',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    window.addEventListener('np:edit-post', handleEditPostEvent);
+    return () =>
+      window.removeEventListener('np:edit-post', handleEditPostEvent);
+  });
+
+  /** Restore the blog page state after inline post editing */
+  const handleBackToBlogPage = useCallback(() => {
+    const stored = storedBlogPageStateRef.current;
+    if (!stored) return;
+
+    setInlinePostId(null);
+    setInlinePostData(null);
+    dispatchPageState({
+      type: 'LOAD',
+      payload: {
+        blocks: stored.blocks,
+        title: stored.title,
+        slug: stored.slug,
+        status: stored.status,
+      },
+    });
+    latestPageStateRef.current = {
+      blocks: stored.blocks,
+      title: stored.title,
+      slug: stored.slug,
+      status: stored.status,
+      isInitialized: true,
+    };
+    storedBlogPageStateRef.current = null;
+
+    // Re-fetch the blog page to pick up any server-side changes
+    if (data?.id) {
+      queryClient.invalidateQueries({ queryKey: [`${apiBase}/${data.id}`] });
+    }
+  }, [data, apiBase, queryClient]);
+
   const handleBlocksChange = (nextBlocks: BlockConfig[]) => {
-    setBlocks(nextBlocks);
-    queuePageDraftSave({ blocks: nextBlocks });
+    dispatchPageState({ type: 'LOAD', payload: { ...pageState, blocks: nextBlocks } });
+    queueDraftSave({ blocks: nextBlocks });
   };
 
   const handleTitleChange = (value: string) => {
-    setPageTitle(value);
-    queuePageDraftSave({ title: value });
+    dispatchPageState({ type: 'LOAD', payload: { ...pageState, title: value } });
+    queueDraftSave({ title: value });
   };
 
   const handlePageMetaChange = (
-    meta: Partial<{ title: string; slug: string; status: string }>
+    meta: Partial<{ title: string; slug: string; status: string }>,
   ) => {
-    if (meta.title !== undefined) setPageTitle(meta.title);
-    if (meta.slug !== undefined) setPageSlug(meta.slug);
-    if (meta.status !== undefined) setPageStatus(meta.status);
-    queuePageDraftSave(meta);
+    const updated = { ...pageState };
+    if (meta.title !== undefined) updated.title = meta.title;
+    if (meta.slug !== undefined) updated.slug = meta.slug;
+    if (meta.status !== undefined) updated.status = meta.status;
+    dispatchPageState({ type: 'LOAD', payload: updated });
+    queueDraftSave(meta);
   };
 
-  if (isLoading || (data && !isInitialized)) {
+  if (isLoading || (data && !pageState.isInitialized)) {
     return (
       <div className="flex h-screen">
         <AdminSidebar />
@@ -233,14 +447,13 @@ export default function PageBuilderEditor({
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  Page not found or failed to load.
+                  {isPost ? 'Post' : 'Page'} not found or failed to load.
                 </p>
                 <Button
-                  onClick={() => setLocation("/pages")}
-                  className="w-full"
-                >
+                  onClick={() => setLocation(isPost ? '/posts' : '/pages')}
+                  className="w-full">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Pages
+                  Back to {isPost ? 'Posts' : 'Pages'}
                 </Button>
               </CardContent>
             </Card>
@@ -251,14 +464,32 @@ export default function PageBuilderEditor({
   }
 
   const handleSave = () => {
+    // When inline-editing a post, show post-specific success message
+    if (inlinePostId) {
+      toast({
+        title: 'Success',
+        description: 'Post saved successfully',
+      });
+      clearPostDraft(inlinePostId);
+      queryClient.invalidateQueries({
+        queryKey: [`/api/posts/${inlinePostId}`],
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
+      return;
+    }
+
     toast({
-      title: "Success",
-      description: "Page saved successfully",
+      title: 'Success',
+      description: `${isPost ? 'Post' : 'Page'} saved successfully`,
     });
 
-    clearPageDraft(data.id);
-    queryClient.invalidateQueries({ queryKey: [`/api/pages/${postId}`] });
-    queryClient.invalidateQueries({ queryKey: ["/api/pages"] });
+    if (isPost) {
+      clearPostDraft(data.id);
+    } else {
+      clearPageDraft(data.id);
+    }
+    queryClient.invalidateQueries({ queryKey: [`${apiBase}/${postId}`] });
+    queryClient.invalidateQueries({ queryKey: [apiBase] });
   };
 
   const handlePageBuilderSave = async () => {
@@ -266,31 +497,61 @@ export default function PageBuilderEditor({
 
     setIsSaving(true);
     try {
-      const { apiRequest } = await import("@/lib/queryClient");
-      const payload = {
-        title: pageTitle,
-        slug: pageSlug,
-        status: pageStatus,
-        blocks,
-        version: data.version ?? 0,
-      };
+      const { apiRequest } = await import('@/lib/queryClient');
+
+      // When inline-editing a post, save to the post API
+      if (inlinePostId) {
+        const postPayload = {
+          title: pageState.title,
+          slug: pageState.slug,
+          status: pageState.status,
+          blocks: pageState.blocks,
+        };
+        const response = await apiRequest(
+          'PUT',
+          `/api/posts/${inlinePostId}`,
+          postPayload,
+        );
+        const updated = await response.json();
+        savePostDraft(updated.id, updated);
+        clearPostDraft(updated.id);
+        setInlinePostData(updated);
+        handleSave();
+        return;
+      }
+
+      const payload = isPost
+        ? { title: pageState.title, slug: pageState.slug, status: pageState.status, blocks: pageState.blocks }
+        : {
+            title: pageState.title,
+            slug: pageState.slug,
+            status: pageState.status,
+            blocks: pageState.blocks,
+            version: data.version ?? 0,
+          };
 
       const response = await apiRequest(
-        "PUT",
-        `/api/pages/${data.id}`,
-        payload
+        'PUT',
+        `${apiBase}/${data.id}`,
+        payload,
       );
-      const updatedPage: Page = await response.json();
+      const updated = await response.json();
 
-      savePageDraft(updatedPage.id, updatedPage);
-      clearPageDraft(updatedPage.id);
+      // Persist and clear draft
+      if (isPost) {
+        savePostDraft(updated.id, updated);
+        clearPostDraft(updated.id);
+      } else {
+        savePageDraft(updated.id, updated);
+        clearPageDraft(updated.id);
+      }
       handleSave();
     } catch (err) {
-      console.error("Error saving page:", err);
+      console.error(`Error saving ${type}:`, err);
       toast({
-        title: "Error",
-        description: "Failed to save page",
-        variant: "destructive",
+        title: 'Error',
+        description: `Failed to save ${type}`,
+        variant: 'destructive',
       });
     } finally {
       setIsSaving(false);
@@ -298,13 +559,24 @@ export default function PageBuilderEditor({
   };
 
   const handlePreview = () => {
+    // When inline-editing a post, preview the post
+    if (inlinePostId) {
+      window.open(`/preview/post/${inlinePostId}`, '_blank');
+      return;
+    }
     if (!data) return;
-    window.open(`/preview/page/${data.id}`, "_blank");
+    const previewPath = isPost
+      ? `/preview/post/${data.id}`
+      : `/preview/page/${data.id}`;
+    window.open(previewPath, '_blank');
   };
 
   const handleBackToList = () => {
-    setLocation("/pages");
+    setLocation(isPost ? '/posts' : '/pages');
   };
+
+  /** Determine the label and back behavior based on inline editing state */
+  const isInlineEditing = !!inlinePostId;
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -316,16 +588,24 @@ export default function PageBuilderEditor({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleBackToList}
-              className="flex items-center gap-2"
-            >
+              onClick={
+                isInlineEditing ? handleBackToBlogPage : handleBackToList
+              }
+              className="flex items-center gap-2">
               <ArrowLeft className="w-4 h-4" />
-              Back
+              {isInlineEditing ? 'Back to Blog Page' : 'Back'}
             </Button>
             <div className="flex items-center gap-2 flex-1 max-w-md">
-              <span className="text-sm text-gray-400">Editing:</span>
+              {isInlineEditing && (
+                <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
+              )}
+              <span className="text-sm text-gray-400 flex-shrink-0">
+                {isInlineEditing
+                  ? 'Editing Post:'
+                  : `Editing ${isPost ? 'Post' : 'Page'}:`}
+              </span>
               <Input
-                value={pageTitle}
+                value={pageState.title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 className="bg-wp-gray border-gray-600 text-white text-sm h-8 focus:border-wp-blue"
                 placeholder="Enter title..."
@@ -339,8 +619,7 @@ export default function PageBuilderEditor({
               size="sm"
               onClick={handlePreview}
               className="flex items-center gap-2 text-gray-800"
-              data-testid="button-preview"
-            >
+              data-testid="button-preview">
               <Eye className="w-4 h-4" />
               Preview
             </Button>
@@ -350,14 +629,13 @@ export default function PageBuilderEditor({
               onClick={handlePageBuilderSave}
               disabled={isSaving}
               className="flex items-center gap-2"
-              data-testid="button-save"
-            >
+              data-testid="button-save">
               <Save className="w-4 h-4" />
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
             <PublishDialog
               post={data}
-              blocks={blocks}
+              blocks={pageState.blocks}
               onPublished={handleSave}
               disabled={isSaving}
             />
@@ -366,18 +644,24 @@ export default function PageBuilderEditor({
 
         <div className="flex-1 min-h-0">
           <PageBuilder
-            post={data}
-            blocks={blocks}
+            post={
+              isInlineEditing && inlinePostData
+                ? adaptPostToEditorData(inlinePostData)
+                : data
+            }
+            blocks={pageState.blocks}
             onBlocksChange={handleBlocksChange}
             onSave={handleSave}
             onPreview={handlePreview}
             pageMeta={{
-              title: pageTitle,
-              slug: pageSlug,
-              status: pageStatus,
-              version: data.version,
+              title: pageState.title,
+              slug: pageState.slug,
+              status: pageState.status,
+              version: isInlineEditing ? 0 : data.version,
             }}
             onPageMetaChange={handlePageMetaChange}
+            currentPostId={inlinePostId || (isPost ? data?.id : undefined)}
+            contentType={type}
           />
         </div>
       </div>

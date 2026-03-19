@@ -1,16 +1,16 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import HeadingBlock from '../components/PageBuilder/blocks/heading/HeadingBlock'
 import type { BlockConfig } from '@shared/schema-types'
 
-// Mock the useBlockManager hook
-const mockUpdateBlockContent = vi.fn()
-const mockUpdateBlockStyles = vi.fn()
+// Mock the useBlockState hook
+const mockOnChange = vi.fn()
 
-vi.mock('@/hooks/useBlockManager', () => ({
-  useBlockManager: () => ({
-    updateBlockContent: mockUpdateBlockContent,
-    updateBlockStyles: mockUpdateBlockStyles,
+vi.mock('../components/PageBuilder/blocks/useBlockState', () => ({
+  useBlockState: ({ value }: { value: BlockConfig }) => ({
+    content: value.content,
+    styles: value.styles,
   })
 }))
 
@@ -27,12 +27,12 @@ describe('HeadingBlock', () => {
     settings: {}
   })
 
-  describe('HeadingRenderer', () => {
+  describe('HeadingBlockComponent', () => {
     it('should render heading with default content', () => {
       const block = createHeadingBlock({ kind: 'text', value: 'Test Heading', level: 2 })
-      const Renderer = HeadingBlock.renderer!
+      const Component = HeadingBlock.component as React.ComponentType<any>
       
-      render(<Renderer block={block} isPreview={false} />)
+      render(<Component value={block} onChange={mockOnChange} />)
       
       const heading = screen.getByRole('heading', { level: 2 })
       expect(heading).toHaveTextContent('Test Heading')
@@ -41,12 +41,12 @@ describe('HeadingBlock', () => {
 
     it('should render different heading levels', () => {
       const levels = [1, 2, 3, 4, 5, 6] as const
+      const Component = HeadingBlock.component as React.ComponentType<any>
       
       levels.forEach(level => {
         const block = createHeadingBlock({ kind: 'text', value: `H${level} Heading`, level })
-        const Renderer = HeadingBlock.renderer!
         
-        const { container } = render(<Renderer block={block} isPreview={false} />)
+        const { container } = render(<Component value={block} onChange={mockOnChange} />)
         const heading = container.querySelector(`h${level}`)
         
         expect(heading).toBeInTheDocument()
@@ -61,9 +61,9 @@ describe('HeadingBlock', () => {
         level: 2, 
         textAlign: 'center' 
       })
-      const Renderer = HeadingBlock.renderer!
+      const Component = HeadingBlock.component as React.ComponentType<any>
       
-      render(<Renderer block={block} isPreview={false} />)
+      render(<Component value={block} onChange={mockOnChange} />)
       
       const heading = screen.getByRole('heading')
       expect(heading).toHaveClass('has-text-align-center')
@@ -76,9 +76,9 @@ describe('HeadingBlock', () => {
         level: 2, 
         anchor: 'my-anchor' 
       })
-      const Renderer = HeadingBlock.renderer!
+      const Component = HeadingBlock.component as React.ComponentType<any>
       
-      render(<Renderer block={block} isPreview={false} />)
+      render(<Component value={block} onChange={mockOnChange} />)
       
       const heading = screen.getByRole('heading')
       expect(heading).toHaveAttribute('id', 'my-anchor')
@@ -91,9 +91,9 @@ describe('HeadingBlock', () => {
         level: 2, 
         className: 'my-custom-class' 
       })
-      const Renderer = HeadingBlock.renderer!
+      const Component = HeadingBlock.component as React.ComponentType<any>
       
-      render(<Renderer block={block} isPreview={false} />)
+      render(<Component value={block} onChange={mockOnChange} />)
       
       const heading = screen.getByRole('heading')
       expect(heading).toHaveClass('my-custom-class')
@@ -102,10 +102,9 @@ describe('HeadingBlock', () => {
     it('should apply inline styles', () => {
       const block = createHeadingBlock({ kind: 'text', value: 'Styled Heading', level: 2 })
       block.styles = { color: 'red', fontSize: '24px' }
+      const Component = HeadingBlock.component as React.ComponentType<any>
       
-      const Renderer = HeadingBlock.renderer!
-      
-      render(<Renderer block={block} isPreview={false} />)
+      render(<Component value={block} onChange={mockOnChange} />)
       
       const heading = screen.getByRole('heading')
       // Accept either literal or computed rgb equivalent
@@ -115,9 +114,9 @@ describe('HeadingBlock', () => {
 
     it('should handle empty content gracefully', () => {
       const block = createHeadingBlock({ kind: 'text', value: '', level: 2 })
-      const Renderer = HeadingBlock.renderer!
+      const Component = HeadingBlock.component as React.ComponentType<any>
       
-      render(<Renderer block={block} isPreview={false} />)
+      render(<Component value={block} onChange={mockOnChange} />)
       
       const heading = screen.getByRole('heading')
       expect(heading).toHaveTextContent('')
@@ -129,9 +128,9 @@ describe('HeadingBlock', () => {
         value: 'New Content', 
         level: 2 
       })
-      const Renderer = HeadingBlock.renderer!
+      const Component = HeadingBlock.component as React.ComponentType<any>
       
-      render(<Renderer block={block} isPreview={false} />)
+      render(<Component value={block} onChange={mockOnChange} />)
       
       const heading = screen.getByRole('heading')
       expect(heading).toHaveTextContent('New Content')
@@ -255,7 +254,7 @@ describe('HeadingBlock', () => {
       expect(HeadingBlock.defaultStyles).toEqual({
         fontSize: '2rem',
         fontWeight: 'bold',
-        margin: '1rem 0'
+        margin: '1rem 0',
       })
     })
 

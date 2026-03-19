@@ -217,7 +217,7 @@ function VideoRenderer({ content, styles }: VideoRendererProps) {
         style={{ display: 'block', width: '100%', height: styles?.height ? '100%' : 'auto' }}
       >
         {Array.isArray(sources) && sources.map((s: any, i: number) => (
-          <source key={i} src={s.src} type={s.type} />
+          <source key={s.src || `source-${i}`} src={s.src} type={s.type} />
         ))}
         Your browser does not support the video tag.
       </video>
@@ -531,20 +531,6 @@ function VideoSettings({ block, onUpdate }: VideoSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyVideoRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <VideoRenderer
-      content={(block.content as VideoContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -574,7 +560,6 @@ const VideoBlock: BlockDefinition = {
   },
   defaultStyles: {},
   component: VideoBlockComponent,
-  renderer: LegacyVideoRenderer,
   settings: VideoSettings,
   hasSettings: true,
 };

@@ -234,20 +234,6 @@ function PreformattedSettings({ block, onUpdate }: PreformattedSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyPreformattedRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <PreformattedRenderer
-      content={(block.content as PreformattedContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -268,7 +254,6 @@ const PreformattedBlock: BlockDefinition = {
     fontSize: '14px',
   },
   component: PreformattedBlockComponent,
-  renderer: LegacyPreformattedRenderer,
   settings: PreformattedSettings,
   hasSettings: true,
 };

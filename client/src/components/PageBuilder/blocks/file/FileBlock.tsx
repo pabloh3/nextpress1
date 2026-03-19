@@ -369,20 +369,6 @@ function FileSettings({ block, onUpdate }: FileSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyFileRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <FileRenderer
-      content={(block.content as FileContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -411,7 +397,6 @@ const FileBlock: BlockDefinition = {
     margin: '1em 0',
   },
   component: FileBlockComponent,
-  renderer: LegacyFileRenderer,
   settings: FileSettings,
   hasSettings: true,
 };

@@ -13,6 +13,7 @@ import { Square as CoverIcon, Settings, Wrench } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
+import { sanitizeHtml } from "../../utils";
 
 // ============================================================================
 // TYPES
@@ -168,7 +169,7 @@ function CoverRenderer({ content, styles }: CoverRendererProps) {
       >
         <div
           className="cover-content"
-          dangerouslySetInnerHTML={{ __html: innerContent }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(innerContent) }}
           style={{
             textAlign: contentPosition.includes('center') ? 'center' : 
                       contentPosition.includes('right') ? 'right' : 'left',
@@ -460,20 +461,6 @@ function CoverSettings({ block, onUpdate }: CoverSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyCoverRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <CoverRenderer
-      content={(block.content as CoverContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -502,7 +489,6 @@ const CoverBlock: BlockDefinition = {
   },
   defaultStyles: {},
   component: CoverBlockComponent,
-  renderer: LegacyCoverRenderer,
   settings: CoverSettings,
   hasSettings: true,
 };

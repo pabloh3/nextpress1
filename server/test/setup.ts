@@ -27,6 +27,48 @@ beforeAll(async () => {
 	`);
 
   await client.exec(`
+		CREATE TABLE IF NOT EXISTS sites (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name VARCHAR,
+			description TEXT,
+			logo_url VARCHAR,
+			favicon_url VARCHAR,
+			site_url VARCHAR,
+			owner_id UUID NOT NULL REFERENCES users(id),
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW(),
+			settings JSONB DEFAULT '{}',
+			active_theme_id UUID,
+			is_default BOOLEAN DEFAULT false,
+			other JSONB DEFAULT '{}'
+		)
+	`);
+
+  await client.exec(`
+		CREATE TABLE IF NOT EXISTS pages (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			title VARCHAR NOT NULL,
+			slug VARCHAR NOT NULL,
+			site_id UUID NOT NULL REFERENCES sites(id),
+			status VARCHAR DEFAULT 'draft',
+			author_id UUID NOT NULL REFERENCES users(id),
+			featured_image VARCHAR,
+			published_at TIMESTAMP,
+			allow_comments BOOLEAN DEFAULT true,
+			password VARCHAR,
+			parent_id UUID,
+			menu_order INTEGER DEFAULT 0,
+			template_id UUID,
+			blocks JSONB DEFAULT '[]',
+			version INTEGER NOT NULL DEFAULT 0,
+			history JSONB DEFAULT '[]',
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW(),
+			other JSONB DEFAULT '{}'
+		)
+	`);
+
+  await client.exec(`
 		CREATE TABLE IF NOT EXISTS blogs (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			name VARCHAR NOT NULL,
@@ -37,6 +79,7 @@ beforeAll(async () => {
 			updated_at TIMESTAMP DEFAULT NOW(),
 			site_id UUID,
 			author_id UUID NOT NULL REFERENCES users(id),
+			page_id UUID REFERENCES pages(id),
 			settings JSONB DEFAULT '{}',
 			other JSONB DEFAULT '{}'
 		)
@@ -75,48 +118,6 @@ beforeAll(async () => {
 			content TEXT NOT NULL,
 			status VARCHAR DEFAULT 'pending',
 			parent_id UUID,
-			created_at TIMESTAMP DEFAULT NOW(),
-			updated_at TIMESTAMP DEFAULT NOW(),
-			other JSONB DEFAULT '{}'
-		)
-	`);
-
-  await client.exec(`
-		CREATE TABLE IF NOT EXISTS sites (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			name VARCHAR,
-			description TEXT,
-			logo_url VARCHAR,
-			favicon_url VARCHAR,
-			site_url VARCHAR,
-			owner_id UUID NOT NULL REFERENCES users(id),
-			created_at TIMESTAMP DEFAULT NOW(),
-			updated_at TIMESTAMP DEFAULT NOW(),
-			settings JSONB DEFAULT '{}',
-			active_theme_id UUID,
-			is_default BOOLEAN DEFAULT false,
-			other JSONB DEFAULT '{}'
-		)
-	`);
-
-  await client.exec(`
-		CREATE TABLE IF NOT EXISTS pages (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			title VARCHAR NOT NULL,
-			slug VARCHAR NOT NULL,
-			site_id UUID NOT NULL REFERENCES sites(id),
-			status VARCHAR DEFAULT 'draft',
-			author_id UUID NOT NULL REFERENCES users(id),
-			featured_image VARCHAR,
-			published_at TIMESTAMP,
-			allow_comments BOOLEAN DEFAULT true,
-			password VARCHAR,
-			parent_id UUID,
-			menu_order INTEGER DEFAULT 0,
-			template_id UUID,
-			blocks JSONB DEFAULT '[]',
-			version INTEGER NOT NULL DEFAULT 0,
-			history JSONB DEFAULT '[]',
 			created_at TIMESTAMP DEFAULT NOW(),
 			updated_at TIMESTAMP DEFAULT NOW(),
 			other JSONB DEFAULT '{}'

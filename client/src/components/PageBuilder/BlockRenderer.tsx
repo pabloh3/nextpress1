@@ -1,32 +1,45 @@
-import React, { useState, isValidElement, ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { Copy, Trash2, GripVertical } from "lucide-react";
-import type { BlockConfig } from "@shared/schema-types";
-import { blockRegistry } from "./blocks";
-import { Droppable, Draggable } from "@/lib/dnd";
-import { useBlockActions } from "./BlockActionsContext";
+import React, { useState, isValidElement, ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Copy, Trash2, GripVertical } from 'lucide-react';
+import type { BlockConfig } from '@shared/schema-types';
+import { blockRegistry } from './blocks';
+import { Droppable, Draggable } from '@/lib/dnd';
+import { useBlockActions } from './BlockActionsContext';
 
-export function ContainerChildren({ block, isPreview, onBlockChange }: { block: BlockConfig; isPreview: boolean; onBlockChange?: (updated: BlockConfig) => void }) {
+export function ContainerChildren({
+  block,
+  isPreview,
+  onBlockChange,
+}: {
+  block: BlockConfig;
+  isPreview: boolean;
+  onBlockChange?: (updated: BlockConfig) => void;
+}) {
   const children = Array.isArray(block.children) ? block.children : [];
   const isContainer = !!blockRegistry[block.name]?.isContainer;
   const actions = useBlockActions();
   if (!isContainer) return null;
   if (import.meta.env.DEBUG_BUILDER) {
-    console.debug('Rendering children for container block in preview mode:', block.id, 'Children:', children);
+    console.debug(
+      'Rendering children for container block in preview mode:',
+      block.id,
+      'Children:',
+      children,
+    );
   }
   if (isPreview) {
     return (
       <div data-container-children="true">
-        {children.map(child => (
-           <BlockRenderer
-             key={child.id}
-             block={child}
-             isSelected={actions?.selectedBlockId === child.id}
-             isPreview={true}
-             onDuplicate={() => actions?.onDuplicate(child.id)}
-             onDelete={() => actions?.onDelete(child.id)}
-             onBlockChange={onBlockChange}
-           />
+        {children.map((child) => (
+          <BlockRenderer
+            key={child.id}
+            block={child}
+            isSelected={actions?.selectedBlockId === child.id}
+            isPreview={true}
+            onDuplicate={() => actions?.onDuplicate(child.id)}
+            onDelete={() => actions?.onDelete(child.id)}
+            onBlockChange={onBlockChange}
+          />
         ))}
       </div>
     );
@@ -40,31 +53,36 @@ export function ContainerChildren({ block, isPreview, onBlockChange }: { block: 
           data-container-children="true"
           style={{
             minHeight: '60px', // Always maintain minimum drop zone height
-            border: snapshot.isDraggingOver ? '2px solid #3b82f6' : '2px dashed #e2e8f0',
+            border: snapshot.isDraggingOver
+              ? '2px solid #3b82f6'
+              : '2px dashed #e2e8f0',
             borderRadius: '4px',
-            background: snapshot.isDraggingOver ? 'rgba(59,130,246,0.06)' : undefined,
+            background: snapshot.isDraggingOver
+              ? 'rgba(59,130,246,0.06)'
+              : undefined,
             paddingBottom: children.length > 0 ? '20px' : '0px', // Add padding for drop zone when there are children
-          }}
-        >
+          }}>
           {children.length > 0 ? (
             children.map((child: BlockConfig, childIndex: number) => (
-              <Draggable key={child.id} draggableId={child.id} index={childIndex}>
+              <Draggable
+                key={child.id}
+                draggableId={child.id}
+                index={childIndex}>
                 {(dragProvided, dragSnapshot) => (
                   <div
                     ref={dragProvided.innerRef}
                     {...dragProvided.draggableProps}
-                     className={`relative group ${dragSnapshot.isDragging ? 'opacity-50' : ''}`}
-                   >
-                      {/* Only use drag handle props on the visible drag handle, not here */}
-                      <BlockRenderer
-                        block={child}
-                        isSelected={actions?.selectedBlockId === child.id}
-                        isPreview={false}
-                        onDuplicate={() => actions?.onDuplicate(child.id)}
-                        onDelete={() => actions?.onDelete(child.id)}
-                        dragHandleProps={dragProvided.dragHandleProps}
-                        onBlockChange={onBlockChange}
-                      />
+                    className={`relative group ${dragSnapshot.isDragging ? 'opacity-50' : ''}`}>
+                    {/* Only use drag handle props on the visible drag handle, not here */}
+                    <BlockRenderer
+                      block={child}
+                      isSelected={actions?.selectedBlockId === child.id}
+                      isPreview={false}
+                      onDuplicate={() => actions?.onDuplicate(child.id)}
+                      onDelete={() => actions?.onDelete(child.id)}
+                      dragHandleProps={dragProvided.dragHandleProps}
+                      onBlockChange={onBlockChange}
+                    />
                   </div>
                 )}
               </Draggable>
@@ -91,7 +109,11 @@ function containsContainerChildren(node: ReactNode): boolean {
   }
   if (isValidElement(node)) {
     const type: any = (node as any).type;
-    if (type === ContainerChildren || type?.displayName === 'ContainerChildren' || type?.name === 'ContainerChildren') {
+    if (
+      type === ContainerChildren ||
+      type?.displayName === 'ContainerChildren' ||
+      type?.name === 'ContainerChildren'
+    ) {
       return true;
     }
     const { children } = (node.props || {}) as any;
@@ -112,11 +134,11 @@ interface BlockRendererProps {
   onBlockChange?: (updated: BlockConfig) => void;
 }
 
-export default function BlockRenderer({ 
-  block, 
-  isSelected, 
-  isPreview, 
-  onDuplicate, 
+export default function BlockRenderer({
+  block,
+  isSelected,
+  isPreview,
+  onDuplicate,
   onDelete,
   hoverHighlight = null,
   dragHandleProps,
@@ -125,7 +147,9 @@ export default function BlockRenderer({
   const [isHovered, setIsHovered] = useState(false);
   const actions = useBlockActions();
   const effectiveSelected = isSelected || actions?.selectedBlockId === block.id;
-  const effectiveHoverHighlight = effectiveSelected ? (hoverHighlight ?? actions?.hoverHighlight ?? null) : null;
+  const effectiveHoverHighlight = effectiveSelected
+    ? (hoverHighlight ?? actions?.hoverHighlight ?? null)
+    : null;
 
   const marginString: string = (block.styles?.margin as string) || '0px';
   const parseMargin = (value: string): [string, string, string, string] => {
@@ -140,17 +164,35 @@ export default function BlockRenderer({
   const parsePadding = parseMargin;
   const [pTop, pRight, pBottom, pLeft] = parsePadding(paddingString);
 
-  const horizontal = (block.styles as any)?.contentAlignHorizontal as 'left' | 'center' | 'right' | undefined;
-  const vertical = (block.styles as any)?.contentAlignVertical as 'top' | 'middle' | 'bottom' | undefined;
-  const justifyContent = horizontal === 'center' ? 'center' : horizontal === 'right' ? 'flex-end' : 'flex-start';
-  const alignItems = vertical === 'middle' ? 'center' : vertical === 'bottom' ? 'flex-end' : 'flex-start';
+  const horizontal = (block.styles as any)?.contentAlignHorizontal as
+    | 'left'
+    | 'center'
+    | 'right'
+    | undefined;
+  const vertical = (block.styles as any)?.contentAlignVertical as
+    | 'top'
+    | 'middle'
+    | 'bottom'
+    | undefined;
+  const justifyContent =
+    horizontal === 'center'
+      ? 'center'
+      : horizontal === 'right'
+        ? 'flex-end'
+        : 'flex-start';
+  const alignItems =
+    vertical === 'middle'
+      ? 'center'
+      : vertical === 'bottom'
+        ? 'flex-end'
+        : 'flex-start';
 
   const renderContent = () => {
     if (import.meta.env.DEBUG_BUILDER) {
       console.debug('Rendering block:', block.name);
     }
     const def = blockRegistry[block.name];
-    
+
     // New component pattern (preferred)
     if (def?.component) {
       const BlockComponent = def.component;
@@ -165,16 +207,14 @@ export default function BlockRenderer({
         />
       );
     }
-    
-    // Legacy renderer pattern (backward compatibility)
-    if (def?.renderer) {
-      const Renderer = def.renderer;
-      return <Renderer block={block} isPreview={isPreview} />;
-    }
-    
+
+
+
     // Fallback
     return (
-      <div style={block.styles} className="p-4 border border-dashed border-gray-300 rounded">
+      <div
+        style={block.styles}
+        className="p-4 border border-dashed border-gray-300 rounded">
         <div className="text-center text-gray-400">
           {blockRegistry[block.name]?.label || block.name} block
           <br />
@@ -187,27 +227,25 @@ export default function BlockRenderer({
   const def = blockRegistry[block.name];
   const isContainer = !!def?.isContainer;
   const contentEl = renderContent();
-  const childrenHandledInRenderer = !!def?.handlesOwnChildren || containsContainerChildren(contentEl);
+  const childrenHandledInRenderer =
+    !!def?.handlesOwnChildren || containsContainerChildren(contentEl);
 
   return (
     <div
       className="relative group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={(e) => { 
-        if (!isPreview) { 
-          e.stopPropagation(); 
-          actions?.onSelect(block.id); 
-        } 
-      }}
-    >
+      onClick={(e) => {
+        if (!isPreview) {
+          e.stopPropagation();
+          actions?.onSelect(block.id);
+        }
+      }}>
       {!isPreview && (
         <>
           {/* Toolbar visible when hovered or selected */}
           {(effectiveSelected || isHovered) && (
-            <div 
-              className="absolute -top-10 left-0 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded shadow-sm p-1"
-            >
+            <div className="absolute top-0 left-0 right-0 z-20 flex items-center gap-1 bg-white/90 border-b border-gray-200 rounded-t backdrop-blur-sm shadow-sm p-1">
               <span className="text-xs text-gray-600 px-2">
                 {blockRegistry[block.name]?.label || block.name}
               </span>
@@ -218,8 +256,7 @@ export default function BlockRenderer({
                   variant="ghost"
                   size="sm"
                   aria-label="Drag to reorder block"
-                  className="h-6 w-6 p-0 cursor-grab active:cursor-grabbing"
-                >
+                  className="h-6 w-6 p-0 cursor-grab active:cursor-grabbing">
                   <GripVertical className="w-3 h-3" />
                 </Button>
               )}
@@ -231,8 +268,7 @@ export default function BlockRenderer({
                   e.stopPropagation();
                   onDuplicate();
                 }}
-                className="h-6 w-6 p-0"
-              >
+                className="h-6 w-6 p-0">
                 <Copy className="w-3 h-3" />
               </Button>
               <Button
@@ -243,8 +279,7 @@ export default function BlockRenderer({
                   e.stopPropagation();
                   onDelete();
                 }}
-                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-              >
+                className="h-6 w-6 p-0 text-red-600 hover:text-red-700">
                 <Trash2 className="w-3 h-3" />
               </Button>
             </div>
@@ -252,20 +287,53 @@ export default function BlockRenderer({
         </>
       )}
 
-      <div className={`${!isPreview ? 'cursor-pointer' : ''} transition-all duration-200`}>
+      <div
+        className={`${!isPreview ? 'cursor-pointer' : ''} transition-all duration-200`}>
         <div
           className={`${!isPreview && effectiveSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''} ${!isPreview && isHovered && !effectiveSelected ? 'ring-1 ring-gray-300' : ''} relative`}
-          style={{ display: 'flex', justifyContent, alignItems, width: '100%' }}
-        >
-          {(!isPreview && effectiveHoverHighlight === 'padding') && (
+          style={{
+            display: 'flex',
+            justifyContent,
+            alignItems,
+            width: '100%',
+          }}>
+          {!isPreview && effectiveHoverHighlight === 'padding' && (
             <>
-              <div className="absolute left-0 right-0 pointer-events-none" style={{ top: 0, height: pTop, background: 'rgba(34,197,94,0.15)' }} />
-              <div className="absolute left-0 right-0 pointer-events-none" style={{ bottom: 0, height: pBottom, background: 'rgba(34,197,94,0.15)' }} />
-              <div className="absolute top-0 bottom-0 pointer-events-none" style={{ left: 0, width: pLeft, background: 'rgba(34,197,94,0.15)' }} />
-              <div className="absolute top-0 bottom-0 pointer-events-none" style={{ right: 0, width: pRight, background: 'rgba(34,197,94,0.15)' }} />
+              <div
+                className="absolute left-0 right-0 pointer-events-none"
+                style={{
+                  top: 0,
+                  height: pTop,
+                  background: 'rgba(34,197,94,0.15)',
+                }}
+              />
+              <div
+                className="absolute left-0 right-0 pointer-events-none"
+                style={{
+                  bottom: 0,
+                  height: pBottom,
+                  background: 'rgba(34,197,94,0.15)',
+                }}
+              />
+              <div
+                className="absolute top-0 bottom-0 pointer-events-none"
+                style={{
+                  left: 0,
+                  width: pLeft,
+                  background: 'rgba(34,197,94,0.15)',
+                }}
+              />
+              <div
+                className="absolute top-0 bottom-0 pointer-events-none"
+                style={{
+                  right: 0,
+                  width: pRight,
+                  background: 'rgba(34,197,94,0.15)',
+                }}
+              />
             </>
           )}
-          {(!isPreview && effectiveHoverHighlight === 'margin') && (
+          {!isPreview && effectiveHoverHighlight === 'margin' && (
             <div
               className="pointer-events-none"
               style={{
@@ -283,7 +351,11 @@ export default function BlockRenderer({
           {contentEl}
         </div>
         {isContainer && !childrenHandledInRenderer && (
-          <ContainerChildren block={block} isPreview={isPreview} onBlockChange={onBlockChange} />
+          <ContainerChildren
+            block={block}
+            isPreview={isPreview}
+            onBlockChange={onBlockChange}
+          />
         )}
       </div>
     </div>

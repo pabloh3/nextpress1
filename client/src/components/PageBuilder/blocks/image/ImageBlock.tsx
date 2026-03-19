@@ -507,20 +507,6 @@ function ImageSettings({ block, onUpdate }: ImageSettingsProps) {
 // LEGACY RENDERER (Backward Compatibility)
 // ============================================================================
 
-function LegacyImageRenderer({
-  block,
-}: {
-  block: BlockConfig;
-  isPreview: boolean;
-}) {
-  return (
-    <ImageRenderer
-      content={(block.content as ImageContent) || DEFAULT_CONTENT}
-      styles={block.styles}
-    />
-  );
-}
-
 // ============================================================================
 // BLOCK DEFINITION
 // ============================================================================
@@ -552,7 +538,6 @@ const ImageBlock: BlockDefinition = {
     height: 'auto',
   },
   component: ImageBlockComponent,
-  renderer: LegacyImageRenderer,
   settings: ImageSettings,
   hasSettings: true,
 };

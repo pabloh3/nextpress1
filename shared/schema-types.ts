@@ -125,7 +125,7 @@ export interface BlockConfig {
 
 	// Display metadata
 	label?: string; // User-facing display name (e.g., 'Heading', 'Two Columns')
-	category?: "basic" | "layout" | "media" | "advanced";
+	category?: "basic" | "layout" | "media" | "advanced" | "post";
 
 	// Content - Discriminated union for type-safe handling
 	// - For text blocks: { kind: 'text', value: '...' }

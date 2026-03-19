@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState } from 'react';
 import BlockLibrary from './BlockLibrary';
 import BlockSettings from './BlockSettings';
 import PageSettings from './PageSettings';
@@ -37,23 +37,25 @@ export function BuilderSidebar({
   ) => void;
 }) {
   const [userManuallyChangedView, setUserManuallyChangedView] = useState(false);
-
-  // Derive settingsView from selectedBlock - no effect needed
-  const settingsView = userManuallyChangedView
-    ? undefined // preserve current (we'll use state below)
-    : (selectedBlock ? 'block' : 'page');
-
-  // Use state for the actual value, but derive initial value
-  const [settingsViewState, setSettingsViewState] = useState<'page' | 'block'>(() => 
+  const [settingsViewState, setSettingsViewState] = useState<'page' | 'block'>(() =>
     selectedBlock ? 'block' : 'page'
   );
 
-  // When selectedBlock changes and user hasn't manually changed, update state
-  React.useEffect(() => {
+  /** Adjusting state during render: track previous selectedBlock identity */
+  const [prevSelectedBlockId, setPrevSelectedBlockId] = useState<string | null>(
+    selectedBlock?.id ?? null,
+  );
+  const currentBlockId = selectedBlock?.id ?? null;
+  if (currentBlockId !== prevSelectedBlockId) {
+    setPrevSelectedBlockId(currentBlockId);
     if (!userManuallyChangedView) {
       setSettingsViewState(selectedBlock ? 'block' : 'page');
     }
-  }, [selectedBlock, userManuallyChangedView]);
+    // Reset manual override when block selection changes
+    if (userManuallyChangedView) {
+      setUserManuallyChangedView(false);
+    }
+  }
   return (
     <div className="w-80 sm:w-80 lg:w-80 bg-white border-r border-gray-200 flex flex-col min-h-0 transition-all duration-300 ease-out shadow-sm">
       <div className="p-4 border-b border-gray-200 flex items-center gap-2 w-full justify-between bg-white">

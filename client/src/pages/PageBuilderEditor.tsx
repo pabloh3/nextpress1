@@ -119,26 +119,22 @@ export default function PageBuilderEditor({
   const [inlinePostData, setInlinePostData] = useState<Post | null>(null);
   const storedBlogPageStateRef = useRef<PageState & { data: EditorData } | null>(null);
 
+  /** Refs for stable event handler identity in useMountEffect */
+  const dataRef = useRef<EditorData | undefined>(undefined);
+  const pageStateRef = useRef<PageState>(initialPageState);
+  const toastRef = useRef(toast);
+
   /** API base path driven by content type */
   const apiBase = isPost ? '/api/posts' : '/api/pages';
 
-  // Resolve page ID from slug if needed (only applicable for pages)
-  const [resolvedPageId, setResolvedPageId] = useState<string | undefined>(
-    postId,
-  );
-
-  useEffect(() => {
+  /** Derive resolvedPageId synchronously — getPageIdFromSlug is a sync localStorage call */
+  const resolvedPageId = (() => {
     if (isSlug && postId && !isPost) {
       const mappingResult = getPageIdFromSlug(postId);
-      if (mappingResult.status && mappingResult.data) {
-        setResolvedPageId(mappingResult.data);
-      } else {
-        setResolvedPageId(postId);
-      }
-    } else {
-      setResolvedPageId(postId);
+      return mappingResult.status && mappingResult.data ? mappingResult.data : postId;
     }
-  }, [postId, isSlug, isPost]);
+    return postId;
+  })();
 
   const {
     data: rawData,
@@ -156,27 +152,38 @@ export default function PageBuilderEditor({
       : (rawData as Page)
     : undefined;
 
-  // Reset state when page/post ID changes (before data loads)
-  useEffect(() => {
-    if (resolvedPageId || postId) {
-      if (draftSaveRef.current) {
-        clearTimeout(draftSaveRef.current);
-      }
-      dispatchPageState({ type: 'RESET' });
-      latestPageStateRef.current = initialPageState;
+  // Keep refs fresh every render for stable useMountEffect handlers
+  dataRef.current = data;
+  pageStateRef.current = pageState;
+  toastRef.current = toast;
+
+  /** Adjusting state during render: reset when page/post ID changes */
+  const currentId = resolvedPageId || postId;
+  const [prevId, setPrevId] = useState<string | undefined>(currentId);
+  if (currentId !== prevId) {
+    setPrevId(currentId);
+    if (draftSaveRef.current) {
+      clearTimeout(draftSaveRef.current);
     }
-  }, [resolvedPageId, postId]);
+    dispatchPageState({ type: 'RESET' });
+    latestPageStateRef.current = initialPageState;
+  }
 
-  useEffect(() => {
-    if (!data) return;
+  /**
+   * Adjusting state during render: initialize page state when data arrives or changes.
+   * Tracks prevDataId to detect when we have new data to load.
+   */
+  const [prevDataId, setPrevDataId] = useState<string | null>(null);
+  const dataId = data?.id ?? null;
+  const dataMatchesCurrent = dataId && dataId === currentId;
 
-    const currentId = resolvedPageId || postId;
-    if (data.id !== currentId) return;
+  if (dataMatchesCurrent && dataId !== prevDataId && data) {
+    setPrevDataId(dataId);
 
     // Load local draft — use post or page draft storage based on type
     const localResult = isPost
-      ? loadPostDraft(data.id)
-      : loadPageDraft(data.id);
+      ? loadPostDraft(dataId)
+      : loadPageDraft(dataId);
     const localDraft = localResult.status ? localResult.data : null;
 
     const toTs = (value: unknown) => {
@@ -223,7 +230,12 @@ export default function PageBuilderEditor({
     } else {
       savePageDraft(data.id, data);
     }
-  }, [data, resolvedPageId, postId, isPost]);
+  }
+
+  // Also reset prevDataId when currentId changes (so we re-load on navigation)
+  if (dataId && dataId !== currentId && prevDataId !== null) {
+    setPrevDataId(null);
+  }
 
   // Replace URL with slug for pages (not applicable for posts) - mount-only
   useMountEffect(() => {
@@ -301,16 +313,17 @@ export default function PageBuilderEditor({
    * Listen for `np:edit-post` custom events dispatched by PostListBlock.
    * When received, store the current blog page state and swap the canvas
    * to the clicked post's blocks for inline editing.
+   * Uses refs for stable handler identity — mount-only subscription.
    */
-  useEffect(() => {
+  useMountEffect(() => {
     const handleEditPostEvent = async (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (!detail?.postId || !data) return;
+      if (!detail?.postId || !dataRef.current) return;
 
       // Store current blog page state so we can restore it later
       storedBlogPageStateRef.current = {
-        ...pageState,
-        data,
+        ...pageStateRef.current,
+        data: dataRef.current,
       };
 
       try {
@@ -339,7 +352,7 @@ export default function PageBuilderEditor({
         };
       } catch (err) {
         console.error('Failed to load post for inline editing:', err);
-        toast({
+        toastRef.current({
           title: 'Error',
           description: 'Failed to load post for editing',
           variant: 'destructive',
@@ -350,7 +363,7 @@ export default function PageBuilderEditor({
     window.addEventListener('np:edit-post', handleEditPostEvent);
     return () =>
       window.removeEventListener('np:edit-post', handleEditPostEvent);
-  }, [data, toast]);
+  });
 
   /** Restore the blog page state after inline post editing */
   const handleBackToBlogPage = useCallback(() => {

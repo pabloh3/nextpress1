@@ -21,16 +21,22 @@ export function useUndoRedo<T>(initialState: T) {
   const canRedo = currentIndex < history.length - 1;
   const currentState = history[currentIndex];
 
+  // Ref for currentIndex so pushState has a stable identity
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
+
   /**
    * Adds a new state to the history.
    * Removes any states after current index (when undoing then making new change).
    * Limits history to 50 states to prevent memory issues.
+   * Uses a ref for currentIndex to maintain stable callback identity.
    */
   const pushState = useCallback(
     (newState: T) => {
       setHistory((prevHistory) => {
+        const idx = currentIndexRef.current;
         // Remove any states after current index (when undoing then making new change)
-        const newHistory = prevHistory.slice(0, currentIndex + 1);
+        const newHistory = prevHistory.slice(0, idx + 1);
         newHistory.push(newState);
 
         // Limit to 50 states
@@ -44,7 +50,7 @@ export function useUndoRedo<T>(initialState: T) {
         return newHistory;
       });
     },
-    [currentIndex],
+    [],
   );
 
   /**

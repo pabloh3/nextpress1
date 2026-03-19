@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useBlockState } from '../useBlockState';
 import { getBlockStateAccessor } from '../blockStateRegistry';
 import type { BlockDefinition, BlockComponentProps } from '../types.ts';
@@ -66,34 +66,19 @@ function useAdjacentPosts(
   postId: string | undefined,
   isPreview: boolean,
 ): AdjacentPostsData | null {
-  const [data, setData] = useState<AdjacentPostsData | null>(null);
+  const { data } = useQuery({
+    queryKey: ['adjacent-posts', postId],
+    queryFn: () =>
+      fetch(`/api/posts/${postId}/adjacent`)
+        .then((res) => {
+          if (!res.ok) throw new Error('Failed to fetch adjacent posts');
+          return res.json();
+        }),
+    enabled: !!isPreview && !!postId,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    if (!isPreview || !postId) {
-      setData(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    fetch(`/api/posts/${postId}/adjacent`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch adjacent posts');
-        return res.json();
-      })
-      .then((result: AdjacentPostsData) => {
-        if (!cancelled) setData(result);
-      })
-      .catch(() => {
-        if (!cancelled) setData(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [postId, isPreview]);
-
-  return data;
+  return data ?? null;
 }
 
 // ============================================================================
@@ -291,19 +276,10 @@ function PostNavigationSettings({
   onUpdate,
 }: PostNavigationSettingsProps) {
   const accessor = getBlockStateAccessor(block.id);
-  const [localContent, setLocalContent] = React.useState<PostNavigationContent>(
-    (block.content as PostNavigationContent) || DEFAULT_CONTENT,
-  );
-
-  React.useEffect(() => {
-    setLocalContent(
-      (block.content as PostNavigationContent) || DEFAULT_CONTENT,
-    );
-  }, [block.content]);
+  const content = (block.content as PostNavigationContent) || DEFAULT_CONTENT;
 
   const updateContent = (updates: Partial<PostNavigationContent>) => {
-    const updated = { ...localContent, ...updates };
-    setLocalContent(updated);
+    const updated = { ...content, ...updates };
     if (accessor) {
       accessor.setContent(updated);
     } else if (onUpdate) {
@@ -315,8 +291,8 @@ function PostNavigationSettings({
     }
   };
 
-  const currentShowThumbnail = localContent?.showThumbnail ?? false;
-  const currentShowLabel = localContent?.showLabel ?? true;
+  const currentShowThumbnail = content?.showThumbnail ?? false;
+  const currentShowLabel = content?.showLabel ?? true;
 
   return (
     <div className="space-y-4">
@@ -365,7 +341,7 @@ function PostNavigationSettings({
             </Label>
             <Input
               id="nav-prev-label"
-              value={localContent?.prevLabel || ''}
+              value={content?.prevLabel || ''}
               onChange={(e) => updateContent({ prevLabel: e.target.value })}
               placeholder="Previous Post"
               className="mt-1 h-9 text-sm"
@@ -379,7 +355,7 @@ function PostNavigationSettings({
             </Label>
             <Input
               id="nav-next-label"
-              value={localContent?.nextLabel || ''}
+              value={content?.nextLabel || ''}
               onChange={(e) => updateContent({ nextLabel: e.target.value })}
               placeholder="Next Post"
               className="mt-1 h-9 text-sm"
@@ -392,10 +368,10 @@ function PostNavigationSettings({
       <CollapsibleCard title="Post" icon={Tag} defaultOpen={false}>
         <div className="space-y-2">
           <Label className="text-sm font-medium text-gray-700">Post ID</Label>
-          {localContent?.postId ? (
+          {content?.postId ? (
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="font-mono text-xs truncate">
-                {localContent.postId}
+                {content.postId}
               </Badge>
               <button
                 onClick={() => updateContent({ postId: '' })}
@@ -405,7 +381,7 @@ function PostNavigationSettings({
             </div>
           ) : (
             <Input
-              value={localContent?.postId || ''}
+              value={content?.postId || ''}
               onChange={(e) => updateContent({ postId: e.target.value })}
               placeholder="Auto-set when added to a post"
               className="h-9 text-sm"
@@ -424,7 +400,7 @@ function PostNavigationSettings({
           </Label>
           <Input
             id="nav-class"
-            value={localContent?.className || ''}
+            value={content?.className || ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-nav"
             className="mt-1 h-9 text-sm"

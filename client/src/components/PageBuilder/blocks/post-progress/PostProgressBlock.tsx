@@ -231,18 +231,11 @@ function PostProgressSettings({
   onUpdate?: (updates: Partial<BlockConfig>) => void;
 }) {
   const accessor = getBlockStateAccessor(block.id);
-  const [localContent, setLocalContent] = useState<PostProgressContent>(
-    (block.content as PostProgressContent) || DEFAULT_CONTENT,
-  );
-
-  useEffect(() => {
-    setLocalContent((block.content as PostProgressContent) || DEFAULT_CONTENT);
-  }, [block.content]);
+  const content = (block.content as PostProgressContent) || DEFAULT_CONTENT;
 
   const updateContent = useCallback(
     (updates: Partial<PostProgressContent>) => {
-      const updated = { ...localContent, ...updates };
-      setLocalContent(updated);
+      const updated = { ...content, ...updates };
       if (accessor) {
         accessor.setContent(updated);
       } else if (onUpdate) {
@@ -253,7 +246,7 @@ function PostProgressSettings({
         });
       }
     },
-    [accessor, localContent, onUpdate],
+    [accessor, content, onUpdate],
   );
 
   return (
@@ -271,12 +264,12 @@ function PostProgressSettings({
               <input
                 id="progress-color"
                 type="color"
-                value={localContent?.color ?? DEFAULT_CONTENT.color}
+                value={content?.color ?? DEFAULT_CONTENT.color}
                 onChange={(e) => updateContent({ color: e.target.value })}
                 className="h-9 w-9 cursor-pointer rounded border border-gray-200 p-0.5"
               />
               <Input
-                value={localContent?.color ?? DEFAULT_CONTENT.color}
+                value={content?.color ?? DEFAULT_CONTENT.color}
                 onChange={(e) => updateContent({ color: e.target.value })}
                 className="h-9 text-sm flex-1"
                 placeholder="#3b82f6"
@@ -295,9 +288,9 @@ function PostProgressSettings({
                 id="progress-bg"
                 type="color"
                 value={
-                  localContent?.backgroundColor === 'transparent'
+                  content?.backgroundColor === 'transparent'
                     ? '#ffffff'
-                    : (localContent?.backgroundColor ?? '#ffffff')
+                    : (content?.backgroundColor ?? '#ffffff')
                 }
                 onChange={(e) =>
                   updateContent({ backgroundColor: e.target.value })
@@ -306,7 +299,7 @@ function PostProgressSettings({
               />
               <Input
                 value={
-                  localContent?.backgroundColor ??
+                  content?.backgroundColor ??
                   DEFAULT_CONTENT.backgroundColor
                 }
                 onChange={(e) =>
@@ -329,7 +322,7 @@ function PostProgressSettings({
               type="number"
               min={2}
               max={12}
-              value={localContent?.height ?? DEFAULT_CONTENT.height}
+              value={content?.height ?? DEFAULT_CONTENT.height}
               onChange={(e) =>
                 updateContent({ height: Number(e.target.value) })
               }
@@ -349,7 +342,7 @@ function PostProgressSettings({
               Position
             </Label>
             <Select
-              value={localContent?.position ?? DEFAULT_CONTENT.position}
+              value={content?.position ?? DEFAULT_CONTENT.position}
               onValueChange={(val) =>
                 updateContent({ position: val as 'top' | 'bottom' })
               }>
@@ -373,7 +366,7 @@ function PostProgressSettings({
             </Label>
             <Switch
               id="progress-percentage"
-              checked={localContent?.showPercentage ?? false}
+              checked={content?.showPercentage ?? false}
               onCheckedChange={(checked) =>
                 updateContent({ showPercentage: checked })
               }
@@ -393,7 +386,7 @@ function PostProgressSettings({
           <Input
             id="progress-class"
             aria-label="CSS Classes"
-            value={localContent?.className ?? ''}
+            value={content?.className ?? ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-progress"
             className="mt-1 h-9 text-sm"

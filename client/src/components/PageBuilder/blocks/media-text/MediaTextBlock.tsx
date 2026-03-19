@@ -12,6 +12,7 @@ import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { Image as ImageIcon, Settings, Link, Wrench } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
+import { sanitizeHtml } from "../../utils";
 
 // ============================================================================
 // TYPES
@@ -130,11 +131,11 @@ function MediaTextRenderer({ content, styles }: MediaTextRendererProps) {
       {mediaPosition === 'left' ? (
         <>
           {mediaContent}
-          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: textContent || '<p>Add text…</p>' }} />
+          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(textContent || '<p>Add text…</p>') }} />
         </>
       ) : (
         <>
-          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: textContent || '<p>Add text…</p>' }} />
+          <div className="wp-block-media-text__content" style={{ flexBasis: `${100 - (mediaWidth || 50)}%` }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(textContent || '<p>Add text…</p>') }} />
           {mediaContent}
         </>
       )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import BlockLibrary from './BlockLibrary';
 import BlockSettings from './BlockSettings';
 import PageSettings from './PageSettings';
@@ -36,35 +36,23 @@ export function BuilderSidebar({
     meta: Partial<{ title: string; slug: string; status: string }>,
   ) => void;
 }) {
-  const [settingsView, setSettingsView] = useState<'page' | 'block'>('page');
   const [userManuallyChangedView, setUserManuallyChangedView] = useState(false);
-  const prevHasBlockRef = useRef<boolean>(false);
 
-  // Auto-set to 'page' when no block selected, 'block' when block selected
-  // But only if user hasn't manually changed the view, and only when transitioning between block/no-block
-  useEffect(() => {
-    const hasBlock = !!selectedBlock;
-    const wasBlock = prevHasBlockRef.current;
-    const transitionedFromBlockToNoBlock = wasBlock && !hasBlock;
-    const transitionedFromNoBlockToBlock = !wasBlock && hasBlock;
+  // Derive settingsView from selectedBlock - no effect needed
+  const settingsView = userManuallyChangedView
+    ? undefined // preserve current (we'll use state below)
+    : (selectedBlock ? 'block' : 'page');
 
-    // Reset manual flag when transitioning between block/no-block (not when switching between different blocks)
-    if (transitionedFromBlockToNoBlock || transitionedFromNoBlockToBlock) {
-      setUserManuallyChangedView(false);
+  // Use state for the actual value, but derive initial value
+  const [settingsViewState, setSettingsViewState] = useState<'page' | 'block'>(() => 
+    selectedBlock ? 'block' : 'page'
+  );
+
+  // When selectedBlock changes and user hasn't manually changed, update state
+  React.useEffect(() => {
+    if (!userManuallyChangedView) {
+      setSettingsViewState(selectedBlock ? 'block' : 'page');
     }
-
-    if (
-      (transitionedFromBlockToNoBlock || transitionedFromNoBlockToBlock) &&
-      !userManuallyChangedView
-    ) {
-      if (hasBlock) {
-        setSettingsView('block');
-      } else {
-        setSettingsView('page');
-      }
-    }
-
-    prevHasBlockRef.current = hasBlock;
   }, [selectedBlock, userManuallyChangedView]);
   return (
     <div className="w-80 sm:w-80 lg:w-80 bg-white border-r border-gray-200 flex flex-col min-h-0 transition-all duration-300 ease-out shadow-sm">
@@ -114,10 +102,10 @@ export function BuilderSidebar({
                 <div className="mb-4 w-full">
                   <ButtonGroup className="w-full">
                     <Button
-                      variant={settingsView === 'page' ? 'default' : 'outline'}
+                      variant={settingsViewState === 'page' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => {
-                        setSettingsView('page');
+                        setSettingsViewState('page');
                         setUserManuallyChangedView(true);
                       }}
                       className="flex-1">
@@ -125,10 +113,10 @@ export function BuilderSidebar({
                       Page
                     </Button>
                     <Button
-                      variant={settingsView === 'block' ? 'default' : 'outline'}
+                      variant={settingsViewState === 'block' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => {
-                        setSettingsView('block');
+                        setSettingsViewState('block');
                         setUserManuallyChangedView(true);
                       }}
                       className="flex-1"
@@ -140,7 +128,7 @@ export function BuilderSidebar({
                 </div>
 
                 {/* Show PageSettings when view is 'page' or no block selected */}
-                {settingsView === 'page' || !selectedBlock ? (
+                {settingsViewState === 'page' || !selectedBlock ? (
                   <PageSettings
                     page={page}
                     isTemplate={isTemplate}

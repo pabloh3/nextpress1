@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,48 @@ import {
   loadPostDraft,
   savePostDraft,
 } from '@/lib/postDraftStorage';
+
+type PageState = {
+  blocks: BlockConfig[];
+  title: string;
+  slug: string;
+  status: string;
+  isInitialized: boolean;
+};
+
+type PageAction =
+  | { type: 'RESET' }
+  | { type: 'LOAD'; payload: { blocks: BlockConfig[]; title: string; slug: string; status: string } };
+
+const initialPageState: PageState = {
+  blocks: [],
+  title: '',
+  slug: '',
+  status: 'draft',
+  isInitialized: false,
+};
+
+function pageStateReducer(state: PageState, action: PageAction): PageState {
+  switch (action.type) {
+    case 'RESET':
+      return { ...initialPageState, isInitialized: false };
+    case 'LOAD':
+      return {
+        ...state,
+        blocks: action.payload.blocks,
+        title: action.payload.title,
+        slug: action.payload.slug,
+        status: action.payload.status,
+        isInitialized: true,
+      };
+    default:
+      return state;
+  }
+}
+
+function useMountEffect(effect: () => void | (() => void)) {
+  useEffect(effect, []);
+}
 
 /** Unified editor type — supports both pages and posts */
 type EditorContentType = 'page' | 'post';
@@ -61,19 +103,10 @@ export default function PageBuilderEditor({
 }: PageBuilderEditorProps) {
   const isPost = type === 'post';
   const [, setLocation] = useLocation();
-  const [blocks, setBlocks] = useState<BlockConfig[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [pageState, dispatchPageState] = useReducer(pageStateReducer, initialPageState);
   const [isSaving, setIsSaving] = useState(false);
-  const [pageTitle, setPageTitle] = useState<string>('');
-  const [pageSlug, setPageSlug] = useState<string>('');
-  const [pageStatus, setPageStatus] = useState<string>('draft');
-  const draftSaveRef = useRef<NodeJS.Timeout>();
-  const latestPageStateRef = useRef<{
-    blocks: BlockConfig[];
-    title: string;
-    slug: string;
-    status: string;
-  }>({ blocks: [], title: '', slug: '', status: 'draft' });
+  const draftSaveRef = useRef<NodeJS.Timeout | null>(null);
+  const latestPageStateRef = useRef<PageState>(initialPageState);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -84,13 +117,7 @@ export default function PageBuilderEditor({
    */
   const [inlinePostId, setInlinePostId] = useState<string | null>(null);
   const [inlinePostData, setInlinePostData] = useState<Post | null>(null);
-  const storedBlogPageStateRef = useRef<{
-    blocks: BlockConfig[];
-    title: string;
-    slug: string;
-    status: string;
-    data: EditorData;
-  } | null>(null);
+  const storedBlogPageStateRef = useRef<PageState & { data: EditorData } | null>(null);
 
   /** API base path driven by content type */
   const apiBase = isPost ? '/api/posts' : '/api/pages';
@@ -135,17 +162,8 @@ export default function PageBuilderEditor({
       if (draftSaveRef.current) {
         clearTimeout(draftSaveRef.current);
       }
-      setIsInitialized(false);
-      setBlocks([]);
-      setPageTitle('');
-      setPageSlug('');
-      setPageStatus('draft');
-      latestPageStateRef.current = {
-        blocks: [],
-        title: '',
-        slug: '',
-        status: 'draft',
-      };
+      dispatchPageState({ type: 'RESET' });
+      latestPageStateRef.current = initialPageState;
     }
   }, [resolvedPageId, postId]);
 
@@ -177,15 +195,21 @@ export default function PageBuilderEditor({
     const initialSlug = source.slug || '';
     const initialStatus = source.status || 'draft';
 
-    setBlocks(initialBlocks);
-    setPageTitle(initialTitle);
-    setPageSlug(initialSlug);
-    setPageStatus(initialStatus);
+    dispatchPageState({
+      type: 'LOAD',
+      payload: {
+        blocks: initialBlocks,
+        title: initialTitle,
+        slug: initialSlug,
+        status: initialStatus,
+      },
+    });
     latestPageStateRef.current = {
       blocks: initialBlocks,
       title: initialTitle,
       slug: initialSlug,
       status: initialStatus,
+      isInitialized: true,
     };
 
     // Store slug mapping for pages only
@@ -199,11 +223,10 @@ export default function PageBuilderEditor({
     } else {
       savePageDraft(data.id, data);
     }
-    setIsInitialized(true);
   }, [data, resolvedPageId, postId, isPost]);
 
-  // Replace URL with slug for pages (not applicable for posts)
-  useEffect(() => {
+  // Replace URL with slug for pages (not applicable for posts) - mount-only
+  useMountEffect(() => {
     if (!isPost && data && postId && !isSlug && data.slug) {
       const currentPath = window.location.pathname;
       const slugPath = `/page-builder/page/${data.slug}`;
@@ -215,7 +238,7 @@ export default function PageBuilderEditor({
         window.history.replaceState({}, '', slugPath);
       }
     }
-  }, [data, postId, isSlug, isPost]);
+  });
 
   const queueDraftSave = (
     override?: Partial<typeof latestPageStateRef.current>,
@@ -266,13 +289,13 @@ export default function PageBuilderEditor({
   };
 
   // Clear timeout on unmount
-  useEffect(() => {
+  useMountEffect(() => {
     return () => {
       if (draftSaveRef.current) {
         clearTimeout(draftSaveRef.current);
       }
     };
-  }, []);
+  });
 
   /**
    * Listen for `np:edit-post` custom events dispatched by PostListBlock.
@@ -286,10 +309,7 @@ export default function PageBuilderEditor({
 
       // Store current blog page state so we can restore it later
       storedBlogPageStateRef.current = {
-        blocks,
-        title: pageTitle,
-        slug: pageSlug,
-        status: pageStatus,
+        ...pageState,
         data,
       };
 
@@ -301,15 +321,21 @@ export default function PageBuilderEditor({
         const postBlocks = Array.isArray(post.blocks) ? post.blocks : [];
         setInlinePostId(post.id);
         setInlinePostData(post);
-        setBlocks(postBlocks);
-        setPageTitle(post.title || 'Untitled Post');
-        setPageSlug(post.slug || '');
-        setPageStatus(post.status || 'draft');
+        dispatchPageState({
+          type: 'LOAD',
+          payload: {
+            blocks: postBlocks,
+            title: post.title || 'Untitled Post',
+            slug: post.slug || '',
+            status: post.status || 'draft',
+          },
+        });
         latestPageStateRef.current = {
           blocks: postBlocks,
           title: post.title || 'Untitled Post',
           slug: post.slug || '',
           status: post.status || 'draft',
+          isInitialized: true,
         };
       } catch (err) {
         console.error('Failed to load post for inline editing:', err);
@@ -324,7 +350,7 @@ export default function PageBuilderEditor({
     window.addEventListener('np:edit-post', handleEditPostEvent);
     return () =>
       window.removeEventListener('np:edit-post', handleEditPostEvent);
-  }, [data, blocks, pageTitle, pageSlug, pageStatus, toast]);
+  }, [data, toast]);
 
   /** Restore the blog page state after inline post editing */
   const handleBackToBlogPage = useCallback(() => {
@@ -333,15 +359,21 @@ export default function PageBuilderEditor({
 
     setInlinePostId(null);
     setInlinePostData(null);
-    setBlocks(stored.blocks);
-    setPageTitle(stored.title);
-    setPageSlug(stored.slug);
-    setPageStatus(stored.status);
+    dispatchPageState({
+      type: 'LOAD',
+      payload: {
+        blocks: stored.blocks,
+        title: stored.title,
+        slug: stored.slug,
+        status: stored.status,
+      },
+    });
     latestPageStateRef.current = {
       blocks: stored.blocks,
       title: stored.title,
       slug: stored.slug,
       status: stored.status,
+      isInitialized: true,
     };
     storedBlogPageStateRef.current = null;
 
@@ -352,25 +384,27 @@ export default function PageBuilderEditor({
   }, [data, apiBase, queryClient]);
 
   const handleBlocksChange = (nextBlocks: BlockConfig[]) => {
-    setBlocks(nextBlocks);
+    dispatchPageState({ type: 'LOAD', payload: { ...pageState, blocks: nextBlocks } });
     queueDraftSave({ blocks: nextBlocks });
   };
 
   const handleTitleChange = (value: string) => {
-    setPageTitle(value);
+    dispatchPageState({ type: 'LOAD', payload: { ...pageState, title: value } });
     queueDraftSave({ title: value });
   };
 
   const handlePageMetaChange = (
     meta: Partial<{ title: string; slug: string; status: string }>,
   ) => {
-    if (meta.title !== undefined) setPageTitle(meta.title);
-    if (meta.slug !== undefined) setPageSlug(meta.slug);
-    if (meta.status !== undefined) setPageStatus(meta.status);
+    const updated = { ...pageState };
+    if (meta.title !== undefined) updated.title = meta.title;
+    if (meta.slug !== undefined) updated.slug = meta.slug;
+    if (meta.status !== undefined) updated.status = meta.status;
+    dispatchPageState({ type: 'LOAD', payload: updated });
     queueDraftSave(meta);
   };
 
-  if (isLoading || (data && !isInitialized)) {
+  if (isLoading || (data && !pageState.isInitialized)) {
     return (
       <div className="flex h-screen">
         <AdminSidebar />
@@ -455,10 +489,10 @@ export default function PageBuilderEditor({
       // When inline-editing a post, save to the post API
       if (inlinePostId) {
         const postPayload = {
-          title: pageTitle,
-          slug: pageSlug,
-          status: pageStatus,
-          blocks,
+          title: pageState.title,
+          slug: pageState.slug,
+          status: pageState.status,
+          blocks: pageState.blocks,
         };
         const response = await apiRequest(
           'PUT',
@@ -474,12 +508,12 @@ export default function PageBuilderEditor({
       }
 
       const payload = isPost
-        ? { title: pageTitle, slug: pageSlug, status: pageStatus, blocks }
+        ? { title: pageState.title, slug: pageState.slug, status: pageState.status, blocks: pageState.blocks }
         : {
-            title: pageTitle,
-            slug: pageSlug,
-            status: pageStatus,
-            blocks,
+            title: pageState.title,
+            slug: pageState.slug,
+            status: pageState.status,
+            blocks: pageState.blocks,
             version: data.version ?? 0,
           };
 
@@ -558,7 +592,7 @@ export default function PageBuilderEditor({
                   : `Editing ${isPost ? 'Post' : 'Page'}:`}
               </span>
               <Input
-                value={pageTitle}
+                value={pageState.title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 className="bg-wp-gray border-gray-600 text-white text-sm h-8 focus:border-wp-blue"
                 placeholder="Enter title..."
@@ -588,7 +622,7 @@ export default function PageBuilderEditor({
             </Button>
             <PublishDialog
               post={data}
-              blocks={blocks}
+              blocks={pageState.blocks}
               onPublished={handleSave}
               disabled={isSaving}
             />
@@ -602,14 +636,14 @@ export default function PageBuilderEditor({
                 ? adaptPostToEditorData(inlinePostData)
                 : data
             }
-            blocks={blocks}
+            blocks={pageState.blocks}
             onBlocksChange={handleBlocksChange}
             onSave={handleSave}
             onPreview={handlePreview}
             pageMeta={{
-              title: pageTitle,
-              slug: pageSlug,
-              status: pageStatus,
+              title: pageState.title,
+              slug: pageState.slug,
+              status: pageState.status,
               version: isInlineEditing ? 0 : data.version,
             }}
             onPageMetaChange={handlePageMetaChange}

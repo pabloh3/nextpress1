@@ -9,6 +9,7 @@ import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Plus, Trash2, Table as TableIcon, Settings, Wrench } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
+import { sanitizeHtml } from "../../utils";
 
 // ============================================================================
 // TYPES
@@ -107,7 +108,7 @@ function TableRenderer({ content, styles }: TableRendererProps) {
                       backgroundColor: '#f8f9fa',
                       fontWeight: 'bold',
                     }}
-                    dangerouslySetInnerHTML={{ __html: cell.content }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(cell.content) }}
                   />
                 ))}
               </tr>
@@ -128,7 +129,7 @@ function TableRenderer({ content, styles }: TableRendererProps) {
                       fontWeight: cell.tag === 'th' ? 'bold' : 'normal',
                       backgroundColor: cell.tag === 'th' ? '#f8f9fa' : 'transparent',
                     }}
-                    dangerouslySetInnerHTML={{ __html: cell.content }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(cell.content) }}
                   />
                 );
               })}
@@ -148,7 +149,7 @@ function TableRenderer({ content, styles }: TableRendererProps) {
                       backgroundColor: '#f8f9fa',
                       fontWeight: 'bold',
                     }}
-                    dangerouslySetInnerHTML={{ __html: cell.content }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(cell.content) }}
                   />
                 ))}
               </tr>

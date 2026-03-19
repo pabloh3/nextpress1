@@ -105,17 +105,10 @@ interface PostTitleSettingsProps {
  */
 function PostTitleSettings({ block, onUpdate }: PostTitleSettingsProps) {
   const accessor = getBlockStateAccessor(block.id);
-  const [localContent, setLocalContent] = React.useState<PostTitleContent>(
-    (block.content as PostTitleContent) || DEFAULT_CONTENT,
-  );
-
-  React.useEffect(() => {
-    setLocalContent((block.content as PostTitleContent) || DEFAULT_CONTENT);
-  }, [block.content]);
+  const content = (block.content as PostTitleContent) || DEFAULT_CONTENT;
 
   const updateContent = (updates: Partial<PostTitleContent>) => {
-    const updated = { ...localContent, ...updates };
-    setLocalContent(updated);
+    const updated = { ...content, ...updates };
     if (accessor) {
       accessor.setContent(updated);
     } else if (onUpdate) {
@@ -127,7 +120,7 @@ function PostTitleSettings({ block, onUpdate }: PostTitleSettingsProps) {
     }
   };
 
-  const currentTag = localContent?.tag || 'h1';
+  const currentTag = content?.tag || 'h1';
 
   return (
     <div className="space-y-4">
@@ -141,7 +134,7 @@ function PostTitleSettings({ block, onUpdate }: PostTitleSettingsProps) {
           </Label>
           <Input
             id="post-title-text"
-            value={localContent?.text || ''}
+            value={content?.text || ''}
             onChange={(e) => updateContent({ text: e.target.value })}
             placeholder="Enter post title"
             className="mt-1 h-9 text-sm"
@@ -180,7 +173,7 @@ function PostTitleSettings({ block, onUpdate }: PostTitleSettingsProps) {
           </Label>
           <Input
             id="post-title-class"
-            value={localContent?.className || ''}
+            value={content?.className || ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-title"
             className="mt-1 h-9 text-sm"

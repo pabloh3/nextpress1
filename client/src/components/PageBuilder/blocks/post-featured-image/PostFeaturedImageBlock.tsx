@@ -291,21 +291,11 @@ function PostFeaturedImageSettings({
   onUpdate?: (updates: Partial<BlockConfig>) => void;
 }) {
   const accessor = getBlockStateAccessor(block.id);
-  const [localContent, setLocalContent] =
-    React.useState<PostFeaturedImageContent>(
-      (block.content as PostFeaturedImageContent) || DEFAULT_CONTENT,
-    );
-
-  React.useEffect(() => {
-    setLocalContent(
-      (block.content as PostFeaturedImageContent) || DEFAULT_CONTENT,
-    );
-  }, [block.content]);
+  const content = (block.content as PostFeaturedImageContent) || DEFAULT_CONTENT;
 
   /** Merges partial updates into current content state */
   const updateContent = (updates: Partial<PostFeaturedImageContent>) => {
-    const updated = { ...localContent, ...updates };
-    setLocalContent(updated);
+    const updated = { ...content, ...updates };
     if (accessor) {
       accessor.setContent(updated);
     } else if (onUpdate) {
@@ -321,7 +311,7 @@ function PostFeaturedImageSettings({
             <Label htmlFor="fi-url">Image URL</Label>
             <Input
               id="fi-url"
-              value={localContent?.url || ''}
+              value={content?.url || ''}
               onChange={(e) => updateContent({ url: e.target.value })}
               placeholder="https://example.com/image.jpg"
               className="h-9"
@@ -331,7 +321,7 @@ function PostFeaturedImageSettings({
             <Label htmlFor="fi-alt">Alt Text</Label>
             <Input
               id="fi-alt"
-              value={localContent?.alt || ''}
+              value={content?.alt || ''}
               onChange={(e) => updateContent({ alt: e.target.value })}
               placeholder="Describe the image"
               className="h-9"
@@ -341,7 +331,7 @@ function PostFeaturedImageSettings({
             <Label htmlFor="fi-caption">Caption</Label>
             <Input
               id="fi-caption"
-              value={localContent?.caption || ''}
+              value={content?.caption || ''}
               onChange={(e) => updateContent({ caption: e.target.value })}
               placeholder="Optional caption"
               className="h-9"
@@ -355,7 +345,7 @@ function PostFeaturedImageSettings({
           <div>
             <Label htmlFor="fi-object-fit">Object Fit</Label>
             <Select
-              value={localContent?.objectFit || 'cover'}
+              value={content?.objectFit || 'cover'}
               onValueChange={(v) =>
                 updateContent({
                   objectFit: v as PostFeaturedImageContent['objectFit'],
@@ -374,7 +364,7 @@ function PostFeaturedImageSettings({
           <div>
             <Label htmlFor="fi-aspect-ratio">Aspect Ratio</Label>
             <Select
-              value={localContent?.aspectRatio || '16/9'}
+              value={content?.aspectRatio || '16/9'}
               onValueChange={(v) => updateContent({ aspectRatio: v })}>
               <SelectTrigger id="fi-aspect-ratio" className="h-9">
                 <SelectValue />
@@ -398,7 +388,7 @@ function PostFeaturedImageSettings({
             <Label htmlFor="fi-class">Additional CSS Class(es)</Label>
             <Input
               id="fi-class"
-              value={localContent?.className || ''}
+              value={content?.className || ''}
               onChange={(e) => updateContent({ className: e.target.value })}
               placeholder="e.g. custom-featured"
               className="h-9"

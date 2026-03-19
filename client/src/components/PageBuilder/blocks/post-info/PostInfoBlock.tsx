@@ -1,5 +1,5 @@
 // blocks/post-info/PostInfoBlock.tsx
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import * as React from 'react';
 import type { BlockDefinition, BlockComponentProps } from '../types.ts';
 import type { BlockConfig, BlockContent } from '@shared/schema-types';
@@ -134,35 +134,25 @@ function usePostMeta(
   postId: string | undefined,
   isPreview: boolean,
 ): PostMeta | null {
-  const [meta, setMeta] = useState<PostMeta | null>(null);
-  useEffect(() => {
-    if (!isPreview || !postId) {
-      setMeta(null);
-      return;
-    }
-    let cancelled = false;
-    fetch(`/api/posts/${postId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('fetch failed');
-        return res.json();
-      })
-      .then((data) => {
-        if (!cancelled)
-          setMeta({
-            publishedAt: data.publishedAt,
-            categories: data.categories,
-            tags: data.tags,
-            wordCount: data.wordCount,
-          });
-      })
-      .catch(() => {
-        if (!cancelled) setMeta(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [postId, isPreview]);
-  return meta;
+  const { data } = useQuery({
+    queryKey: ['post-meta', postId],
+    queryFn: () =>
+      fetch(`/api/posts/${postId}`)
+        .then((res) => {
+          if (!res.ok) throw new Error('fetch failed');
+          return res.json();
+        }),
+    enabled: !!isPreview && !!postId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (!data) return null;
+  return {
+    publishedAt: data.publishedAt,
+    categories: data.categories,
+    tags: data.tags,
+    wordCount: data.wordCount,
+  };
 }
 
 /** Build the wrapper className string. */
@@ -213,6 +203,7 @@ function PostInfoRenderer({
   const fetched = usePostMeta(content?.postId, !!isPreview);
   const meta: PostMeta = isPreview && fetched ? fetched : PLACEHOLDER_META;
   const items: React.ReactNode[] = [];
+  const itemKeys: string[] = [];
 
   if ((content?.showDate ?? true) && meta.publishedAt) {
     items.push(
@@ -223,6 +214,7 @@ function PostInfoRenderer({
         {formatDate(meta.publishedAt, dateFormat)}
       </span>,
     );
+    itemKeys.push('date');
   }
   if ((content?.showCategories ?? true) && meta.categories?.length) {
     items.push(
@@ -237,6 +229,7 @@ function PostInfoRenderer({
         </span>
       </span>,
     );
+    itemKeys.push('categories');
   }
   if ((content?.showTags ?? true) && meta.tags?.length) {
     items.push(
@@ -251,6 +244,7 @@ function PostInfoRenderer({
         </span>
       </span>,
     );
+    itemKeys.push('tags');
   }
   if (content?.showReadTime ?? true) {
     items.push(
@@ -261,6 +255,7 @@ function PostInfoRenderer({
         {computeReadTime(meta.wordCount)}
       </span>,
     );
+    itemKeys.push('readtime');
   }
 
   if (items.length === 0) {
@@ -278,7 +273,7 @@ function PostInfoRenderer({
       <div className={className} style={styles}>
         <div className="flex flex-wrap items-center gap-3">
           {items.map((item, idx) => (
-            <React.Fragment key={idx}>
+            <React.Fragment key={itemKeys[idx]}>
               {idx > 0 && <span className="text-gray-300">·</span>}
               {item}
             </React.Fragment>
@@ -326,17 +321,10 @@ interface PostInfoSettingsProps {
 /** Sidebar settings panel for the post info block. */
 function PostInfoSettings({ block, onUpdate }: PostInfoSettingsProps) {
   const accessor = getBlockStateAccessor(block.id);
-  const [localContent, setLocalContent] = React.useState<PostInfoContent>(
-    (block.content as PostInfoContent) || DEFAULT_CONTENT,
-  );
-
-  React.useEffect(() => {
-    setLocalContent((block.content as PostInfoContent) || DEFAULT_CONTENT);
-  }, [block.content]);
+  const content = (block.content as PostInfoContent) || DEFAULT_CONTENT;
 
   const updateContent = (updates: Partial<PostInfoContent>) => {
-    const updated = { ...localContent, ...updates };
-    setLocalContent(updated);
+    const updated = { ...content, ...updates };
     if (accessor) {
       accessor.setContent(updated);
     } else if (onUpdate) {
@@ -351,25 +339,25 @@ function PostInfoSettings({ block, onUpdate }: PostInfoSettingsProps) {
       id: 'show-date',
       label: 'Show Date',
       key: 'showDate' as const,
-      value: localContent?.showDate ?? true,
+      value: content?.showDate ?? true,
     },
     {
       id: 'show-categories',
       label: 'Show Categories',
       key: 'showCategories' as const,
-      value: localContent?.showCategories ?? true,
+      value: content?.showCategories ?? true,
     },
     {
       id: 'show-tags',
       label: 'Show Tags',
       key: 'showTags' as const,
-      value: localContent?.showTags ?? true,
+      value: content?.showTags ?? true,
     },
     {
       id: 'show-readtime',
       label: 'Show Read Time',
       key: 'showReadTime' as const,
-      value: localContent?.showReadTime ?? true,
+      value: content?.showReadTime ?? true,
     },
   ];
 
@@ -403,7 +391,7 @@ function PostInfoSettings({ block, onUpdate }: PostInfoSettingsProps) {
               Date Format
             </Label>
             <Select
-              value={localContent?.dateFormat ?? 'long'}
+              value={content?.dateFormat ?? 'long'}
               onValueChange={(val) =>
                 updateContent({
                   dateFormat: val as PostInfoContent['dateFormat'],
@@ -424,7 +412,7 @@ function PostInfoSettings({ block, onUpdate }: PostInfoSettingsProps) {
           <div>
             <Label className="text-sm font-medium text-gray-700">Layout</Label>
             <Select
-              value={localContent?.layout ?? 'inline'}
+              value={content?.layout ?? 'inline'}
               onValueChange={(val) =>
                 updateContent({ layout: val as PostInfoContent['layout'] })
               }>
@@ -446,10 +434,10 @@ function PostInfoSettings({ block, onUpdate }: PostInfoSettingsProps) {
       <CollapsibleCard title="Post" icon={Settings} defaultOpen={false}>
         <div className="space-y-2">
           <Label className="text-sm font-medium text-gray-700">Post ID</Label>
-          {localContent?.postId ? (
+          {content?.postId ? (
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="font-mono text-xs truncate">
-                {localContent.postId}
+                {content.postId}
               </Badge>
               <button
                 onClick={() => updateContent({ postId: '' })}
@@ -459,7 +447,7 @@ function PostInfoSettings({ block, onUpdate }: PostInfoSettingsProps) {
             </div>
           ) : (
             <Input
-              value={localContent?.postId || ''}
+              value={content?.postId || ''}
               onChange={(e) => updateContent({ postId: e.target.value })}
               placeholder="Auto-set when added to a post"
               className="h-9 text-sm"
@@ -477,7 +465,7 @@ function PostInfoSettings({ block, onUpdate }: PostInfoSettingsProps) {
           </Label>
           <Input
             id="post-info-class"
-            value={localContent?.className || ''}
+            value={content?.className || ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-post-info"
             className="mt-1 h-9 text-sm"

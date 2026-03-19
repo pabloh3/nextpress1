@@ -9,6 +9,7 @@ import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Quote as QuoteIcon, Settings, Wrench } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
+import { sanitizeHtml } from "../../utils";
 
 // ============================================================================
 // TYPES
@@ -81,7 +82,7 @@ function QuoteRenderer({ content, styles }: QuoteRendererProps) {
         ...styles,
       }}
     >
-      <div style={{ whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: valueHtml }} />
+      <div style={{ whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(valueHtml) }} />
       {citation && (
         <cite style={{ display: 'block', marginTop: '10px', fontSize: '0.95rem', color: '#64748b' }}>
           — {citation}

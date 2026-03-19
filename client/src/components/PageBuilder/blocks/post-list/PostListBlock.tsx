@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { useBlockState } from '../useBlockState';
 import { getBlockStateAccessor } from '../blockStateRegistry';
@@ -121,70 +121,43 @@ function PostListRenderer({
   isPreview?: boolean;
 }) {
   const cfg = { ...DEFAULT_CONTENT, ...content } as Required<PostListContent>;
-  const [posts, setPosts] = useState<PostItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch real posts when in preview mode OR when in editor mode with a blogId
   const shouldFetchReal = isPreview || !!cfg.blogId;
 
-  useEffect(() => {
-    if (!shouldFetchReal) {
-      setPosts(buildPlaceholderPosts(cfg.postsPerPage));
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    // In editor mode, fetch all statuses so draft posts are visible too
-    const statusParam = isPreview ? 'publish' : 'any';
-    const params = new URLSearchParams({
-      per_page: String(cfg.postsPerPage),
-      status: statusParam,
-    });
-    if (cfg.blogId) params.set('blog_id', cfg.blogId);
-    if (cfg.orderBy) params.set('order_by', cfg.orderBy);
-    if (cfg.order) params.set('order', cfg.order);
-
-    fetch(`/api/posts?${params.toString()}`, { credentials: 'include' })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Failed to fetch posts (${res.status})`);
-        return res.json();
-      })
-      .then((data) => {
-        if (cancelled) return;
-        const items: PostItem[] = (
-          Array.isArray(data) ? data : (data.posts ?? [])
-        ).map((p: any) => ({
-          id: p.id,
-          title: p.title ?? 'Untitled',
-          slug: p.slug ?? '',
-          excerpt: p.excerpt ?? '',
-          featuredImage: p.featuredImage ?? p.featured_image ?? '',
-          publishedAt: p.publishedAt ?? p.published_at ?? p.createdAt ?? '',
-          author: p.author ? { name: p.author.name ?? 'Unknown' } : undefined,
-        }));
-        setPosts(items);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['posts', cfg.blogId, cfg.postsPerPage, cfg.orderBy, cfg.order],
+    queryFn: async () => {
+      const statusParam = isPreview ? 'publish' : 'any';
+      const params = new URLSearchParams({
+        per_page: String(cfg.postsPerPage),
+        status: statusParam,
       });
+      if (cfg.blogId) params.set('blog_id', cfg.blogId);
+      if (cfg.orderBy) params.set('order_by', cfg.orderBy);
+      if (cfg.order) params.set('order', cfg.order);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    shouldFetchReal,
-    isPreview,
-    cfg.postsPerPage,
-    cfg.blogId,
-    cfg.orderBy,
-    cfg.order,
-  ]);
+      const res = await fetch(`/api/posts?${params.toString()}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(`Failed to fetch posts (${res.status})`);
+      const json = await res.json();
+      const items: PostItem[] = (
+        Array.isArray(json) ? json : (json.posts ?? [])
+      ).map((p: any) => ({
+        id: p.id,
+        title: p.title ?? 'Untitled',
+        slug: p.slug ?? '',
+        excerpt: p.excerpt ?? '',
+        featuredImage: p.featuredImage ?? p.featured_image ?? '',
+        publishedAt: p.publishedAt ?? p.published_at ?? p.createdAt ?? '',
+        author: p.author ? { name: p.author.name ?? 'Unknown' } : undefined,
+      }));
+      return items;
+    },
+    enabled: shouldFetchReal,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const posts: PostItem[] = data ?? buildPlaceholderPosts(cfg.postsPerPage);
 
   const wrapperClass = [
     'np-post-list',
@@ -194,16 +167,18 @@ function PostListRenderer({
     .filter(Boolean)
     .join(' ');
 
-  if (loading)
+  if (isLoading)
     return (
       <div className={wrapperClass} style={styles}>
         <p className="text-sm text-gray-400 py-8 text-center">Loading posts…</p>
       </div>
     );
-  if (error)
+  if (isError)
     return (
       <div className={wrapperClass} style={styles}>
-        <p className="text-sm text-red-400 py-8 text-center">{error}</p>
+        <p className="text-sm text-red-400 py-8 text-center">
+          {error instanceof Error ? error.message : 'Failed to load posts'}
+        </p>
       </div>
     );
 
@@ -431,19 +406,10 @@ function PostListSettings({
   onUpdate?: (updates: Partial<BlockConfig>) => void;
 }) {
   const accessor = getBlockStateAccessor(block.id);
-  const [localContent, setLocalContent] = React.useState<PostListContent>(
-    (block.content as unknown as PostListContent) ?? DEFAULT_CONTENT,
-  );
-
-  React.useEffect(() => {
-    setLocalContent(
-      (block.content as unknown as PostListContent) ?? DEFAULT_CONTENT,
-    );
-  }, [block.content]);
+  const content = (block.content as unknown as PostListContent) ?? DEFAULT_CONTENT;
 
   const updateContent = (updates: Partial<PostListContent>) => {
-    const updated = { ...localContent, ...updates };
-    setLocalContent(updated);
+    const updated = { ...content, ...updates };
     if (accessor) {
       accessor.setContent(updated);
     } else if (onUpdate) {
@@ -458,7 +424,7 @@ function PostListSettings({
           <div>
             <Label htmlFor="pl-layout">Layout</Label>
             <Select
-              value={localContent.layout ?? 'grid'}
+              value={content.layout ?? 'grid'}
               onValueChange={(v) => updateContent({ layout: v as any })}>
               <SelectTrigger id="pl-layout" className="h-9">
                 <SelectValue />
@@ -478,7 +444,7 @@ function PostListSettings({
               min={1}
               max={50}
               className="h-9"
-              value={localContent.postsPerPage ?? 6}
+              value={content.postsPerPage ?? 6}
               onChange={(e) =>
                 updateContent({
                   postsPerPage: Math.max(1, Number(e.target.value) || 1),
@@ -495,7 +461,7 @@ function PostListSettings({
             <Label htmlFor="pl-excerpt">Show excerpt</Label>
             <Switch
               id="pl-excerpt"
-              checked={localContent.showExcerpt ?? true}
+              checked={content.showExcerpt ?? true}
               onCheckedChange={(v) => updateContent({ showExcerpt: v })}
             />
           </div>
@@ -503,7 +469,7 @@ function PostListSettings({
             <Label htmlFor="pl-image">Show featured image</Label>
             <Switch
               id="pl-image"
-              checked={localContent.showFeaturedImage ?? true}
+              checked={content.showFeaturedImage ?? true}
               onCheckedChange={(v) => updateContent({ showFeaturedImage: v })}
             />
           </div>
@@ -511,7 +477,7 @@ function PostListSettings({
             <Label htmlFor="pl-date">Show date</Label>
             <Switch
               id="pl-date"
-              checked={localContent.showDate ?? true}
+              checked={content.showDate ?? true}
               onCheckedChange={(v) => updateContent({ showDate: v })}
             />
           </div>
@@ -519,7 +485,7 @@ function PostListSettings({
             <Label htmlFor="pl-author">Show author</Label>
             <Switch
               id="pl-author"
-              checked={localContent.showAuthor ?? true}
+              checked={content.showAuthor ?? true}
               onCheckedChange={(v) => updateContent({ showAuthor: v })}
             />
           </div>
@@ -533,7 +499,7 @@ function PostListSettings({
             <Input
               id="pl-blog"
               className="h-9"
-              value={localContent.blogId ?? ''}
+              value={content.blogId ?? ''}
               onChange={(e) => updateContent({ blogId: e.target.value })}
               placeholder="Filter by blog ID"
             />
@@ -541,7 +507,7 @@ function PostListSettings({
           <div>
             <Label htmlFor="pl-orderby">Order by</Label>
             <Select
-              value={localContent.orderBy ?? 'date'}
+              value={content.orderBy ?? 'date'}
               onValueChange={(v) => updateContent({ orderBy: v as any })}>
               <SelectTrigger id="pl-orderby" className="h-9">
                 <SelectValue />
@@ -555,7 +521,7 @@ function PostListSettings({
           <div>
             <Label htmlFor="pl-order">Order</Label>
             <Select
-              value={localContent.order ?? 'desc'}
+              value={content.order ?? 'desc'}
               onValueChange={(v) => updateContent({ order: v as any })}>
               <SelectTrigger id="pl-order" className="h-9">
                 <SelectValue />
@@ -575,7 +541,7 @@ function PostListSettings({
           <Input
             id="pl-class"
             className="h-9 text-sm"
-            value={localContent.className ?? ''}
+            value={content.className ?? ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. featured-posts"
           />

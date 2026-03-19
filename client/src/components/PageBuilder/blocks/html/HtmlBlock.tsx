@@ -8,6 +8,7 @@ import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Code2 as HtmlIcon, Wrench } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
+import { sanitizeHtml } from "../../utils";
 
 // ============================================================================
 // TYPES
@@ -48,7 +49,7 @@ function HtmlRenderer({ content, styles, isPreview }: HtmlRendererProps) {
       <div
         className={className}
         style={styles}
-        dangerouslySetInnerHTML={{ __html: htmlContent }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlContent) }}
       />
     );
   }

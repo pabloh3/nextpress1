@@ -53,7 +53,7 @@ function ButtonRenderer({ content, styles, isPreview }: ButtonRendererProps) {
   const anchorClass = "wp-block-button__link wp-element-button";
 
   return (
-    <div className={wrapperClass} onClick={(e) => (isPreview ? undefined : e.preventDefault())}>
+    <div className={wrapperClass} role="presentation" onClick={(e) => (isPreview ? undefined : e.preventDefault())}>
       <a
         href={url}
         target={linkTarget}

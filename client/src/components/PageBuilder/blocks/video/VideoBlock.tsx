@@ -217,7 +217,7 @@ function VideoRenderer({ content, styles }: VideoRendererProps) {
         style={{ display: 'block', width: '100%', height: styles?.height ? '100%' : 'auto' }}
       >
         {Array.isArray(sources) && sources.map((s: any, i: number) => (
-          <source key={i} src={s.src} type={s.type} />
+          <source key={s.src || `source-${i}`} src={s.src} type={s.type} />
         ))}
         Your browser does not support the video tag.
       </video>

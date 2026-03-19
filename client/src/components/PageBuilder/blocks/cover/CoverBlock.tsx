@@ -13,6 +13,7 @@ import { Square as CoverIcon, Settings, Wrench } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
+import { sanitizeHtml } from "../../utils";
 
 // ============================================================================
 // TYPES
@@ -168,7 +169,7 @@ function CoverRenderer({ content, styles }: CoverRendererProps) {
       >
         <div
           className="cover-content"
-          dangerouslySetInnerHTML={{ __html: innerContent }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(innerContent) }}
           style={{
             textAlign: contentPosition.includes('center') ? 'center' : 
                       contentPosition.includes('right') ? 'right' : 'left',

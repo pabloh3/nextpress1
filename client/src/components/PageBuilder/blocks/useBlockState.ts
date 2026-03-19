@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type React from "react";
 import type { BlockConfig } from "@shared/schema-types";
 import { nanoid } from "nanoid";
@@ -6,6 +6,10 @@ import {
 	registerBlockState,
 	unregisterBlockState,
 } from "./blockStateRegistry";
+
+function useMountEffect(effect: () => void | (() => void)) {
+	useEffect(effect, []);
+}
 
 interface UseBlockStateOptions<TContent> {
 	value: BlockConfig;
@@ -34,73 +38,60 @@ export function useBlockState<TContent>({
 }: UseBlockStateOptions<TContent>): UseBlockStateResult<TContent> {
 	const [clientId] = useState(() => value.id || nanoid());
 
-	const resolveContent = () =>
-		((value.content as TContent) ?? getDefaultContent());
+	const content = ((value.content as TContent) ?? getDefaultContent());
+	const styles = value.styles;
+	const settings = value.settings;
 
-	const [content, setContent] = useState<TContent>(resolveContent);
-	const [styles, setStyles] = useState<React.CSSProperties | undefined>(
-		() => value.styles,
+	const setContent = useCallback(
+		(update: TContent | ((prev: TContent) => TContent)) => {
+			const next =
+				typeof update === "function"
+					? (update as (prev: TContent) => TContent)(content)
+					: update;
+			onChange({ ...value, content: next as BlockConfig["content"] });
+		},
+		[value, onChange, content],
 	);
-	const [settings, setSettings] = useState<Record<string, any> | undefined>(
-		() => value.settings,
+
+	const setStyles = useCallback(
+		(
+			update:
+				| React.CSSProperties
+				| undefined
+				| ((prev: React.CSSProperties | undefined) => React.CSSProperties | undefined),
+		) => {
+			const next =
+				typeof update === "function"
+					? (update as (prev: React.CSSProperties | undefined) => React.CSSProperties | undefined)(
+							styles,
+					  )
+					: update;
+			onChange({ ...value, styles: next });
+		},
+		[value, onChange, styles],
 	);
 
-	const prevValueIdRef = useRef<string | null>(null);
-	const latestValueRef = useRef<BlockConfig>({
-		...value,
-		id: clientId,
-		content,
-		styles,
-		settings,
-	});
+	const setSettings = useCallback(
+		(
+			update:
+				| Record<string, any>
+				| undefined
+				| ((
+						prev: Record<string, any> | undefined,
+				  ) => Record<string, any> | undefined),
+		) => {
+			const next =
+				typeof update === "function"
+					? (update as (
+							prev: Record<string, any> | undefined,
+					  ) => Record<string, any> | undefined)(settings)
+					: update;
+			onChange({ ...value, settings: next });
+		},
+		[value, onChange, settings],
+	);
 
-	// Store onChange in a ref to avoid infinite loops when parent re-renders
-	const onChangeRef = useRef(onChange);
-	useEffect(() => {
-		onChangeRef.current = onChange;
-	});
-
-	// Track initial mount to avoid emitting onChange before any user interaction
-	const isInitialMount = useRef(true);
-
-	// Keep the latest value for structural metadata (parentId, order, etc.)
-	useEffect(() => {
-		latestValueRef.current = { ...value, id: clientId, content, styles, settings };
-	}, [value, clientId, content, styles, settings]);
-
-	// Re-initialize local state only when a different block instance mounts
-	useEffect(() => {
-		if (prevValueIdRef.current === null || prevValueIdRef.current !== value.id) {
-			prevValueIdRef.current = value.id;
-			setContent(resolveContent());
-			setStyles(value.styles);
-			setSettings(value.settings);
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [value.id]);
-
-	// Emit changes upstream whenever local state mutates
-	useEffect(() => {
-		// Skip emitting on initial mount - only emit on actual user changes
-		if (isInitialMount.current) {
-			isInitialMount.current = false;
-			return;
-		}
-
-		const base = latestValueRef.current;
-		const nextBlock: BlockConfig = {
-			...base,
-			id: clientId,
-			content: content as BlockConfig["content"],
-			styles,
-			settings,
-		};
-		latestValueRef.current = nextBlock;
-		onChangeRef.current(nextBlock);
-	}, [clientId, content, styles, settings]);
-
-	// Register accessors so sidebar settings can interact with the block state
-	useEffect(() => {
+	useMountEffect(() => {
 		registerBlockState(clientId, {
 			getContent: () => content,
 			getStyles: () => styles,
@@ -108,10 +99,10 @@ export function useBlockState<TContent>({
 			setContent,
 			setStyles,
 			setSettings,
-			getFullState: () => latestValueRef.current,
+			getFullState: () => value,
 		});
 		return () => unregisterBlockState(clientId);
-	}, [clientId, content, styles, settings]);
+	});
 
 	return {
 		clientId,
@@ -123,5 +114,3 @@ export function useBlockState<TContent>({
 		setSettings,
 	};
 }
-
-

@@ -19,6 +19,10 @@ import {
   duplicateBlockDeep,
 } from '@/lib/handlers/treeUtils';
 
+function useMountEffect(effect: () => void | (() => void)) {
+  useEffect(effect, []);
+}
+
 function isDescendant(
   blocks: BlockConfig[],
   ancestorId: string,
@@ -84,15 +88,11 @@ export default function PageBuilder({
   const initialBlocks =
     propBlocks || (data ? (data.blocks as BlockConfig[]) || [] : []);
 
-  // Use undo/redo for blocks state
+  // Use undo/redo for blocks state - derive blocks directly from currentState
   const { currentState, pushState, undo, redo, canUndo, canRedo, resetState } =
     useUndoRedo<BlockConfig[]>(initialBlocks);
-  const [blocks, setBlocks] = useState<BlockConfig[]>(currentState);
+  const blocks = currentState; // Direct derivation - no separate state
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setBlocks(currentState);
-  }, [currentState]);
 
   /**
    * Detect when the parent swaps propBlocks externally (e.g. inline post editing).
@@ -121,26 +121,26 @@ export default function PageBuilder({
 
   const commitBlocks = useCallback(
     (next: BlockConfig[] | ((prev: BlockConfig[]) => BlockConfig[])) => {
-      setBlocks((prev) => {
-        const resolved =
-          typeof next === 'function'
-            ? (next as (p: BlockConfig[]) => BlockConfig[])(prev)
-            : next;
-        if (resolved === prev) {
-          console.log('[COMMIT-DEBUG] No change (same ref), skipping');
-          return prev;
-        }
-        console.log(
-          '[COMMIT-DEBUG] Committing blocks:',
-          prev.length,
-          '->',
-          resolved.length,
-        );
-        pushState(resolved);
-        return resolved;
-      });
+      const resolved =
+        typeof next === 'function'
+          ? (next as (p: BlockConfig[]) => BlockConfig[])(currentState)
+          : next;
+      if (resolved === currentState) {
+        console.log('[COMMIT-DEBUG] No change (same ref), skipping');
+        return;
+      }
+      console.log(
+        '[COMMIT-DEBUG] Committing blocks:',
+        currentState.length,
+        '->',
+        resolved.length,
+      );
+      pushState(resolved);
+      // Notify parent of changes
+      lastEmittedRef.current = resolved;
+      onBlocksChange?.(resolved);
     },
-    [pushState],
+    [pushState, currentState, onBlocksChange],
   );
 
   const updateBlockPartial = useCallback(
@@ -182,17 +182,7 @@ export default function PageBuilder({
   >(null);
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
-  // Store onBlocksChange in a ref to avoid infinite loops when parent re-renders
-  const onBlocksChangeRef = useRef(onBlocksChange);
-  useEffect(() => {
-    onBlocksChangeRef.current = onBlocksChange;
-  });
-
-  // Notify parent of blocks changes without onBlocksChange in deps
-  useEffect(() => {
-    lastEmittedRef.current = blocks;
-    onBlocksChangeRef.current?.(blocks);
-  }, [blocks]);
+  // Parent notification is now done procedurally in commitBlocks
 
   const selectedBlock = selectedBlockId
     ? findBlock(blocks, selectedBlockId)
@@ -214,7 +204,7 @@ export default function PageBuilder({
     }
   }, [blocks, saveMutation, onSave, data]);
 
-  useEffect(() => {
+  useMountEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
@@ -232,7 +222,7 @@ export default function PageBuilder({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, handleSave]);
+  });
 
   const setBlocksFromDnD = useCallback(
     (next: BlockConfig[]) => {

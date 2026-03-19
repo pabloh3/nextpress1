@@ -258,17 +258,10 @@ interface PostTocSettingsProps {
  */
 function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
   const accessor = getBlockStateAccessor(block.id);
-  const [localContent, setLocalContent] = React.useState<PostTocContent>(
-    (block.content as PostTocContent) || DEFAULT_CONTENT,
-  );
-
-  React.useEffect(() => {
-    setLocalContent((block.content as PostTocContent) || DEFAULT_CONTENT);
-  }, [block.content]);
+  const content = (block.content as PostTocContent) || DEFAULT_CONTENT;
 
   const updateContent = (updates: Partial<PostTocContent>) => {
-    const updated = { ...localContent, ...updates };
-    setLocalContent(updated);
+    const updated = { ...content, ...updates };
     if (accessor) {
       accessor.setContent(updated);
     } else if (onUpdate) {
@@ -293,7 +286,7 @@ function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
           <Input
             id="toc-title"
             aria-label="TOC title"
-            value={localContent?.title ?? ''}
+            value={content?.title ?? ''}
             onChange={(e) => updateContent({ title: e.target.value })}
             placeholder='e.g. "Table of Contents"'
             className="mt-1 h-9 text-sm"
@@ -312,7 +305,7 @@ function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
               Max Heading Depth
             </Label>
             <Select
-              value={String(localContent?.maxDepth ?? 3)}
+              value={String(content?.maxDepth ?? 3)}
               onValueChange={(val) => updateContent({ maxDepth: Number(val) })}>
               <SelectTrigger id="toc-depth" className="mt-1 h-9 text-sm">
                 <SelectValue placeholder="Select depth" />
@@ -336,7 +329,7 @@ function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
             </Label>
             <Switch
               id="toc-ordered"
-              checked={localContent?.ordered ?? false}
+              checked={content?.ordered ?? false}
               onCheckedChange={(checked) => updateContent({ ordered: checked })}
             />
           </div>
@@ -354,7 +347,7 @@ function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
           <Input
             id="toc-class"
             aria-label="CSS Classes"
-            value={localContent?.className ?? ''}
+            value={content?.className ?? ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-toc"
             className="mt-1 h-9 text-sm"

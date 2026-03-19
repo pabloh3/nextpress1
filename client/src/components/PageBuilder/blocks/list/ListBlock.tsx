@@ -10,6 +10,7 @@ import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Settings, Wrench, List as ListIcon } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
+import { sanitizeHtml } from "../../utils";
 
 // ============================================================================
 // TYPES
@@ -76,7 +77,7 @@ function ListRenderer({ content, styles }: ListRendererProps) {
     style,
     ...(anchor ? { id: anchor } : {}),
     ...(className ? { className } : {}),
-    dangerouslySetInnerHTML: { __html: valuesHtml },
+    dangerouslySetInnerHTML: { __html: sanitizeHtml(valuesHtml) },
   };
 
   // For ordered lists, support HTML attributes reversed/start and type

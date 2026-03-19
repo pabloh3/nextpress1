@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useReducer } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
@@ -24,13 +24,60 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Blog } from "@shared/schema-types";
 
-// API response shape for blogs list
 interface BlogsResponse {
   blogs: Blog[];
   total: number;
 }
 
 type DialogStep = "select-blog" | "create-blog";
+
+type FormState = {
+  selectedBlogId: string;
+  postTitle: string;
+  newBlogName: string;
+  newBlogDescription: string;
+  isCreating: boolean;
+  isCreatingBlog: boolean;
+};
+
+type FormAction =
+  | { type: 'SET_BLOG'; payload: string }
+  | { type: 'SET_POST_TITLE'; payload: string }
+  | { type: 'SET_BLOG_NAME'; payload: string }
+  | { type: 'SET_BLOG_DESC'; payload: string }
+  | { type: 'SET_CREATING'; payload: boolean }
+  | { type: 'SET_CREATING_BLOG'; payload: boolean }
+  | { type: 'RESET' };
+
+const initialFormState: FormState = {
+  selectedBlogId: "",
+  postTitle: "",
+  newBlogName: "",
+  newBlogDescription: "",
+  isCreating: false,
+  isCreatingBlog: false,
+};
+
+function formReducer(state: FormState, action: FormAction): FormState {
+  switch (action.type) {
+    case 'SET_BLOG':
+      return { ...state, selectedBlogId: action.payload };
+    case 'SET_POST_TITLE':
+      return { ...state, postTitle: action.payload };
+    case 'SET_BLOG_NAME':
+      return { ...state, newBlogName: action.payload };
+    case 'SET_BLOG_DESC':
+      return { ...state, newBlogDescription: action.payload };
+    case 'SET_CREATING':
+      return { ...state, isCreating: action.payload };
+    case 'SET_CREATING_BLOG':
+      return { ...state, isCreatingBlog: action.payload };
+    case 'RESET':
+      return initialFormState;
+    default:
+      return state;
+  }
+}
 
 interface CreatePostDialogProps {
   open: boolean;
@@ -49,16 +96,9 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Dialog state
+  // Dialog state - step is separate for clarity
   const [step, setStep] = useState<DialogStep>("select-blog");
-  const [selectedBlogId, setSelectedBlogId] = useState<string>("");
-  const [postTitle, setPostTitle] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
-
-  // Create-blog sub-form
-  const [newBlogName, setNewBlogName] = useState("");
-  const [newBlogDescription, setNewBlogDescription] = useState("");
-  const [isCreatingBlog, setIsCreatingBlog] = useState(false);
+  const [form, dispatchForm] = useReducer(formReducer, initialFormState);
 
   // Fetch existing blogs
   const { data: blogsData, isLoading: blogsLoading, refetch: refetchBlogs } = useQuery<BlogsResponse>({
@@ -71,12 +111,7 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
   /** Reset all dialog state */
   const resetState = () => {
     setStep("select-blog");
-    setSelectedBlogId("");
-    setPostTitle("");
-    setNewBlogName("");
-    setNewBlogDescription("");
-    setIsCreating(false);
-    setIsCreatingBlog(false);
+    dispatchForm({ type: 'RESET' });
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -86,13 +121,13 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
 
   /** Create a new blog, then auto-select it */
   const handleCreateBlog = async () => {
-    if (!newBlogName.trim()) return;
+    if (!form.newBlogName.trim()) return;
 
-    setIsCreatingBlog(true);
+    dispatchForm({ type: 'SET_CREATING_BLOG', payload: true });
     try {
       const response = await apiRequest("POST", "/api/blogs", {
-        name: newBlogName.trim(),
-        description: newBlogDescription.trim() || undefined,
+        name: form.newBlogName.trim(),
+        description: form.newBlogDescription.trim() || undefined,
         status: "publish",
       });
       const blog = await response.json();
@@ -101,9 +136,9 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
 
       // Refresh the blogs list and auto-select the new blog
       await refetchBlogs();
-      setSelectedBlogId(blog.id);
-      setNewBlogName("");
-      setNewBlogDescription("");
+      dispatchForm({ type: 'SET_BLOG', payload: blog.id });
+      dispatchForm({ type: 'SET_BLOG_NAME', payload: '' });
+      dispatchForm({ type: 'SET_BLOG_DESC', payload: '' });
       setStep("select-blog");
     } catch (err) {
       console.error("Error creating blog:", err);
@@ -113,19 +148,19 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
         variant: "destructive",
       });
     } finally {
-      setIsCreatingBlog(false);
+      dispatchForm({ type: 'SET_CREATING_BLOG', payload: false });
     }
   };
 
   /** Create the post via API and navigate to page builder */
   const handleCreatePost = async () => {
-    if (!postTitle.trim() || !selectedBlogId) return;
+    if (!form.postTitle.trim() || !form.selectedBlogId) return;
 
-    setIsCreating(true);
+    dispatchForm({ type: 'SET_CREATING', payload: true });
     try {
       const response = await apiRequest("POST", "/api/posts", {
-        title: postTitle.trim(),
-        blogId: selectedBlogId,
+        title: form.postTitle.trim(),
+        blogId: form.selectedBlogId,
         status: "draft",
         blocks: [],
       });
@@ -142,15 +177,15 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
         variant: "destructive",
       });
     } finally {
-      setIsCreating(false);
+      dispatchForm({ type: 'SET_CREATING', payload: false });
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      if (step === "create-blog" && newBlogName.trim()) {
+      if (step === "create-blog" && form.newBlogName.trim()) {
         handleCreateBlog();
-      } else if (step === "select-blog" && postTitle.trim() && selectedBlogId) {
+      } else if (step === "select-blog" && form.postTitle.trim() && form.selectedBlogId) {
         handleCreatePost();
       }
     }
@@ -174,8 +209,8 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
               <Input
                 id="blog-name"
                 placeholder="e.g. Engineering Blog"
-                value={newBlogName}
-                onChange={(e) => setNewBlogName(e.target.value)}
+                value={form.newBlogName}
+                onChange={(e) => dispatchForm({ type: 'SET_BLOG_NAME', payload: e.target.value })}
                 onKeyDown={handleKeyDown}
                 autoFocus
               />
@@ -185,8 +220,8 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
               <Input
                 id="blog-desc"
                 placeholder="What is this blog about?"
-                value={newBlogDescription}
-                onChange={(e) => setNewBlogDescription(e.target.value)}
+                value={form.newBlogDescription}
+                onChange={(e) => dispatchForm({ type: 'SET_BLOG_DESC', payload: e.target.value })}
                 onKeyDown={handleKeyDown}
               />
             </div>
@@ -198,9 +233,9 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
             </Button>
             <Button
               onClick={handleCreateBlog}
-              disabled={!newBlogName.trim() || isCreatingBlog}
+              disabled={!form.newBlogName.trim() || form.isCreatingBlog}
             >
-              {isCreatingBlog && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {form.isCreatingBlog && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Create Blog
             </Button>
           </DialogFooter>
@@ -242,7 +277,7 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Select value={selectedBlogId} onValueChange={setSelectedBlogId}>
+                <Select value={form.selectedBlogId} onValueChange={(v) => dispatchForm({ type: 'SET_BLOG', payload: v })}>
                   <SelectTrigger id="blog-select" className="flex-1">
                     <SelectValue placeholder="Choose a blog..." />
                   </SelectTrigger>
@@ -272,8 +307,8 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
             <Input
               id="post-title"
               placeholder="Enter post title..."
-              value={postTitle}
-              onChange={(e) => setPostTitle(e.target.value)}
+              value={form.postTitle}
+              onChange={(e) => dispatchForm({ type: 'SET_POST_TITLE', payload: e.target.value })}
               onKeyDown={handleKeyDown}
               autoFocus={blogs.length > 0}
             />
@@ -289,9 +324,9 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
           </Button>
           <Button
             onClick={handleCreatePost}
-            disabled={!postTitle.trim() || !selectedBlogId || isCreating}
+            disabled={!form.postTitle.trim() || !form.selectedBlogId || form.isCreating}
           >
-            {isCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {form.isCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Create Post
           </Button>
         </DialogFooter>

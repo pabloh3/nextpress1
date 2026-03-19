@@ -1,5 +1,5 @@
 // blocks/post-author-box/PostAuthorBoxBlock.tsx
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import * as React from 'react';
 import type { BlockDefinition, BlockComponentProps } from '../types.ts';
 import type { BlockConfig, BlockContent } from '@shared/schema-types';
@@ -79,34 +79,19 @@ function useAuthorData(
   authorId: string | undefined,
   isPreview: boolean,
 ): AuthorData | null {
-  const [author, setAuthor] = useState<AuthorData | null>(null);
+  const { data } = useQuery({
+    queryKey: ['author', authorId],
+    queryFn: () =>
+      fetch(`/api/users/${authorId}`)
+        .then((res) => {
+          if (!res.ok) throw new Error('Failed to fetch author');
+          return res.json();
+        }),
+    enabled: !!isPreview && !!authorId,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    if (!isPreview || !authorId) {
-      setAuthor(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    fetch(`/api/users/${authorId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch author');
-        return res.json();
-      })
-      .then((data) => {
-        if (!cancelled) setAuthor(data);
-      })
-      .catch(() => {
-        if (!cancelled) setAuthor(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authorId, isPreview]);
-
-  return author;
+  return data ?? null;
 }
 
 // ============================================================================
@@ -229,17 +214,10 @@ function PostAuthorBoxSettings({
   onUpdate,
 }: PostAuthorBoxSettingsProps) {
   const accessor = getBlockStateAccessor(block.id);
-  const [localContent, setLocalContent] = React.useState<PostAuthorBoxContent>(
-    (block.content as PostAuthorBoxContent) || DEFAULT_CONTENT,
-  );
-
-  React.useEffect(() => {
-    setLocalContent((block.content as PostAuthorBoxContent) || DEFAULT_CONTENT);
-  }, [block.content]);
+  const content = (block.content as PostAuthorBoxContent) || DEFAULT_CONTENT;
 
   const updateContent = (updates: Partial<PostAuthorBoxContent>) => {
-    const updated = { ...localContent, ...updates };
-    setLocalContent(updated);
+    const updated = { ...content, ...updates };
     if (accessor) {
       accessor.setContent(updated);
     } else if (onUpdate) {
@@ -251,11 +229,11 @@ function PostAuthorBoxSettings({
     }
   };
 
-  const currentLayout = localContent?.layout ?? 'horizontal';
-  const currentAvatarSize = localContent?.avatarSize ?? 64;
-  const currentShowAvatar = localContent?.showAvatar ?? true;
-  const currentShowName = localContent?.showName ?? true;
-  const currentShowBio = localContent?.showBio ?? true;
+  const currentLayout = content?.layout ?? 'horizontal';
+  const currentAvatarSize = content?.avatarSize ?? 64;
+  const currentShowAvatar = content?.showAvatar ?? true;
+  const currentShowName = content?.showName ?? true;
+  const currentShowBio = content?.showBio ?? true;
 
   return (
     <div className="space-y-4">
@@ -271,7 +249,7 @@ function PostAuthorBoxSettings({
             </Label>
             <Input
               id="author-id"
-              value={localContent?.authorId || ''}
+              value={content?.authorId || ''}
               onChange={(e) => updateContent({ authorId: e.target.value })}
               placeholder="Enter author ID"
               className="mt-1 h-9 text-sm"
@@ -369,10 +347,10 @@ function PostAuthorBoxSettings({
       <CollapsibleCard title="Post" icon={Wrench} defaultOpen={false}>
         <div className="space-y-2">
           <Label className="text-sm font-medium text-gray-700">Post ID</Label>
-          {localContent?.postId ? (
+          {content?.postId ? (
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="font-mono text-xs truncate">
-                {localContent.postId}
+                {content.postId}
               </Badge>
               <button
                 onClick={() => updateContent({ postId: '' })}
@@ -382,7 +360,7 @@ function PostAuthorBoxSettings({
             </div>
           ) : (
             <Input
-              value={localContent?.postId || ''}
+              value={content?.postId || ''}
               onChange={(e) => updateContent({ postId: e.target.value })}
               placeholder="Auto-set when added to a post"
               className="h-9 text-sm"
@@ -401,7 +379,7 @@ function PostAuthorBoxSettings({
           </Label>
           <Input
             id="author-box-class"
-            value={localContent?.className || ''}
+            value={content?.className || ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-author-box"
             className="mt-1 h-9 text-sm"

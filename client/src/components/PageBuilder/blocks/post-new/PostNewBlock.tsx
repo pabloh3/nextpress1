@@ -155,17 +155,10 @@ interface PostNewSettingsProps {
  */
 function PostNewSettings({ block, onUpdate }: PostNewSettingsProps) {
   const accessor = getBlockStateAccessor(block.id);
-  const [localContent, setLocalContent] = React.useState<PostNewContent>(
-    (block.content as PostNewContent) || DEFAULT_CONTENT,
-  );
-
-  React.useEffect(() => {
-    setLocalContent((block.content as PostNewContent) || DEFAULT_CONTENT);
-  }, [block.content]);
+  const content = (block.content as PostNewContent) || DEFAULT_CONTENT;
 
   const updateContent = (updates: Partial<PostNewContent>) => {
-    const updated = { ...localContent, ...updates };
-    setLocalContent(updated);
+    const updated = { ...content, ...updates };
     if (accessor) {
       accessor.setContent(updated);
     } else if (onUpdate) {
@@ -177,7 +170,7 @@ function PostNewSettings({ block, onUpdate }: PostNewSettingsProps) {
     }
   };
 
-  const currentStyle = localContent?.style || 'card';
+  const currentStyle = content?.style || 'card';
 
   return (
     <div className="space-y-4">
@@ -193,7 +186,7 @@ function PostNewSettings({ block, onUpdate }: PostNewSettingsProps) {
             </Label>
             <Input
               id="post-new-text"
-              value={localContent?.buttonText || ''}
+              value={content?.buttonText || ''}
               onChange={(e) => updateContent({ buttonText: e.target.value })}
               placeholder="Create New Post"
               className="mt-1 h-9 text-sm"
@@ -231,7 +224,7 @@ function PostNewSettings({ block, onUpdate }: PostNewSettingsProps) {
             </Label>
             <Textarea
               id="post-new-desc"
-              value={localContent?.description || ''}
+              value={content?.description || ''}
               onChange={(e) => updateContent({ description: e.target.value })}
               placeholder="Sub-text shown below the button"
               rows={2}
@@ -251,7 +244,7 @@ function PostNewSettings({ block, onUpdate }: PostNewSettingsProps) {
           </Label>
           <Input
             id="post-new-class"
-            value={localContent?.className || ''}
+            value={content?.className || ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-new-post"
             className="mt-1 h-9 text-sm"

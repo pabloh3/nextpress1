@@ -100,9 +100,9 @@ function PostExcerptRenderer({ content, styles }: PostExcerptRendererProps) {
       </p>
       {showReadMore && wasTruncated && (
         <p className="wp-block-post-excerpt__more-link">
-          <a href="#" onClick={(e) => e.preventDefault()}>
+          <button type="button" onClick={(e) => e.preventDefault()} className="text-blue-600 hover:text-blue-800 underline">
             {readMoreText}
-          </a>
+          </button>
         </p>
       )}
     </div>
@@ -138,17 +138,10 @@ interface PostExcerptSettingsProps {
  */
 function PostExcerptSettings({ block, onUpdate }: PostExcerptSettingsProps) {
   const accessor = getBlockStateAccessor(block.id);
-  const [localContent, setLocalContent] = React.useState<PostExcerptContent>(
-    (block.content as PostExcerptContent) || DEFAULT_CONTENT,
-  );
-
-  React.useEffect(() => {
-    setLocalContent((block.content as PostExcerptContent) || DEFAULT_CONTENT);
-  }, [block.content]);
+  const content = (block.content as PostExcerptContent) || DEFAULT_CONTENT;
 
   const updateContent = (updates: Partial<PostExcerptContent>) => {
-    const updated = { ...localContent, ...updates };
-    setLocalContent(updated);
+    const updated = { ...content, ...updates };
     if (accessor) {
       accessor.setContent(updated);
     } else if (onUpdate) {
@@ -161,9 +154,9 @@ function PostExcerptSettings({ block, onUpdate }: PostExcerptSettingsProps) {
   };
 
   const currentMaxLength =
-    localContent?.maxLength ?? DEFAULT_CONTENT.maxLength!;
-  const currentShowReadMore = localContent?.showReadMore ?? true;
-  const currentReadMoreText = localContent?.readMoreText || 'Read More';
+    content?.maxLength ?? DEFAULT_CONTENT.maxLength!;
+  const currentShowReadMore = content?.showReadMore ?? true;
+  const currentReadMoreText = content?.readMoreText || 'Read More';
 
   return (
     <div className="space-y-4">
@@ -177,7 +170,7 @@ function PostExcerptSettings({ block, onUpdate }: PostExcerptSettingsProps) {
           </Label>
           <Textarea
             id="excerpt-text"
-            value={localContent?.text || ''}
+            value={content?.text || ''}
             onChange={(e) => updateContent({ text: e.target.value })}
             placeholder="Write the post excerpt..."
             rows={4}
@@ -256,7 +249,7 @@ function PostExcerptSettings({ block, onUpdate }: PostExcerptSettingsProps) {
           </Label>
           <Input
             id="excerpt-class"
-            value={localContent?.className || ''}
+            value={content?.className || ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-excerpt"
             className="mt-1 h-9 text-sm"

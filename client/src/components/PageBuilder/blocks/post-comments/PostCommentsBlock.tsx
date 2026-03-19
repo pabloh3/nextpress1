@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import * as React from 'react';
 import { useBlockState } from '../useBlockState';
 import { getBlockStateAccessor } from '../blockStateRegistry';
@@ -204,72 +204,46 @@ function PostCommentsRenderer({
     ...DEFAULT_CONTENT,
     ...content,
   } as Required<PostCommentsContent>;
-  const [comments, setComments] = useState<CommentItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isPreview) {
-      setComments(buildPlaceholderComments());
-      return;
-    }
-    if (!cfg.postId) {
-      setComments([]);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    const params = new URLSearchParams({
-      postId: cfg.postId,
-      per_page: String(cfg.commentsPerPage),
-    });
-
-    fetch(`/api/comments?${params.toString()}`)
-      .then((res) => {
-        if (!res.ok)
-          throw new Error(`Failed to fetch comments (${res.status})`);
-        return res.json();
-      })
-      .then((data) => {
-        if (cancelled) return;
-        const items: CommentItem[] = (
-          Array.isArray(data) ? data : (data.comments ?? [])
-        ).map((c: any) => ({
-          id: c.id,
-          author: c.author ?? c.authorName ?? 'Anonymous',
-          date: c.date ?? c.createdAt ?? c.created_at ?? '',
-          content: c.content ?? c.body ?? '',
-          replies: Array.isArray(c.replies)
-            ? c.replies.map((r: any) => ({
-                id: r.id,
-                author: r.author ?? r.authorName ?? 'Anonymous',
-                date: r.date ?? r.createdAt ?? r.created_at ?? '',
-                content: r.content ?? r.body ?? '',
-              }))
-            : [],
-        }));
-        setComments(items);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['comments', cfg.postId, cfg.commentsPerPage],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        postId: cfg.postId,
+        per_page: String(cfg.commentsPerPage),
       });
+      const res = await fetch(`/api/comments?${params.toString()}`);
+      if (!res.ok) throw new Error(`Failed to fetch comments (${res.status})`);
+      const json = await res.json();
+      const items: CommentItem[] = (
+        Array.isArray(json) ? json : (json.comments ?? [])
+      ).map((c: any) => ({
+        id: c.id,
+        author: c.author ?? c.authorName ?? 'Anonymous',
+        date: c.date ?? c.createdAt ?? c.created_at ?? '',
+        content: c.content ?? c.body ?? '',
+        replies: Array.isArray(c.replies)
+          ? c.replies.map((r: any) => ({
+              id: r.id,
+              author: r.author ?? r.authorName ?? 'Anonymous',
+              date: r.date ?? r.createdAt ?? r.created_at ?? '',
+              content: r.content ?? r.body ?? '',
+            }))
+          : [],
+      }));
+      return items;
+    },
+    enabled: !!isPreview && !!cfg.postId,
+    staleTime: 5 * 60 * 1000,
+  });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [isPreview, cfg.postId, cfg.commentsPerPage]);
+  const comments: CommentItem[] = data ?? (isPreview ? [] : buildPlaceholderComments());
 
   const wrapperClass = ['np-post-comments', cfg.className]
     .filter(Boolean)
     .join(' ');
 
-  if (loading)
+  if (isLoading)
     return (
       <div className={wrapperClass} style={styles}>
         <p className="text-sm text-gray-400 py-8 text-center">
@@ -277,10 +251,12 @@ function PostCommentsRenderer({
         </p>
       </div>
     );
-  if (error)
+  if (isError)
     return (
       <div className={wrapperClass} style={styles}>
-        <p className="text-sm text-red-400 py-8 text-center">{error}</p>
+        <p className="text-sm text-red-400 py-8 text-center">
+          {error instanceof Error ? error.message : 'Failed to load comments'}
+        </p>
       </div>
     );
 
@@ -346,17 +322,10 @@ function PostCommentsSettings({
   onUpdate?: (updates: Partial<BlockConfig>) => void;
 }) {
   const accessor = getBlockStateAccessor(block.id);
-  const [localContent, setLocalContent] = React.useState<PostCommentsContent>(
-    (block.content as PostCommentsContent) || DEFAULT_CONTENT,
-  );
-
-  React.useEffect(() => {
-    setLocalContent((block.content as PostCommentsContent) || DEFAULT_CONTENT);
-  }, [block.content]);
+  const content = (block.content as PostCommentsContent) || DEFAULT_CONTENT;
 
   const updateContent = (updates: Partial<PostCommentsContent>) => {
-    const updated = { ...localContent, ...updates };
-    setLocalContent(updated);
+    const updated = { ...content, ...updates };
     if (accessor) {
       accessor.setContent(updated);
     } else if (onUpdate) {
@@ -372,7 +341,7 @@ function PostCommentsSettings({
             <Label htmlFor="pc-show-form">Show comment form</Label>
             <Switch
               id="pc-show-form"
-              checked={localContent.showForm ?? true}
+              checked={content.showForm ?? true}
               onCheckedChange={(v) => updateContent({ showForm: v })}
             />
           </div>
@@ -380,7 +349,7 @@ function PostCommentsSettings({
             <Label htmlFor="pc-show-count">Show comment count</Label>
             <Switch
               id="pc-show-count"
-              checked={localContent.showCount ?? true}
+              checked={content.showCount ?? true}
               onCheckedChange={(v) => updateContent({ showCount: v })}
             />
           </div>
@@ -388,7 +357,7 @@ function PostCommentsSettings({
             <Label htmlFor="pc-allow-replies">Allow replies</Label>
             <Switch
               id="pc-allow-replies"
-              checked={localContent.allowReplies ?? true}
+              checked={content.allowReplies ?? true}
               onCheckedChange={(v) => updateContent({ allowReplies: v })}
             />
           </div>
@@ -400,7 +369,7 @@ function PostCommentsSettings({
               min={1}
               max={100}
               className="h-9"
-              value={localContent.commentsPerPage ?? 10}
+              value={content.commentsPerPage ?? 10}
               onChange={(e) =>
                 updateContent({
                   commentsPerPage: Math.max(1, Number(e.target.value) || 1),
@@ -414,10 +383,10 @@ function PostCommentsSettings({
       <CollapsibleCard title="Post" icon={Settings} defaultOpen={false}>
         <div className="space-y-2">
           <Label className="text-sm font-medium text-gray-700">Post ID</Label>
-          {localContent?.postId ? (
+          {content?.postId ? (
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="font-mono text-xs truncate">
-                {localContent.postId}
+                {content.postId}
               </Badge>
               <button
                 onClick={() => updateContent({ postId: '' })}
@@ -427,7 +396,7 @@ function PostCommentsSettings({
             </div>
           ) : (
             <Input
-              value={localContent?.postId || ''}
+              value={content?.postId || ''}
               onChange={(e) => updateContent({ postId: e.target.value })}
               placeholder="Auto-set when added to a post"
               className="h-9 text-sm"
@@ -442,7 +411,7 @@ function PostCommentsSettings({
           <Input
             id="pc-class"
             className="h-9 text-sm"
-            value={localContent.className ?? ''}
+            value={content.className ?? ''}
             onChange={(e) => updateContent({ className: e.target.value })}
             placeholder="e.g. custom-comments"
           />

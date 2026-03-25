@@ -115,7 +115,7 @@ vi.mock("../components/PageBuilder/PageBuilder", () => {
 						handleSelect(block.id);
 					}}
 				>
-					<div>{(block.content as any)?.value || block.content?.text}</div>
+					<div>{(block.content as any)?.value ?? (block.content as any)?.text ?? ''}</div>
 					{isGroup && block.children?.length ? (
 						<div>{block.children.map(renderBlock)}</div>
 					) : null}

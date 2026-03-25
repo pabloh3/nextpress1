@@ -19,7 +19,7 @@ describe('Tree Utilities', () => {
     name: type,
     type: children !== undefined && children.length > 0 ? 'container' : 'block',
     parentId: null,
-    content: { text: `Content for ${id}` },
+    content: { kind: 'text', value: `Content for ${id}` } as any,
     styles: {},
     children: children || []
   })
@@ -91,11 +91,11 @@ describe('Tree Utilities', () => {
         createMockBlock('block3')
       ]
 
-      const updates = { content: { text: 'Updated content' } }
+      const updates = { content: { kind: 'text', value: 'Updated content' } as any }
       const result = updateBlockDeep(blocks, 'block2', updates)
       
       expect(result.found).toBe(true)
-      expect(result.next[1].content.text).toBe('Updated content')
+      expect((result.next[1].content as any).value).toBe('Updated content')
       expect(result.next[0].id).toBe('block1') // Other blocks unchanged
       expect(result.next[2].id).toBe('block3')
     })
@@ -109,11 +109,11 @@ describe('Tree Utilities', () => {
         ])
       ]
 
-      const updates = { content: { text: 'Updated nested content' } }
+      const updates = { content: { kind: 'text', value: 'Updated nested content' } as any }
       const result = updateBlockDeep(blocks, 'nested1', updates)
       
       expect(result.found).toBe(true)
-      expect(result.next[1].children![0].content.text).toBe('Updated nested content')
+      expect((result.next[1].children![0].content as any)?.value).toBe('Updated nested content')
       expect(result.next[1].children![1].id).toBe('nested2') // Sibling unchanged
     })
 
@@ -183,7 +183,7 @@ describe('Tree Utilities', () => {
       expect(result.next).toHaveLength(4)
       expect(result.next[1].id).toBe('block2') // Original
       expect(result.next[2].id).toBe(result.duplicatedId) // Duplicate
-      expect(result.next[2].content.text).toBe(result.next[1].content.text)
+      expect((result.next[2]?.content as any)?.value).toBe((result.next[1]?.content as any)?.value)
     })
 
     it('should duplicate nested block with children', () => {

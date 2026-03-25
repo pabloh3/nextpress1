@@ -14,7 +14,9 @@ import { Label } from '@/components/ui/label';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import type { Post, InsertPost } from '@shared/schema';
+import type { Post, NewPost } from '@shared/schema-types';
+
+type PostFormData = Partial<NewPost> & { content?: string; type?: string };
 
 interface PostEditorProps {
   postId?: number;
@@ -31,7 +33,7 @@ export default function PostEditor({
   onCancel,
   noContainer = false,
 }: PostEditorProps) {
-  const [formData, setFormData] = useState<Partial<InsertPost>>({
+  const [formData, setFormData] = useState<PostFormData>({
     title: '',
     content: '',
     excerpt: '',
@@ -53,17 +55,16 @@ export default function PostEditor({
     if (post) {
       setFormData({
         title: post.title ?? '',
-        content: post.content ?? '',
         excerpt: post.excerpt ?? '',
         slug: post.slug ?? '',
         status: post.status ?? 'draft',
-        type: post.type ?? type,
+        type,
       });
     }
   }, [post, type]);
 
   const saveMutation = useMutation({
-    mutationFn: async (data: Partial<InsertPost>) => {
+    mutationFn: async (data: PostFormData) => {
       if (postId) {
         return await apiRequest('PUT', `/api/posts/${postId}`, data);
       } else {

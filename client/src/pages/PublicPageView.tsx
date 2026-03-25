@@ -5,6 +5,22 @@ import BlockRenderer from "@/components/PageBuilder/BlockRenderer";
 import type { Post } from "@shared/schema-types";
 import type { BlockConfig } from "@shared/schema-types";
 
+/**
+ * Extended post data type for public page rendering.
+ * The API returns Post objects which may include additional fields
+ * depending on the content type (page vs post) and builder state.
+ */
+interface PublicPageData extends Post {
+  /** HTML content for non-page-builder pages */
+  content?: string;
+  /** Whether this page uses the page builder */
+  usePageBuilder?: boolean;
+  /** Content type discriminator: 'page' | 'post' */
+  type?: string;
+  /** Page builder block data (legacy alias for blocks) */
+  builderData?: BlockConfig[];
+}
+
 interface PublicPageViewProps {
   slug?: string;
   type?: 'page' | 'post' | 'homepage';
@@ -29,7 +45,7 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
       if (!response.ok) {
         throw new Error('Content not found');
       }
-      return response.json() as Promise<Post>;
+      return response.json() as Promise<PublicPageData>;
     },
     enabled: !!(slug || type === 'homepage'),
   });
@@ -80,7 +96,7 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
     );
   }
 
-  const blocks: BlockConfig[] = (data.builderData as BlockConfig[]) || [];
+  const blocks: BlockConfig[] = (data.builderData || data.blocks as BlockConfig[]) || [];
   const publishDate = data.publishedAt ? new Date(data.publishedAt) : new Date();
 
   // SEO meta information

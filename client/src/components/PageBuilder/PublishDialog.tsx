@@ -18,12 +18,12 @@ import { Separator } from "@/components/ui/separator";
 import { Share2, Globe, ExternalLink, AlertCircle, FileX } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Post, BlockConfig } from "@shared/schema";
+import type { Post, Page, BlockConfig } from "@shared/schema-types";
 
 interface PublishDialogProps {
-  post?: Post;
+  post?: Post | Page;
   blocks: BlockConfig[];
-  onPublished?: (updatedData: Post) => void;
+  onPublished?: (updatedData: Post | Page) => void;
   disabled?: boolean;
 }
 
@@ -183,6 +183,7 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
 
   const isPublished = post?.status === 'publish';
   const hasSlugChanged = slug !== originalSlug;
+  const postType = post ? ("menuOrder" in post ? "page" : "post") : "post";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -229,14 +230,14 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
               <div className="flex-1">
                 <p className="text-sm font-medium text-green-800">Currently Published</p>
                 <p className="text-xs text-green-600">
-                  Live at: /{post?.type}/{post?.slug}
+                  Live at: /{postType}/{post?.slug}
                 </p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  const url = `/${post?.type}/${post?.slug}`;
+                  const url = `/${postType}/${post?.slug}`;
                   window.open(url, '_blank');
                 }}
                 className="h-auto p-1 text-green-600"
@@ -250,7 +251,7 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
           <div className="space-y-2">
             <Label htmlFor="slug">Page URL</Label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">/{post?.type}/</span>
+              <span className="text-sm text-gray-500">/{postType}/</span>
               <Input
                 id="slug"
                 value={slug}

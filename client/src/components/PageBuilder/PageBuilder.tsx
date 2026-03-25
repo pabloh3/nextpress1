@@ -90,7 +90,7 @@ export default function PageBuilder({
     propBlocks || (data ? (data.blocks as BlockConfig[]) || [] : []);
 
   // Use undo/redo for blocks state - derive blocks directly from currentState
-  const { currentState, pushState, undo, redo, canUndo, canRedo, resetState } =
+  const { currentState, pushState, replaceCurrentState, undo, redo, canUndo, canRedo, resetState } =
     useUndoRedo<BlockConfig[]>(initialBlocks);
   const blocks = currentState; // Direct derivation - no separate state
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
@@ -129,9 +129,27 @@ export default function PageBuilder({
   onBlocksChangeRef.current = onBlocksChange;
 
   /**
+   * Coalescing undo history: rapid edits (keystrokes) replace the current
+   * history entry instead of creating new ones. After 300ms of silence,
+   * the next edit creates a new entry. This gives word-level undo granularity.
+   */
+  const coalesceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isCoalescingRef = useRef(false);
+
+  // Cleanup coalesce timer on unmount
+  useMountEffect(() => {
+    return () => {
+      if (coalesceTimerRef.current !== null) {
+        clearTimeout(coalesceTimerRef.current);
+      }
+    };
+  });
+
+  /**
    * Commit a blocks update to undo/redo history and notify parent.
-   * Uses refs for currentState and onBlocksChange so this callback
-   * has a stable identity (only depends on pushState which is stable).
+   * Uses coalescing: rapid calls within 300ms replace the current history
+   * entry; after a pause, the next call creates a new entry.
+   * Canvas always receives fresh state immediately via pushState/replaceCurrentState.
    */
   const commitBlocks = useCallback(
     (next: BlockConfig[] | ((prev: BlockConfig[]) => BlockConfig[])) => {
@@ -141,11 +159,30 @@ export default function PageBuilder({
           ? (next as (p: BlockConfig[]) => BlockConfig[])(current)
           : next;
       if (resolved === current) return;
-      pushState(resolved);
+
+      // Coalesce rapid edits: replace current entry if within 300ms window
+      if (isCoalescingRef.current) {
+        replaceCurrentState(resolved);
+      } else {
+        pushState(resolved);
+      }
+
+      // Notify parent immediately
       lastEmittedRef.current = resolved;
       onBlocksChangeRef.current?.(resolved);
+
+      // Enter/extend coalesce window: subsequent edits within 300ms
+      // replace the current entry instead of creating new undo steps
+      isCoalescingRef.current = true;
+      if (coalesceTimerRef.current !== null) {
+        clearTimeout(coalesceTimerRef.current);
+      }
+      coalesceTimerRef.current = setTimeout(() => {
+        isCoalescingRef.current = false;
+        coalesceTimerRef.current = null;
+      }, 300);
     },
-    [pushState],
+    [pushState, replaceCurrentState],
   );
 
   const updateBlockPartial = useCallback(
@@ -216,9 +253,13 @@ export default function PageBuilder({
 
       if (isMod && key === 'z' && !e.shiftKey) {
         e.preventDefault();
+        // End coalesce window so next edit after undo creates a new entry
+        isCoalescingRef.current = false;
         undoRef.current();
       } else if (isMod && ((e.shiftKey && key === 'z') || key === 'y')) {
         e.preventDefault();
+        // End coalesce window so next edit after redo creates a new entry
+        isCoalescingRef.current = false;
         redoRef.current();
       } else if (isMod && key === 's') {
         e.preventDefault();

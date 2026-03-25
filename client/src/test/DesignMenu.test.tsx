@@ -116,7 +116,7 @@ describe('DesignMenu', () => {
   });
 
   test('applies template when template is clicked', async () => {
-    vi.mocked(queryClient.apiRequest).mockResolvedValue({});
+    vi.mocked(queryClient.apiRequest).mockResolvedValue(new Response());
 
     renderDesignMenu({ currentPostId: 'post-123', currentType: 'post' });
     const trigger = screen.getByText('Design');
@@ -178,7 +178,7 @@ describe('DesignMenu', () => {
   });
 
   test('applies theme when theme is clicked', async () => {
-    vi.mocked(queryClient.apiRequest).mockResolvedValue({});
+    vi.mocked(queryClient.apiRequest).mockResolvedValue(new Response());
 
     renderDesignMenu({ currentPostId: 'post-123', currentType: 'post' });
     const trigger = screen.getByText('Design');
@@ -239,7 +239,7 @@ describe('DesignMenu', () => {
   });
 
   test('invalidates queries after successful template application', async () => {
-    vi.mocked(queryClient.apiRequest).mockResolvedValue({});
+    vi.mocked(queryClient.apiRequest).mockResolvedValue(new Response());
     const invalidateQueriesSpy = vi.spyOn(queryClientInstance, 'invalidateQueries');
 
     renderDesignMenu({ currentPostId: 'post-123', currentType: 'post' });
@@ -257,7 +257,7 @@ describe('DesignMenu', () => {
   });
 
   test('invalidates queries after successful theme activation', async () => {
-    vi.mocked(queryClient.apiRequest).mockResolvedValue({});
+    vi.mocked(queryClient.apiRequest).mockResolvedValue(new Response());
     const invalidateQueriesSpy = vi.spyOn(queryClientInstance, 'invalidateQueries');
 
     renderDesignMenu({ currentPostId: 'post-123', currentType: 'post' });

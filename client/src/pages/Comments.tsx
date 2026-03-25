@@ -13,7 +13,7 @@ import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Comment } from "@shared/schema";
+import type { Comment } from "@shared/schema-types";
 
 export default function CommentsPage() {
   const [search, setSearch] = useState("");
@@ -39,7 +39,7 @@ export default function CommentsPage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       return await apiRequest('PATCH', `/api/comments/${id}/approve`);
     },
     onSuccess: () => {
@@ -59,7 +59,7 @@ export default function CommentsPage() {
   });
 
   const spamMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       return await apiRequest('PATCH', `/api/comments/${id}/spam`);
     },
     onSuccess: () => {
@@ -79,7 +79,7 @@ export default function CommentsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       return await apiRequest('DELETE', `/api/comments/${id}`);
     },
     onSuccess: () => {
@@ -99,7 +99,7 @@ export default function CommentsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
       return await apiRequest('PUT', `/api/comments/${id}`, data);
     },
     onSuccess: () => {
@@ -120,17 +120,17 @@ export default function CommentsPage() {
     },
   });
 
-  const handleApprove = (id: number) => {
+  const handleApprove = (id: string) => {
     approveMutation.mutate(id);
   };
 
-  const handleSpam = (id: number) => {
+  const handleSpam = (id: string) => {
     if (confirm("Are you sure you want to mark this comment as spam?")) {
       spamMutation.mutate(id);
     }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this comment permanently?")) {
       deleteMutation.mutate(id);
     }

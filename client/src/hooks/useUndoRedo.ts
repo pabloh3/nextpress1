@@ -54,6 +54,23 @@ export function useUndoRedo<T>(initialState: T) {
   );
 
   /**
+   * Replaces the current (latest) history entry without creating a new undo step.
+   * Used for coalescing rapid edits (e.g. per-keystroke updates) so that undo
+   * captures word-level changes instead of individual characters.
+   */
+  const replaceCurrentState = useCallback(
+    (newState: T) => {
+      setHistory((prevHistory) => {
+        const idx = currentIndexRef.current;
+        const updated = [...prevHistory];
+        updated[idx] = newState;
+        return updated;
+      });
+    },
+    [],
+  );
+
+  /**
    * Moves to the previous state in history (undo).
    */
   const undo = () => {
@@ -81,5 +98,5 @@ export function useUndoRedo<T>(initialState: T) {
     setCurrentIndex(0);
   }, []);
 
-  return { currentState, pushState, undo, redo, canUndo, canRedo, resetState };
+  return { currentState, pushState, replaceCurrentState, undo, redo, canUndo, canRedo, resetState };
 }

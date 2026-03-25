@@ -82,9 +82,9 @@ export default function PageSettings({
     try {
       const { apiRequest } = await import('@/lib/queryClient');
       
-      if (isTemplate) {
+        if (isTemplate) {
         const response = await apiRequest('PUT', `/api/templates/${page.id}`, {
-          name: formData.title,
+          name: formData.title ?? '',
         });
         const updated = await response.json();
         onUpdate?.(updated);
@@ -95,9 +95,9 @@ export default function PageSettings({
         const endpoint = isPage ? `/api/pages/${page.id}` : `/api/posts/${page.id}`;
         
         const payload: any = {
-          title: formData.title,
-          slug: formData.slug,
-          status: formData.status,
+          title: formData.title ?? '',
+          slug: formData.slug ?? '',
+          status: formData.status ?? 'draft',
           featuredImage: formData.featuredImage || undefined,
           allowComments: formData.allowComments,
           password: formData.password || undefined,
@@ -105,7 +105,7 @@ export default function PageSettings({
 
         if (isPage) {
           payload.parentId = formData.parentId || undefined;
-          payload.menuOrder = formData.menuOrder;
+          payload.menuOrder = formData.menuOrder ?? 0;
           payload.templateId = formData.templateId || undefined;
         }
 
@@ -246,7 +246,7 @@ export default function PageSettings({
             <Select
               value={formData.parentId || '__none__'}
               onValueChange={(value) =>
-                handleFieldChange('parentId', value === '__none__' ? undefined : value)
+                handleFieldChange('parentId', value === '__none__' ? '' : value)
               }
             >
               <SelectTrigger id="page-parent">
@@ -282,7 +282,7 @@ export default function PageSettings({
             <Select
               value={formData.templateId || '__none__'}
               onValueChange={(value) =>
-                handleFieldChange('templateId', value === '__none__' ? undefined : value)
+                handleFieldChange('templateId', value === '__none__' ? '' : value)
               }
             >
               <SelectTrigger id="page-template">

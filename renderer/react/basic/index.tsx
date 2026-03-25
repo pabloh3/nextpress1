@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { JSX } from "react";
 import type { BlockData } from "../block-types";
 
 /**
@@ -11,7 +12,7 @@ export function HeadingBlock(props: BlockData) {
     { blockName: "core/heading" }
   >;
 
-  const Tag = `h${level || 2}` as keyof JSX.IntrinsicElements;
+  const Tag = `h${level || 2}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
   const mergedClassName = ["wp-block-heading", className]
     .filter(Boolean)
     .join(" ");

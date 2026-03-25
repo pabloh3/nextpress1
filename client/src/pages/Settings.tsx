@@ -1467,7 +1467,7 @@ export default function Settings() {
       <MediaPickerDialog
         open={mediaPickerOpen}
         onOpenChange={setMediaPickerOpen}
-        onSelectMedia={handleMediaSelect}
+        onSelect={handleMediaSelect}
       />
     </div>
   );

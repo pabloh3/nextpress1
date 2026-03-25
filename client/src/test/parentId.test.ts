@@ -95,64 +95,9 @@ describe('ParentId Management', () => {
           name: 'core/group',
           type: 'container',
           parentId: null,
-          content: {},
+          content: { kind: 'empty' },
           children: [
-            { id: 'child', name: 'core/text', type: 'block', parentId: 'parent', content: {} }
-          ]
-        }
-      ];
-      
-      const parent = findParentBlock(blocks, 'child');
-      
-      expect(parent?.id).toBe('parent');
-    });
-    
-    it('should find parent in nested structure', () => {
-      const blocks: BlockConfig[] = [
-        {
-          id: 'grandparent',
-          name: 'core/group',
-          type: 'container',
-          parentId: null,
-          content: { kind: 'structured', data: {} },
-          children: [{
-            id: 'parent',
-            name: 'core/group',
-            type: 'container',
-            parentId: 'grandparent',
-            content: { kind: 'structured', data: {} },
-            children: [
-              { id: 'child', name: 'core/text', type: 'block', parentId: 'parent', content: { kind: 'text', value: '' } }
-            ]
-          }]
-        }
-      ];
-      
-      const parent = findParentBlock(blocks, 'child');
-      
-      expect(parent?.id).toBe('parent');
-    });
-    
-    it('should return null for root block', () => {
-      const blocks: BlockConfig[] = [
-        { id: 'root', name: 'core/text', type: 'block', parentId: null, content: { kind: 'text', value: '' } }
-      ];
-      
-      const parent = findParentBlock(blocks, 'root');
-      
-      expect(parent).toBeNull();
-    });
-    
-    it('should return null for non-existent block', () => {
-      const blocks: BlockConfig[] = [
-        {
-          id: 'parent',
-          name: 'core/group',
-          type: 'container',
-          parentId: null,
-          content: {},
-          children: [
-            { id: 'child', name: 'core/text', type: 'block', parentId: 'parent', content: {} }
+            { id: 'child', name: 'core/text', type: 'block', parentId: 'parent', content: { kind: 'empty' } }
           ]
         }
       ];

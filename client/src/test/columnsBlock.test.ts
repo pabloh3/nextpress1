@@ -17,7 +17,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
       id: 'core/heading',
       label: 'Heading',
       isContainer: false,
-      defaultContent: { kind: 'text', value: '', level: 1 },
+      defaultContent: { kind: 'text', value: '', level: 1 } as any,
       defaultStyles: {},
       category: 'basic'
     },
@@ -58,7 +58,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
         parentId: null,
         label: 'Heading',
         category: 'basic',
-        content: { kind: 'text', value: '', level: 1 },
+        content: { kind: 'text', value: '', level: 1 } as any,
         styles: {},
         settings: {}
       },
@@ -92,7 +92,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
 
 interface ColumnLayout {
   columnId: string;
-  width?: string;
+  width: string;
   blockIds: string[];
 }
 
@@ -368,7 +368,7 @@ describe('ColumnsBlock with New Structure', () => {
       
       // Add group block to columns
       const result = insertNewBlock(testBlocks, 'columns-1', 0, 'core/group');
-      const groupId = result.newId;
+      const groupId = result.newId!;
       
       // Add text to group
       const result2 = insertNewBlock(result.blocks, groupId, 0, 'core/text');

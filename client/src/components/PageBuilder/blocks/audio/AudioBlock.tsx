@@ -16,16 +16,20 @@ import { useBlockState } from "../useBlockState";
 // TYPES
 // ============================================================================
 
-type AudioContent = BlockContent & {
+type AudioContent = {
+  kind: 'media';
+  mediaType: 'audio';
+  url: string;
+  alt?: string;
+  caption?: string;
   controls?: boolean;
   autoplay?: boolean;
   loop?: boolean;
   preload?: string;
   align?: 'default' | 'wide' | 'full';
-  caption?: string;
   anchor?: string;
   className?: string;
-  id?: number;
+  id?: number | string;
 };
 
 const DEFAULT_CONTENT: AudioContent = {

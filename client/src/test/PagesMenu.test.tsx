@@ -42,7 +42,7 @@ describe('PagesMenu', () => {
       defaultOptions: { queries: { retry: false } },
     });
     // jsdom missing scrollIntoView
-    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    (window.HTMLElement.prototype as any).scrollIntoView = vi.fn();
   });
 
   const renderPagesMenu = (props = {}) => {
@@ -164,11 +164,11 @@ describe('PagesMenu', () => {
     await user.click(browseItem);
 
     const firstPage = await screen.findByText('Home Page');
-    const firstPageRow = firstPage.closest('[role]');
+    const firstPageRow = firstPage.closest('[role]') as HTMLElement | null;
     expect(within(firstPageRow!).getByText('published')).toBeInTheDocument();
 
     const secondPage = screen.getByText('About Page');
-    const secondPageRow = secondPage.closest('[role]');
+    const secondPageRow = secondPage.closest('[role]') as HTMLElement | null;
     expect(within(secondPageRow!).getByText('draft')).toBeInTheDocument();
   });
 });

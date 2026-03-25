@@ -42,8 +42,10 @@ import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { User, CreateUser, UpdateUser } from "@shared/schema";
+import type { User, NewUser } from "@shared/schema-types";
 import { getZodSchema } from "@shared/zod-schema";
+
+type UserFormData = NewUser & { role?: string };
 
 const userSchemas = getZodSchema("users");
 
@@ -55,7 +57,7 @@ export default function Users() {
 	const { toast } = useToast();
 	const queryClient = useQueryClient();
 
-	const form = useForm<CreateUser>({
+	const form = useForm<UserFormData>({
 		resolver: zodResolver(userSchemas.insert),
 		defaultValues: {
 			username: "",
@@ -74,7 +76,7 @@ export default function Users() {
 	});
 
 	const createMutation = useMutation({
-		mutationFn: async (userData: CreateUser) => {
+		mutationFn: async (userData: NewUser) => {
 			return await apiRequest("POST", "/api/users", userData);
 		},
 		onSuccess: () => {
@@ -101,7 +103,7 @@ export default function Users() {
 			data,
 		}: {
 			id: string;
-			data: Partial<UpdateUser>;
+			data: Partial<User>;
 		}) => {
 			return await apiRequest("PUT", `/api/users/${id}`, data);
 		},
@@ -171,7 +173,7 @@ export default function Users() {
 		}
 	};
 
-	const onSubmit = (data: CreateUser) => {
+	const onSubmit = (data: UserFormData) => {
 		if (editingUser) {
 			// For updates, remove password if it's empty
 			const updateData = { ...data } as any;

@@ -159,12 +159,12 @@ interface SpacerConfig extends BaseBlockData {
 
 interface SeparatorConfig extends BaseBlockData {
 	blockName: "core/separator";
-	style?: "default" | "wide" | "dots";
+	separatorStyle?: "default" | "wide" | "dots";
 }
 
 interface DividerConfig extends BaseBlockData {
 	blockName: "core/divider";
-	style?: "solid" | "dashed" | "dotted";
+	dividerStyle?: "solid" | "dashed" | "dotted";
 }
 
 // ============================================================================

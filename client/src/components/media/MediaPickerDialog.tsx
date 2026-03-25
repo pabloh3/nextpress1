@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Image as ImageIcon, Film, Music, File } from "lucide-react";
-import type { Media } from "@shared/schema";
+import type { Media } from "@shared/schema-types";
 
 type MediaKind = "any" | "image" | "video" | "audio";
 

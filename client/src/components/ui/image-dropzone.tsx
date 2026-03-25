@@ -98,8 +98,9 @@ export function ImageDropzone({
    */
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length > 0) {
-      handleFile(files[0]).catch((error) => {
+    const firstFile = files?.[0];
+    if (firstFile) {
+      handleFile(firstFile).catch((error) => {
         console.error('Upload error:', error);
       });
     }
@@ -119,8 +120,9 @@ export function ImageDropzone({
     if (disabled || uploading) return;
 
     const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      handleFile(files[0]).catch((error) => {
+    const firstFile = files?.[0];
+    if (firstFile) {
+      handleFile(firstFile).catch((error) => {
         console.error('Upload error:', error);
       });
     }
@@ -143,7 +145,7 @@ export function ImageDropzone({
    */
   const handleRemove = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    onChange(undefined);
+    onChange?.(undefined);
   }, [onChange]);
 
   // Show preview if image URL is available

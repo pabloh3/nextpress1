@@ -7,7 +7,7 @@ import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Theme } from "@shared/schema";
+import type { Theme } from "@shared/schema-types";
 
 export default function Themes() {
   const { toast } = useToast();
@@ -136,7 +136,7 @@ export default function Themes() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(themes as any)?.filter((theme: Theme) => !theme.isActive).map((theme: Theme) => (
+                {(themes as any)?.filter((theme: Theme) => activeTheme?.id !== theme.id).map((theme: Theme) => (
                   <Card key={theme.id} className="border border-gray-200 hover:border-wp-blue transition-colors">
                     <CardContent className="p-6">
                       <div className="space-y-4">
@@ -153,13 +153,13 @@ export default function Themes() {
                           <p className="text-sm text-gray-600 mb-3">{theme.description}</p>
                           <div className="text-xs text-gray-500 mb-4">
                             <div>Version: {theme.version}</div>
-                            <div>By: {theme.author}</div>
+                            <div>By: {theme.authorId}</div>
                           </div>
                         </div>
                         <div className="flex space-x-2">
                           <Button 
                             className="flex-1 bg-wp-blue hover:bg-wp-blue-dark text-white"
-                            onClick={() => handleActivate(theme.id || 0)}
+                            onClick={() => handleActivate(theme.id as unknown as number)}
                             disabled={activateMutation.isPending}
                           >
                             Activate

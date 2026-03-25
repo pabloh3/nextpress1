@@ -19,7 +19,9 @@ const getDraftKey = (pageId: string) => `page-builder:page:${pageId}`;
 
 const toHistoryEntry = (draft: PageDraft): PageVersionEntry => ({
 	version: draft.version ?? draft.localVersion ?? 0,
-	updatedAt: draft.updatedAt || new Date().toISOString(),
+	updatedAt: draft.updatedAt instanceof Date
+		? draft.updatedAt.toISOString()
+		: (typeof draft.updatedAt === 'string' ? draft.updatedAt : new Date().toISOString()),
 	blocks: (draft as Page).blocks as BlockConfig[],
 	authorId: (draft as any).authorId,
 });

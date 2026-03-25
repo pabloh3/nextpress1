@@ -107,9 +107,10 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
   };
 
   // Utility functions for parsing and formatting values
-  const parseSpacingValue = (value: string | undefined): { number: string; unit: string } => {
-    if (!value) return { number: '0', unit: 'px' };
-    const match = value.match(/^(\d*\.?\d+)(px|rem|em|%|)$/);
+  const parseSpacingValue = (value: string | number | undefined): { number: string; unit: string } => {
+    if (!value && value !== 0) return { number: '0', unit: 'px' };
+    const str = String(value);
+    const match = str.match(/^(\d*\.?\d+)(px|rem|em|%|)$/);
     if (match) {
       return { number: match[1], unit: match[2] || 'px' };
     }
@@ -124,32 +125,34 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
   const getPaddingValues = () => {
     const padding = block.styles?.padding;
     if (padding) {
-      const values = padding.split(' ').map((v: string) => v.trim());
+      const paddingStr = typeof padding === 'string' ? padding : String(padding);
+      const values = paddingStr.split(' ').map((v: string) => v.trim());
       if (values.length === 1) return { top: values[0], right: values[0], bottom: values[0], left: values[0] };
       if (values.length === 2) return { top: values[0], right: values[1], bottom: values[0], left: values[1] };
       if (values.length === 4) return { top: values[0], right: values[1], bottom: values[2], left: values[3] };
     }
     return {
-      top: block.styles?.paddingTop || '0px',
-      right: block.styles?.paddingRight || '0px',
-      bottom: block.styles?.paddingBottom || '0px',
-      left: block.styles?.paddingLeft || '0px',
+      top: String(block.styles?.paddingTop || '0px'),
+      right: String(block.styles?.paddingRight || '0px'),
+      bottom: String(block.styles?.paddingBottom || '0px'),
+      left: String(block.styles?.paddingLeft || '0px'),
     };
   };
 
   const getMarginValues = () => {
     const margin = block.styles?.margin;
     if (margin) {
-      const values = margin.split(' ').map((v: string) => v.trim());
+      const marginStr = typeof margin === 'string' ? margin : String(margin);
+      const values = marginStr.split(' ').map((v: string) => v.trim());
       if (values.length === 1) return { top: values[0], right: values[0], bottom: values[0], left: values[0] };
       if (values.length === 2) return { top: values[0], right: values[1], bottom: values[0], left: values[1] };
       if (values.length === 4) return { top: values[0], right: values[1], bottom: values[2], left: values[3] };
     }
     return {
-      top: block.styles?.marginTop || '0px',
-      right: block.styles?.marginRight || '0px',
-      bottom: block.styles?.marginBottom || '0px',
-      left: block.styles?.marginLeft || '0px',
+      top: String(block.styles?.marginTop || '0px'),
+      right: String(block.styles?.marginRight || '0px'),
+      bottom: String(block.styles?.marginBottom || '0px'),
+      left: String(block.styles?.marginLeft || '0px'),
     };
   };
 
@@ -281,8 +284,8 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                 { value: '500', label: 'Medium', icon: Square },
                 { value: 'bold', label: 'Bold', icon: Bold },
               ]}
-              value={block.styles?.fontWeight || 'normal'}
-              onChange={(value) => updateStyles({ fontWeight: value })}
+              value={String(block.styles?.fontWeight ?? 'normal')}
+              onChange={(value) => updateStyles({ fontWeight: String(value) })}
             />
 
             {/* Text Alignment - Chip Grid */}

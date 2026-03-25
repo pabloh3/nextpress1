@@ -1,24 +1,33 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { BlockConfig, Page } from "@shared/schema-types";
+import type { BlockConfig, Page, Post } from "@shared/schema-types";
 import { savePageDraft } from "@/lib/pageDraftStorage";
+
+type SaveContentType = "page" | "post";
+
+function getEntityLabel(isTemplate: boolean, contentType: SaveContentType) {
+	if (isTemplate) return "Template";
+	return contentType === "post" ? "Post" : "Page";
+}
 
 export function usePageSave({
 	isTemplate,
 	data,
 	onSave,
 	pageMeta,
+	contentType = "page",
 }: {
 	isTemplate: boolean;
-	data: Page | undefined;
-	onSave?: (updatedData: Page) => void;
+	data: Page | Post | undefined;
+	onSave?: (updatedData: Page | Post) => void;
 	pageMeta?: {
 		title?: string;
 		slug?: string;
 		status?: string;
 		version?: number;
 	};
+	contentType?: SaveContentType;
 }) {
 	const toast = useToast();
 	const queryClient = useQueryClient();
@@ -30,27 +39,30 @@ export function usePageSave({
 			let payload: any;
 			let endpoint: string;
 
-			endpoint = `/api/pages/${data.id}`;
+			endpoint = contentType === "post" ? `/api/posts/${data.id}` : `/api/pages/${data.id}`;
 			payload = {
 				title: pageMeta?.title ?? data.title,
 				slug: pageMeta?.slug ?? data.slug,
 				status: pageMeta?.status ?? data.status,
 				blocks: builderData,
-				version: pageMeta?.version ?? data.version ?? 0,
 			};
+
+			if (contentType === "page") {
+				payload.version = pageMeta?.version ?? (data as Page).version ?? 0;
+			}
 
 			const response = await apiRequest("PUT", endpoint, payload);
 			return await response.json();
 		},
 		onSuccess: (updatedData) => {
-			const isPage = !isTemplate && data && "menuOrder" in data;
+			const isPage = !isTemplate && contentType === "page";
 			if (isPage && updatedData?.id) {
 				savePageDraft(updatedData.id, updatedData as any);
 			}
 
 			toast.toast({
 				title: "Success",
-				description: `${isTemplate ? "Template" : isPage ? "Page" : "Post"} saved successfully`,
+				description: `${getEntityLabel(isTemplate, contentType)} saved successfully`,
 			});
 			onSave?.(updatedData);
 
@@ -66,10 +78,9 @@ export function usePageSave({
 			}
 		},
 		onError: () => {
-			const isPage = !isTemplate && data && "menuOrder" in data;
 			toast.toast({
 				title: "Error",
-				description: `Failed to save ${isTemplate ? "template" : isPage ? "page" : "post"}`,
+				description: `Failed to save ${getEntityLabel(isTemplate, contentType).toLowerCase()}`,
 				variant: "destructive",
 			});
 		},

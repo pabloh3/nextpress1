@@ -24,8 +24,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { getZodSchema } from "@shared/zod-schema";
-import type { CreateUser } from "@shared/schema";
+import type { NewUser } from "@shared/schema-types";
 import { Eye, EyeOff } from "lucide-react";
+
+type UserFormData = NewUser & { role?: string };
 
 const userSchemas = getZodSchema("users");
 
@@ -36,7 +38,7 @@ export default function Register() {
 	const [showPassword, setShowPassword] = useState(false);
 	const { toast } = useToast();
 
-	const form = useForm<CreateUser>({
+	const form = useForm<UserFormData>({
 		resolver: zodResolver(userSchemas.insert),
 		defaultValues: {
 			username: "",
@@ -49,7 +51,7 @@ export default function Register() {
 		},
 	});
 
-	const onSubmit = async (data: CreateUser) => {
+	const onSubmit = async (data: UserFormData) => {
 		setIsLoading(true);
 		try {
 			const response = await apiRequest("POST", "/api/auth/register", data);

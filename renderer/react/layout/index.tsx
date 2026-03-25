@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { JSX } from "react";
 import type { BlockData } from "../block-types";
 import { BLOCK_COMPONENTS } from "../block-components";
 
@@ -134,7 +135,7 @@ export function GroupBlock(props: BlockData) {
   const { layout, tagName, className, style, attributes, children } =
     props as Extract<BlockData, { blockName: "core/group" }>;
 
-  const Tag = (tagName || "div") as keyof JSX.IntrinsicElements;
+  const Tag = (tagName || "div") as "div" | "section" | "article" | "main" | "header" | "footer" | "aside" | "nav" | "span" | "p";
 
   const mergedClassName = [
     "wp-block-group",
@@ -212,7 +213,7 @@ export function SpacerBlock(props: BlockData) {
  */
 export function SeparatorBlock(props: BlockData) {
   const {
-    style: separatorStyle,
+    separatorStyle,
     className,
     style,
     attributes,
@@ -230,7 +231,7 @@ export function SeparatorBlock(props: BlockData) {
     <hr
       className={mergedClassName || undefined}
       style={style}
-      {...attributes}
+      {...(attributes as Record<string, unknown>)}
     />
   );
 }
@@ -241,7 +242,7 @@ export function SeparatorBlock(props: BlockData) {
  */
 export function DividerBlock(props: BlockData) {
   const {
-    style: dividerStyle,
+    dividerStyle,
     className,
     style,
     attributes,
@@ -257,14 +258,18 @@ export function DividerBlock(props: BlockData) {
 
   const dividerElementStyle: React.CSSProperties = {
     ...style,
-    borderStyle: dividerStyle || "solid",
   };
+  if (dividerStyle) {
+    dividerElementStyle.borderStyle = dividerStyle;
+  } else if (!style?.borderStyle) {
+    dividerElementStyle.borderStyle = "solid";
+  }
 
   return (
     <hr
       className={mergedClassName || undefined}
       style={dividerElementStyle}
-      {...attributes}
+      {...(attributes as Record<string, unknown>)}
     />
   );
 }

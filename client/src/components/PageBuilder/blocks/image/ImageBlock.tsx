@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import type { JSX } from "react";
 import type { BlockConfig, BlockContent } from "@shared/schema-types";
 import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,16 @@ import { useBlockState } from "../useBlockState";
 // TYPES
 // ============================================================================
 
-type ImageContent = BlockContent & {
+/**
+ * Image block content type. Extends the 'media' variant of BlockContent
+ * with image-specific properties for alignment, sizing, and linking.
+ */
+type ImageContent = {
+  kind: 'media';
+  url: string;
+  alt?: string;
+  caption?: string;
+  mediaType: 'image' | 'video' | 'audio';
   align?: 'left' | 'center' | 'right' | 'wide' | 'full' | '';
   sizeSlug?: 'thumbnail' | 'medium' | 'large' | 'full';
   className?: string;

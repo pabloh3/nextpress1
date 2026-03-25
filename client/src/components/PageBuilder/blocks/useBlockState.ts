@@ -84,10 +84,15 @@ export function useBlockState<TContent>({
 				typeof update === "function"
 					? (update as (prev: TContent) => TContent)(prev)
 					: update;
-			onChangeRef.current({
+			// Eagerly update refs so getters return fresh values immediately,
+			// preventing stale content when settings components force re-render
+			contentRef.current = next;
+			const updatedBlock = {
 				...valueRef.current,
 				content: next as BlockConfig["content"],
-			});
+			};
+			valueRef.current = updatedBlock;
+			onChangeRef.current(updatedBlock);
 		},
 		[],
 	);
@@ -111,7 +116,11 @@ export function useBlockState<TContent>({
 							) => React.CSSProperties | undefined
 						)(prev)
 					: update;
-			onChangeRef.current({ ...valueRef.current, styles: next });
+			// Eagerly update refs before notifying parent
+			stylesRef.current = next;
+			const updatedBlock = { ...valueRef.current, styles: next };
+			valueRef.current = updatedBlock;
+			onChangeRef.current(updatedBlock);
 		},
 		[],
 	);
@@ -135,7 +144,11 @@ export function useBlockState<TContent>({
 							) => Record<string, any> | undefined
 						)(prev)
 					: update;
-			onChangeRef.current({ ...valueRef.current, settings: next });
+			// Eagerly update refs before notifying parent
+			settingsRef.current = next;
+			const updatedBlock = { ...valueRef.current, settings: next };
+			valueRef.current = updatedBlock;
+			onChangeRef.current(updatedBlock);
 		},
 		[],
 	);

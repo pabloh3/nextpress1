@@ -48,7 +48,7 @@ describe('BlogMenu', () => {
     });
     user = userEvent.setup();
     // jsdom missing scrollIntoView used by cmdk
-    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    (window.HTMLElement.prototype as any).scrollIntoView = vi.fn();
   });
 
   const renderBlogMenu = (props = {}) => {
@@ -152,11 +152,11 @@ describe('BlogMenu', () => {
     await user.click(browseItem);
 
     const firstPost = await screen.findByText('First Blog Post');
-    const firstPostRow = firstPost.closest('[role]');
+    const firstPostRow = firstPost.closest('[role]') as HTMLElement | null;
     expect(within(firstPostRow!).getByText('published')).toBeInTheDocument();
 
     const secondPost = screen.getByText('Second Blog Post');
-    const secondPostRow = secondPost.closest('[role]');
+    const secondPostRow = secondPost.closest('[role]') as HTMLElement | null;
     expect(within(secondPostRow!).getByText('draft')).toBeInTheDocument();
   });
 

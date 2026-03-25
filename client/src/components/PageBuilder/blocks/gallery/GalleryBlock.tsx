@@ -18,7 +18,7 @@ import { useBlockState } from "../useBlockState";
 // ============================================================================
 
 interface GalleryImage {
-  id: number;
+  id: string | number;
   url: string;
   alt: string;
   caption?: string;

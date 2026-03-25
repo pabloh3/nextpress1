@@ -23,6 +23,9 @@ const mockPages: Post[] = [
     settings: null,
     featuredImage: null,
     templateId: null,
+    allowComments: true,
+    parentId: null,
+    blocks: [],
   },
   {
     id: 'page-2',
@@ -40,6 +43,9 @@ const mockPages: Post[] = [
     settings: null,
     featuredImage: null,
     templateId: null,
+    allowComments: true,
+    parentId: null,
+    blocks: [],
   },
 ];
 
@@ -60,6 +66,9 @@ const mockPosts: Post[] = [
     settings: null,
     featuredImage: null,
     templateId: null,
+    allowComments: true,
+    parentId: null,
+    blocks: [],
   },
   {
     id: 'post-2',
@@ -77,6 +86,9 @@ const mockPosts: Post[] = [
     settings: null,
     featuredImage: null,
     templateId: null,
+    allowComments: true,
+    parentId: null,
+    blocks: [],
   },
   {
     id: 'post-3',
@@ -94,6 +106,9 @@ const mockPosts: Post[] = [
     settings: null,
     featuredImage: null,
     templateId: null,
+    allowComments: true,
+    parentId: null,
+    blocks: [],
   },
 ];
 
@@ -128,6 +143,7 @@ const mockThemes: Theme[] = [
     isPaid: null,
     price: null,
     currency: null,
+    renderer: null,
   },
 ];
 

@@ -43,13 +43,19 @@ function emitChange(): void {
 /**
  * Register a block's state accessor in the global registry.
  * Called by block components during render (synchronous registration).
+ * Suppresses emitChange when re-registering the same block ID since
+ * refs keep accessors fresh automatically — avoids unnecessary subscriber noise.
  */
 export function registerBlockState(
 	blockId: string,
 	accessor: BlockStateAccessor,
 ): void {
+	const existing = blockStateRegistry.get(blockId);
 	blockStateRegistry.set(blockId, accessor);
-	emitChange();
+	// Only notify subscribers for genuinely new registrations
+	if (!existing) {
+		emitChange();
+	}
 }
 
 /**

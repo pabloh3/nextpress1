@@ -7,16 +7,34 @@ export default defineConfig({
 	plugins: [react()],
 	test: {
 		globals: true,
-		environment: "jsdom",
-		setupFiles: ["./client/src/test/setup.ts", "./server/test/setup.ts"],
-		include: [
-			"client/src/**/*.test.{ts,tsx}",
-			"client/src/**/*.spec.{ts,tsx}",
-			"client/src/test/**/*.test.{ts,tsx}",
-			"server/test/**/*.test.{ts,tsx}",
-			"server/test/**/*.spec.{ts,tsx}",
+		projects: [
+			{
+				extends: true,
+				test: {
+					name: "client",
+					environment: "jsdom",
+					setupFiles: ["./client/src/test/setup.ts"],
+					include: [
+						"client/src/**/*.test.{ts,tsx}",
+						"client/src/**/*.spec.{ts,tsx}",
+					],
+					exclude: ["node_modules", "dist", "build", "**/*.e2e.{ts,tsx}"],
+				},
+			},
+			{
+				extends: true,
+				test: {
+					name: "server",
+					environment: "node",
+					setupFiles: ["./server/test/setup.ts"],
+					include: [
+						"server/test/**/*.test.{ts,tsx}",
+						"server/test/**/*.spec.{ts,tsx}",
+					],
+					exclude: ["node_modules", "dist", "build", "**/*.e2e.{ts,tsx}"],
+				},
+			},
 		],
-		exclude: ["node_modules", "dist", "build", "**/*.e2e.{ts,tsx}"],
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "json", "html"],

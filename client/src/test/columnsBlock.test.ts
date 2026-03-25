@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { insertNewBlock, moveExistingBlock } from '@/lib/handlers/treeUtils';
 import type { BlockConfig } from '@shared/schema-types';
+import {
+  buildColumnsContainerStyle,
+  buildColumnsLayout,
+  removeColumnAndCleanup,
+} from '@/components/PageBuilder/blocks/columns/ColumnsBlock';
 
 // Mock the block registry
 vi.mock('@/components/PageBuilder/blocks', () => ({
@@ -17,7 +22,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
       id: 'core/heading',
       label: 'Heading',
       isContainer: false,
-      defaultContent: { kind: 'text', value: '', level: 1 },
+      defaultContent: { kind: 'text', value: '', level: 1 } as any,
       defaultStyles: {},
       category: 'basic'
     },
@@ -58,7 +63,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
         parentId: null,
         label: 'Heading',
         category: 'basic',
-        content: { kind: 'text', value: '', level: 1 },
+        content: { kind: 'text', value: '', level: 1 } as any,
         styles: {},
         settings: {}
       },
@@ -92,7 +97,7 @@ vi.mock('@/components/PageBuilder/blocks', () => ({
 
 interface ColumnLayout {
   columnId: string;
-  width?: string;
+  width: string;
   blockIds: string[];
 }
 
@@ -259,14 +264,11 @@ describe('ColumnsBlock with New Structure', () => {
   describe('Column Operations', () => {
     it('should add new column to columnLayout', () => {
       const layout = columnsBlock.settings?.columnLayout as ColumnLayout[];
-      
-      const newLayout = [
-        ...layout,
-        { columnId: 'col-3', width: '33.33%', blockIds: [] }
-      ];
+
+      const newLayout = buildColumnsLayout(3, columnsBlock.children || [], layout);
 
       expect(newLayout).toHaveLength(3);
-      expect(newLayout[2].columnId).toBe('col-3');
+      expect(newLayout.every((column) => column.width === '33.33%')).toBe(true);
     });
 
     it('should remove column from columnLayout', () => {
@@ -289,20 +291,12 @@ describe('ColumnsBlock with New Structure', () => {
         }
       };
 
-      // Remove first column and its blocks
       const layout = populated.settings?.columnLayout as ColumnLayout[];
-      const blocksToRemove = layout[0].blockIds;
-      
-      const updated = {
-        ...populated,
-        settings: {
-          columnLayout: layout.filter((_, i) => i !== 0)
-        },
-        children: populated.children?.filter(c => !blocksToRemove.includes(c.id))
-      };
+      const updated = removeColumnAndCleanup(layout, 0, populated.children || []);
 
-      expect(updated.settings?.columnLayout).toHaveLength(1);
-      expect(updated.children).toHaveLength(0);
+      expect(updated.nextLayout).toHaveLength(1);
+      expect(updated.nextLayout[0].blockIds).toEqual([]);
+      expect(updated.nextChildren).toHaveLength(0);
     });
 
     it('should adjust column widths', () => {
@@ -317,6 +311,119 @@ describe('ColumnsBlock with New Structure', () => {
 
       expect(updatedLayout).toHaveLength(3);
       expect(updatedLayout.every(col => col.width === '33.33%')).toBe(true);
+    });
+  });
+
+  describe('Layout Style Helpers', () => {
+    it('should build equal-width grid columns', () => {
+      const layout = columnsBlock.settings?.columnLayout as ColumnLayout[];
+      const style = buildColumnsContainerStyle(
+        {
+          layoutMode: 'grid',
+          direction: 'row',
+          gap: '24px',
+          verticalAlignment: 'center',
+          horizontalAlignment: 'left',
+        },
+        layout,
+      );
+
+      expect(style.display).toBe('grid');
+      expect(style.gridTemplateColumns).toBe('repeat(2, minmax(0, 1fr))');
+      expect(style.gap).toBe('24px');
+    });
+
+    it('should respect vertical grid direction', () => {
+      const layout = columnsBlock.settings?.columnLayout as ColumnLayout[];
+      const style = buildColumnsContainerStyle(
+        {
+          layoutMode: 'grid',
+          direction: 'column',
+          gap: '16px',
+          verticalAlignment: 'top',
+          horizontalAlignment: 'center',
+        },
+        layout,
+      );
+
+      expect(style.display).toBe('grid');
+      expect(style.gridTemplateColumns).toBe('minmax(0, 1fr)');
+      expect(style.gridTemplateRows).toBe('repeat(2, auto)');
+    });
+
+    it('should preserve child ordering when rebuilding layout', () => {
+      const children: BlockConfig[] = [
+        {
+          id: 'text-1',
+          name: 'core/text',
+          type: 'block',
+          parentId: 'columns-1',
+          content: { kind: 'text', value: 'Text 1' }
+        },
+        {
+          id: 'text-2',
+          name: 'core/text',
+          type: 'block',
+          parentId: 'columns-1',
+          content: { kind: 'text', value: 'Text 2' }
+        },
+        {
+          id: 'text-3',
+          name: 'core/text',
+          type: 'block',
+          parentId: 'columns-1',
+          content: { kind: 'text', value: 'Text 3' }
+        }
+      ];
+
+      const rebuilt = buildColumnsLayout(2, children, [
+        { columnId: 'col-1', width: '50%', blockIds: ['text-1', 'text-3'] },
+        { columnId: 'col-2', width: '50%', blockIds: ['text-2'] },
+      ]);
+
+      expect(rebuilt[0].blockIds).toEqual(['text-1', 'text-3']);
+      expect(rebuilt[1].blockIds).toEqual(['text-2']);
+    });
+
+    it('should respect vertical flex direction', () => {
+      const layout = columnsBlock.settings?.columnLayout as ColumnLayout[];
+      const style = buildColumnsContainerStyle(
+        {
+          layoutMode: 'flex',
+          direction: 'column',
+          gap: '12px',
+          verticalAlignment: 'top',
+          horizontalAlignment: 'left',
+        },
+        layout,
+      );
+
+      expect(style.display).toBe('flex');
+      expect(style.flexDirection).toBe('column');
+      expect(style.flexWrap).toBe('nowrap');
+      expect(style.gap).toBe('12px');
+    });
+
+    it('should keep horizontal flex layout responsive', () => {
+      const layout = columnsBlock.settings?.columnLayout as ColumnLayout[];
+      const style = buildColumnsContainerStyle(
+        {
+          layoutMode: 'flex',
+          direction: 'row',
+          gap: '18px',
+          minColumnWidth: '240px',
+          verticalAlignment: 'center',
+          horizontalAlignment: 'left',
+        },
+        layout,
+      );
+
+      expect(style.display).toBe('flex');
+      expect(style.flexDirection).toBe('row');
+      expect(style.flexWrap).toBe('wrap');
+      expect(style.gap).toBe('18px');
+      expect(style.maxWidth).toBe('100%');
+      expect(style['--np-columns-min-width' as keyof typeof style]).toBe('240px');
     });
   });
 
@@ -368,7 +475,7 @@ describe('ColumnsBlock with New Structure', () => {
       
       // Add group block to columns
       const result = insertNewBlock(testBlocks, 'columns-1', 0, 'core/group');
-      const groupId = result.newId;
+      const groupId = result.newId!;
       
       // Add text to group
       const result2 = insertNewBlock(result.blocks, groupId, 0, 'core/text');
@@ -382,4 +489,3 @@ describe('ColumnsBlock with New Structure', () => {
     });
   });
 });
-

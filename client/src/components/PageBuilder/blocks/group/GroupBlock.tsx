@@ -1,4 +1,5 @@
 import React from "react";
+import type { JSX } from "react";
 import type { BlockConfig, BlockContent } from "@shared/schema-types";
 import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
@@ -88,7 +89,7 @@ function GroupRenderer({ content, styles, children, isPreview }: GroupRendererPr
       style={containerStyle}
     >
       <div className="wp-block-group__inner-container">
-        <ContainerChildren block={blockForChildren} isPreview={isPreview} />
+        <ContainerChildren block={blockForChildren} isPreview={isPreview ?? false} />
       </div>
     </TagName>
   );

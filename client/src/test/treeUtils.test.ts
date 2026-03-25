@@ -8,7 +8,7 @@ const makeBlock = (id: string, blockType: string = 'core/paragraph', children?: 
   name: blockType,
   type: children !== undefined ? 'container' : 'block',
   parentId: null,
-  content: blockType === 'core/paragraph' ? { text: id } : {},
+  content: blockType === 'core/paragraph' ? { kind: 'text', value: id } : { kind: 'empty' },
   styles: {},
   settings: {},
   ...(children !== undefined && { children })

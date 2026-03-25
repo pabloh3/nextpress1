@@ -13,7 +13,7 @@ import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Media } from "@shared/schema";
+import type { Media } from "@shared/schema-types";
 
 export default function MediaPage() {
   const [search, setSearch] = useState("");
@@ -74,7 +74,7 @@ export default function MediaPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
       return await apiRequest('PUT', `/api/media/${id}`, data);
     },
     onSuccess: () => {
@@ -96,7 +96,7 @@ export default function MediaPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       return await apiRequest('DELETE', `/api/media/${id}`);
     },
     onSuccess: () => {
@@ -146,7 +146,7 @@ export default function MediaPage() {
     setIsEditOpen(true);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this media file?")) {
       deleteMutation.mutate(id);
     }

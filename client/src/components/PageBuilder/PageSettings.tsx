@@ -22,6 +22,7 @@ interface PageSettingsProps {
   isTemplate?: boolean;
   onUpdate?: (updatedPage: Page | Post | Template) => void;
   onMetaChange?: (meta: Partial<{ title: string; slug: string; status: string }>) => void;
+  contentType?: 'page' | 'post';
 }
 
 /**
@@ -33,6 +34,7 @@ export default function PageSettings({
   isTemplate = false,
   onUpdate,
   onMetaChange,
+  contentType = 'page',
 }: PageSettingsProps) {
   const [formData, setFormData] = useState({
     title: (page as any)?.title || (page as Template)?.name || '',
@@ -90,8 +92,7 @@ export default function PageSettings({
         onUpdate?.(updated);
         queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
       } else {
-        // Check if it's a page (has menuOrder) or post
-        const isPage = 'menuOrder' in page;
+        const isPage = contentType === 'page';
         const endpoint = isPage ? `/api/pages/${page.id}` : `/api/posts/${page.id}`;
         
         const payload: any = {
@@ -119,7 +120,7 @@ export default function PageSettings({
 
       toast({
         title: 'Success',
-        description: `${isTemplate ? 'Template' : 'Page'} settings saved successfully`,
+        description: `${isTemplate ? 'Template' : contentType === 'page' ? 'Page' : 'Post'} settings saved successfully`,
       });
     } catch (error: any) {
       toast({
@@ -163,7 +164,7 @@ export default function PageSettings({
     );
   }
 
-  const isPage = 'menuOrder' in page;
+  const isPage = contentType === 'page';
 
   return (
     <div className="space-y-4">
@@ -312,4 +313,3 @@ export default function PageSettings({
     </div>
   );
 }
-

@@ -638,6 +638,7 @@ export default function PageBuilderEditor({
               blocks={pageState.blocks}
               onPublished={handleSave}
               disabled={isSaving}
+              contentType={type}
             />
           </div>
         </div>

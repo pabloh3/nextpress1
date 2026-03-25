@@ -85,6 +85,7 @@ export default function PageBuilder({
 }: PageBuilderProps) {
   const data = post;
   const isTemplate = false;
+  const resolvedContentType = contentType ?? 'page';
 
   const initialBlocks =
     propBlocks || (data ? (data.blocks as BlockConfig[]) || [] : []);
@@ -220,10 +221,16 @@ export default function PageBuilder({
     ? findBlock(blocks, selectedBlockId)
     : null;
 
-  const saveMutation = usePageSave({ isTemplate, data, onSave, pageMeta });
+  const saveMutation = usePageSave({
+    isTemplate,
+    data,
+    onSave,
+    pageMeta,
+    contentType: resolvedContentType,
+  });
 
   const handleSave = useCallback(() => {
-    if (!isTemplate && data && 'menuOrder' in data && data.id) {
+    if (!isTemplate && resolvedContentType === 'page' && data?.id) {
       savePageDraftWithHistory(data.id as string, {
         ...data,
         blocks,
@@ -234,7 +241,7 @@ export default function PageBuilder({
     if (data) {
       onSave?.(data);
     }
-  }, [blocks, saveMutation, onSave, data]);
+  }, [blocks, saveMutation, onSave, data, isTemplate, resolvedContentType]);
 
   // Refs for keyboard shortcut handlers so useMountEffect captures stable references
   const handleSaveRef = useRef(handleSave);
@@ -389,6 +396,7 @@ export default function PageBuilder({
               isTemplate={isTemplate}
               onPageUpdate={onSave}
               onPageMetaChange={onPageMetaChange}
+              contentType={resolvedContentType}
             />
           )}
           <div className="flex-1 flex flex-col">

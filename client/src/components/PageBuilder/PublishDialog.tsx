@@ -25,9 +25,16 @@ interface PublishDialogProps {
   blocks: BlockConfig[];
   onPublished?: (updatedData: Post | Page) => void;
   disabled?: boolean;
+  contentType?: 'post' | 'page';
 }
 
-export default function PublishDialog({ post, blocks, onPublished, disabled }: PublishDialogProps) {
+export default function PublishDialog({
+  post,
+  blocks,
+  onPublished,
+  disabled,
+  contentType = 'page',
+}: PublishDialogProps) {
   const [open, setOpen] = useState(false);
   const [slug, setSlug] = useState(post?.slug || "");
   const [originalSlug, setOriginalSlug] = useState(post?.slug || "");
@@ -67,8 +74,7 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
     mutationFn: async () => {
       if (!post) throw new Error("No post data");
       
-      // Determine if this is a page or post (pages have menuOrder field)
-      const isPage = "menuOrder" in post;
+      const isPage = contentType === 'page';
       const endpoint = isPage ? `/api/pages/${post.id}` : `/api/posts/${post.id}`;
       
       const publishData: any = {
@@ -87,10 +93,10 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
       return await response.json();
     },
     onSuccess: (updatedData) => {
-      const isPage = post && "menuOrder" in post;
+      const isPage = contentType === 'page';
       toast({
         title: "Published!",
-        description: `Page is now live at /${updatedData.type || (isPage ? 'page' : 'post')}/${updatedData.slug}`,
+        description: `${isPage ? 'Page' : 'Post'} is now live at /${updatedData.type || (isPage ? 'page' : 'post')}/${updatedData.slug}`,
       });
       setOpen(false);
       onPublished?.(updatedData);
@@ -117,8 +123,7 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
     mutationFn: async () => {
       if (!post) throw new Error("No post data");
       
-      // Determine if this is a page or post (pages have menuOrder field)
-      const isPage = "menuOrder" in post;
+      const isPage = contentType === 'page';
       const endpoint = isPage ? `/api/pages/${post.id}` : `/api/posts/${post.id}`;
       
       const unpublishData: any = {
@@ -137,10 +142,10 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
       return await response.json();
     },
     onSuccess: (updatedData) => {
-      const isPage = post && "menuOrder" in post;
+      const isPage = contentType === 'page';
       toast({
         title: "Moved to Draft",
-        description: "Page is no longer publicly accessible",
+        description: `${isPage ? 'Page' : 'Post'} is no longer publicly accessible`,
       });
       setOpen(false);
       onPublished?.(updatedData);
@@ -183,7 +188,7 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
 
   const isPublished = post?.status === 'publish';
   const hasSlugChanged = slug !== originalSlug;
-  const postType = post ? ("menuOrder" in post ? "page" : "post") : "post";
+  const postType = contentType;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -213,12 +218,14 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Share2 className="w-5 h-5" />
-            {isPublished ? 'Update Published Page' : 'Publish Page'}
+            {isPublished
+              ? `Update Published ${contentType === 'page' ? 'Page' : 'Post'}`
+              : `Publish ${contentType === 'page' ? 'Page' : 'Post'}`}
           </DialogTitle>
           <DialogDescription>
             {isPublished 
-              ? 'Update your published page with the latest changes.'
-              : 'Make your page publicly available with a custom URL.'
+              ? `Update your published ${contentType === 'page' ? 'page' : 'post'} with the latest changes.`
+              : `Make your ${contentType === 'page' ? 'page' : 'post'} publicly available with a custom URL.`
             }
           </DialogDescription>
         </DialogHeader>
@@ -249,14 +256,14 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="slug">Page URL</Label>
+            <Label htmlFor="slug">{contentType === 'page' ? 'Page URL' : 'Post URL'}</Label>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">/{postType}/</span>
               <Input
                 id="slug"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                placeholder={post ? generateSlug(post.title) : "page-slug"}
+                  placeholder={post ? generateSlug(post.title) : `${contentType}-slug`}
                 className="flex-1"
                 data-testid="input-slug"
               />
@@ -270,7 +277,7 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
             <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <AlertCircle className="w-4 h-4 text-yellow-600" />
               <p className="text-sm text-yellow-800">
-                Changing the URL will break existing links to this page.
+                 {`Changing the URL will break existing links to this ${contentType}.`}
               </p>
             </div>
           )}
@@ -278,10 +285,10 @@ export default function PublishDialog({ post, blocks, onPublished, disabled }: P
           <Separator />
 
           <div className="space-y-2">
-            <h4 className="text-sm font-medium">Page Status</h4>
+            <h4 className="text-sm font-medium">{contentType === 'page' ? 'Page' : 'Post'} Status</h4>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">
-                {post?.title || 'Untitled Page'}
+                  {post?.title || `Untitled ${contentType === 'page' ? 'Page' : 'Post'}`}
               </span>
               <Badge variant={isPublished ? "default" : "secondary"}>
                 {isPublished ? 'Published' : 'Draft'}

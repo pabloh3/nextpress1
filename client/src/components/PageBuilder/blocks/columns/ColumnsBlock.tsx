@@ -37,10 +37,14 @@ interface ColumnLayout {
 }
 
 interface ColumnsData extends Record<string, unknown> {
+  layoutMode?: "flex" | "grid";
   gap?: string;
+  minColumnWidth?: string;
   verticalAlignment?: "top" | "center" | "bottom" | "stretch";
   horizontalAlignment?: "left" | "center" | "right" | "space-between" | "space-around";
   direction?: "row" | "column";
+  columnVerticalAlignment?: "top" | "center" | "bottom" | "stretch";
+  columnHorizontalAlignment?: "left" | "center" | "right" | "stretch";
 }
 
 type ColumnsContent = BlockContent & {
@@ -53,20 +57,28 @@ function readColumnsData(content: BlockContent): ColumnsData {
     if (content.kind === "structured" && content.data && typeof content.data === "object") {
       const data = content.data as Record<string, unknown>;
       return {
+        layoutMode: typeof data.layoutMode === "string" ? (data.layoutMode as ColumnsData["layoutMode"]) : undefined,
         gap: typeof data.gap === "string" ? data.gap : undefined,
+        minColumnWidth: typeof data.minColumnWidth === "string" ? data.minColumnWidth : undefined,
         verticalAlignment: typeof data.verticalAlignment === "string" ? (data.verticalAlignment as ColumnsData["verticalAlignment"]) : undefined,
         horizontalAlignment: typeof data.horizontalAlignment === "string" ? (data.horizontalAlignment as ColumnsData["horizontalAlignment"]) : undefined,
         direction: typeof data.direction === "string" ? (data.direction as ColumnsData["direction"]) : undefined,
+        columnVerticalAlignment: typeof data.columnVerticalAlignment === "string" ? (data.columnVerticalAlignment as ColumnsData["columnVerticalAlignment"]) : undefined,
+        columnHorizontalAlignment: typeof data.columnHorizontalAlignment === "string" ? (data.columnHorizontalAlignment as ColumnsData["columnHorizontalAlignment"]) : undefined,
       };
     }
     return {};
   }
   const legacy = content as unknown as Record<string, unknown>;
   return {
+    layoutMode: typeof legacy.layoutMode === "string" ? (legacy.layoutMode as ColumnsData["layoutMode"]) : undefined,
     gap: typeof legacy.gap === "string" ? legacy.gap : undefined,
+    minColumnWidth: typeof legacy.minColumnWidth === "string" ? legacy.minColumnWidth : undefined,
     verticalAlignment: typeof legacy.verticalAlignment === "string" ? (legacy.verticalAlignment as ColumnsData["verticalAlignment"]) : undefined,
     horizontalAlignment: typeof legacy.horizontalAlignment === "string" ? (legacy.horizontalAlignment as ColumnsData["horizontalAlignment"]) : undefined,
     direction: typeof legacy.direction === "string" ? (legacy.direction as ColumnsData["direction"]) : undefined,
+    columnVerticalAlignment: typeof legacy.columnVerticalAlignment === "string" ? (legacy.columnVerticalAlignment as ColumnsData["columnVerticalAlignment"]) : undefined,
+    columnHorizontalAlignment: typeof legacy.columnHorizontalAlignment === "string" ? (legacy.columnHorizontalAlignment as ColumnsData["columnHorizontalAlignment"]) : undefined,
   };
 }
 
@@ -78,33 +90,114 @@ function writeColumnsData(prev: BlockContent, updates: Partial<ColumnsData>): Bl
 
 const DEFAULT_CONTENT: ColumnsContent = {
   kind: "structured",
-  data: { gap: "20px", verticalAlignment: "top", horizontalAlignment: "left", direction: "row" },
+  data: {
+    layoutMode: "flex",
+    gap: "20px",
+    minColumnWidth: "220px",
+    verticalAlignment: "top",
+    horizontalAlignment: "left",
+    direction: "row",
+    columnVerticalAlignment: "top",
+    columnHorizontalAlignment: "stretch",
+  },
 };
 
-// ============================================================================
-// RENDERER
-// ============================================================================
-
-interface ColumnsRendererProps {
-  content: ColumnsContent;
-  styles?: React.CSSProperties;
-  children?: BlockConfig[];
-  columnLayout?: ColumnLayout[];
-  isPreview?: boolean;
+function cloneColumnLayout(layout: ColumnLayout[]): ColumnLayout[] {
+  return layout.map((column) => ({
+    ...column,
+    blockIds: [...column.blockIds],
+  }));
 }
 
-function ColumnsRenderer({ content, styles, children, columnLayout, isPreview }: ColumnsRendererProps) {
-  const data = readColumnsData(content);
+function getOrderedChildIds(
+  children: BlockConfig[],
+  layout: ColumnLayout[],
+): string[] {
+  const childIds = children.map((child) => child.id);
+  const assignedIds = new Set(
+    layout.flatMap((column) =>
+      Array.isArray(column.blockIds) ? column.blockIds : [],
+    ),
+  );
+
+  return childIds.filter((id) => assignedIds.has(id)).concat(
+    childIds.filter((id) => !assignedIds.has(id)),
+  );
+}
+
+/**
+ * Builds a new column layout and redistributes existing child blocks evenly.
+ */
+export function buildColumnsLayout(
+  count: number,
+  children: BlockConfig[],
+  previousLayout: ColumnLayout[],
+): ColumnLayout[] {
+  const safeCount = Math.max(1, count);
+  const width = `${(100 / safeCount).toFixed(2)}%`;
+  const orderedChildIds = getOrderedChildIds(children, previousLayout);
+  const nextLayout: ColumnLayout[] = Array.from({ length: safeCount }, () => ({
+    columnId: `col-${generateBlockId()}`,
+    width,
+    blockIds: [],
+  }));
+
+  orderedChildIds.forEach((childId, index) => {
+    nextLayout[index % safeCount].blockIds.push(childId);
+  });
+
+  return nextLayout;
+}
+
+/**
+ * Removes a column and returns the remaining layout plus kept children.
+ */
+export function removeColumnAndCleanup(
+  layout: ColumnLayout[],
+  index: number,
+  children: BlockConfig[],
+): { nextLayout: ColumnLayout[]; nextChildren: BlockConfig[] } {
+  if (layout.length <= 1) {
+    return {
+      nextLayout: cloneColumnLayout(layout),
+      nextChildren: [...children],
+    };
+  }
+
+  const nextLayout = cloneColumnLayout(layout);
+  const [removedColumn] = nextLayout.splice(index, 1);
+  if (!removedColumn) {
+    return {
+      nextLayout: cloneColumnLayout(layout),
+      nextChildren: [...children],
+    };
+  }
+
+  const removedIds = new Set(removedColumn.blockIds);
+  nextLayout.forEach((column) => {
+    column.blockIds = column.blockIds.filter((blockId) => !removedIds.has(blockId));
+  });
+
+  return {
+    nextLayout,
+    nextChildren: children.filter((child) => !removedIds.has(child.id)),
+  };
+}
+
+/**
+ * Computes the outer container style for the Columns block.
+ */
+export function buildColumnsContainerStyle(
+  data: ColumnsData,
+  layout: ColumnLayout[],
+  styles?: React.CSSProperties,
+): React.CSSProperties {
   const gap = data.gap || "20px";
+  const minColumnWidth = data.minColumnWidth || "220px";
   const verticalAlignment = data.verticalAlignment || "top";
   const horizontalAlignment = data.horizontalAlignment || "left";
   const direction = data.direction || "row";
-
-  const layout = columnLayout || [
-    { columnId: "default-col-1", width: "100%", blockIds: [] },
-  ];
-
-  const childBlocks = children || [];
+  const layoutMode = data.layoutMode || "flex";
 
   const alignItems = {
     top: "flex-start",
@@ -121,40 +214,178 @@ function ColumnsRenderer({ content, styles, children, columnLayout, isPreview }:
     "space-around": "space-around",
   }[horizontalAlignment];
 
+  if (layoutMode === "grid") {
+    const isVertical = direction === "column";
+    return {
+      ...styles,
+      display: "grid",
+      gap,
+      width: "100%",
+      gridTemplateColumns: isVertical
+        ? "minmax(0, 1fr)"
+        : `repeat(${Math.max(layout.length, 1)}, minmax(0, 1fr))`,
+      gridTemplateRows: isVertical
+        ? `repeat(${Math.max(layout.length, 1)}, auto)`
+        : undefined,
+      alignItems,
+      justifyItems:
+        justifyContent === "flex-start"
+          ? "start"
+          : justifyContent === "flex-end"
+            ? "end"
+            : justifyContent === "center"
+              ? "center"
+              : "stretch",
+    };
+  }
+
+  return {
+    ...styles,
+    display: "flex",
+    flexDirection: direction,
+    flexWrap: direction === "row" ? "wrap" : "nowrap",
+    gap,
+    width: "100%",
+    maxWidth: "100%",
+    alignItems,
+    justifyContent,
+    ...(direction === "row"
+      ? {
+          alignContent: "stretch",
+          ['--np-columns-min-width' as string]: minColumnWidth,
+        }
+      : {}),
+  };
+}
+
+function buildColumnStyle(
+  data: ColumnsData,
+  layoutMode: NonNullable<ColumnsData["layoutMode"]>,
+  direction: NonNullable<ColumnsData["direction"]>,
+  column: ColumnLayout,
+): React.CSSProperties {
+  if (layoutMode === "grid") {
+    return {
+      minWidth: 0,
+      width: "100%",
+    };
+  }
+
+  if (direction === "column") {
+    return {
+      minWidth: 0,
+      width: "100%",
+    };
+  }
+
+  const minColumnWidth = data.minColumnWidth || "220px";
+  const width = column.width || "auto";
+  if (width === "auto") {
+    return {
+      flex: "1 1 0%",
+      minWidth: minColumnWidth,
+    };
+  }
+
+  if (width.endsWith("fr")) {
+    const flexGrow = Number.parseFloat(width) || 1;
+    return {
+      flex: `${flexGrow} 1 0%`,
+      minWidth: minColumnWidth,
+    };
+  }
+
+  return {
+    flex: "1 1 auto",
+    width,
+    minWidth: minColumnWidth,
+  };
+}
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+
+interface ColumnsRendererProps {
+  content: ColumnsContent;
+  styles?: React.CSSProperties;
+  children?: BlockConfig[];
+  columnLayout?: ColumnLayout[];
+  isPreview?: boolean;
+  onBlockChange?: (updated: BlockConfig) => void;
+}
+
+function ColumnsRenderer({
+  content,
+  styles,
+  children,
+  columnLayout,
+  isPreview,
+  onBlockChange,
+}: ColumnsRendererProps) {
+  const data = readColumnsData(content);
+  const layoutMode = data.layoutMode || "flex";
+  const direction = data.direction || "row";
+  const minColumnWidth = data.minColumnWidth || "220px";
+  const columnVerticalAlignment = data.columnVerticalAlignment || "top";
+  const columnHorizontalAlignment = data.columnHorizontalAlignment || "stretch";
+
+  const layout = columnLayout || [
+    { columnId: "default-col-1", width: "100%", blockIds: [] },
+  ];
+
+  const childBlocks = children || [];
+
+  const columnAlignItems = {
+    top: "flex-start",
+    center: "center",
+    bottom: "flex-end",
+    stretch: "stretch",
+  }[columnVerticalAlignment];
+
+  const columnJustifyContent = {
+    left: "flex-start",
+    center: "center",
+    right: "flex-end",
+    stretch: "flex-start",
+  }[columnHorizontalAlignment];
+
   const actions = useBlockActions();
+  const containerStyle = buildColumnsContainerStyle(data, layout, styles);
 
   return (
-    <div
-      className="wp-block-columns"
-      style={{
-        display: "flex",
-        flexDirection: direction,
-        flexWrap: direction === "row" ? "wrap" : "nowrap",
-        gap,
-        width: "100%",
-        alignItems,
-        justifyContent,
-        ...styles,
-      }}
-    >
+    <div className="wp-block-columns" style={containerStyle}>
       {layout.map((column) => {
         const columnChildren = childBlocks.filter((child) =>
           column.blockIds.includes(child.id)
         );
+        const columnStyle = buildColumnStyle(data, layoutMode, direction, column);
 
         return (
           <div
             key={column.columnId}
             className="wp-block-column"
-            style={{
-              flex: column.width === "auto" ? "none" : "1",
-              width:
-                column.width && column.width !== "auto" ? column.width : undefined,
-              minWidth: 0,
-            }}
-          >
+              style={{
+                ...columnStyle,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
             {isPreview ? (
-              <div className="space-y-2">
+              <div
+                className="space-y-2"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems:
+                    columnHorizontalAlignment === "stretch"
+                      ? "stretch"
+                      : columnAlignItems,
+                  justifyContent: columnJustifyContent,
+                  minHeight: "60px",
+                  width: "100%",
+                }}
+              >
                 {columnChildren.map((childBlock) => (
                   <BlockRenderer
                     key={childBlock.id}
@@ -173,6 +404,13 @@ function ColumnsRenderer({ content, styles, children, columnLayout, isPreview }:
                     ref={provided.innerRef}
                     {...provided.droppableProps}
                     style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: columnJustifyContent,
+                      alignItems:
+                        columnHorizontalAlignment === "stretch"
+                          ? "stretch"
+                          : columnAlignItems,
                       minHeight: "60px",
                       border: snapshot.isDraggingOver ? "2px solid #3b82f6" : "2px dashed #e2e8f0",
                       borderRadius: "4px",
@@ -200,12 +438,13 @@ function ColumnsRenderer({ content, styles, children, columnLayout, isPreview }:
                                 block={childBlock}
                                 isSelected={actions?.selectedBlockId === childBlock.id}
                                 isPreview={false}
-                                onDuplicate={() => actions?.onDuplicate(childBlock.id)}
-                                onDelete={() => actions?.onDelete(childBlock.id)}
-                                dragHandleProps={dragProvided.dragHandleProps}
-                              />
-                            </div>
-                          )}
+                              onDuplicate={() => actions?.onDuplicate(childBlock.id)}
+                              onDelete={() => actions?.onDelete(childBlock.id)}
+                              dragHandleProps={dragProvided.dragHandleProps}
+                              onBlockChange={onBlockChange}
+                            />
+                          </div>
+                        )}
                         </Draggable>
                       ))
                     ) : (
@@ -252,6 +491,7 @@ export function ColumnsBlockComponent({
       children={value.children}
       columnLayout={columnLayout}
       isPreview={isPreview}
+      onBlockChange={onChange}
     />
   );
 }
@@ -278,8 +518,10 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
   const columnLayout = (currentSettings?.columnLayout as ColumnLayout[] | undefined) || [
     { columnId: "default-col-1", width: "100%", blockIds: [] },
   ];
+  const childBlocks = Array.isArray(block.children) ? block.children : [];
 
   const data = readColumnsData(content);
+  const layoutMode = data.layoutMode || "flex";
 
   // Update handlers
   const updateContent = (contentUpdates: Partial<ColumnsData>) => {
@@ -291,6 +533,19 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
     } else if (onUpdate) {
       onUpdate({ content: writeColumnsData(block.content, contentUpdates) });
     }
+  };
+
+  const updateBlock = (updates: Partial<BlockConfig>) => {
+    if (accessor) {
+      const current = accessor.getFullState?.() || block;
+      onUpdate?.({
+        ...current,
+        ...updates,
+      });
+      return;
+    }
+
+    onUpdate?.(updates);
   };
 
   const updateSettings = (settingsUpdates: Partial<{ columnLayout: ColumnLayout[] }>) => {
@@ -325,8 +580,20 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
   };
 
   const removeColumn = (index: number) => {
-    const newColumnLayout = columnLayout.filter((_, i) => i !== index);
-    updateColumnLayout(newColumnLayout);
+    const { nextLayout, nextChildren } = removeColumnAndCleanup(
+      columnLayout,
+      index,
+      childBlocks,
+    );
+
+    updateBlock({
+      settings: {
+        ...(currentSettings || {}),
+        columnLayout: nextLayout,
+      },
+      children: nextChildren,
+    });
+    setUpdateTrigger((prev) => prev + 1);
   };
 
   const updateColumn = (index: number, updates: Partial<ColumnLayout>) => {
@@ -335,13 +602,7 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
   };
 
   const addQuickColumns = (count: number) => {
-    const width = `${(100 / count).toFixed(2)}%`;
-    const ids = Array.from({ length: count }, () => generateBlockId());
-    const newColumnLayout: ColumnLayout[] = ids.map((id) => ({
-      columnId: `col-${id}`,
-      width,
-      blockIds: [],
-    }));
+    const newColumnLayout = buildColumnsLayout(count, childBlocks, columnLayout);
     updateColumnLayout(newColumnLayout);
   };
 
@@ -382,29 +643,33 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
                   <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
-              <div>
-                <Label htmlFor={`col-width-${index}`} className="text-xs">
-                  Width
-                </Label>
-                <Select value={column.width || "auto"} onValueChange={(value) => updateColumn(index, { width: value })}>
-                  <SelectTrigger className="h-9" id={`col-width-${index}`} aria-label={`Column ${index + 1} width`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">Auto</SelectItem>
-                    <SelectItem value="25%">25%</SelectItem>
-                    <SelectItem value="33.33%">33.33%</SelectItem>
-                    <SelectItem value="50%">50%</SelectItem>
-                    <SelectItem value="66.67%">66.67%</SelectItem>
-                    <SelectItem value="75%">75%</SelectItem>
-                    <SelectItem value="100%">100%</SelectItem>
-                    <SelectItem value="200px">200px</SelectItem>
-                    <SelectItem value="300px">300px</SelectItem>
-                    <SelectItem value="1fr">1fr (flex)</SelectItem>
-                    <SelectItem value="2fr">2fr (flex)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {layoutMode === "flex" ? (
+                <div>
+                  <Label htmlFor={`col-width-${index}`} className="text-xs">
+                    Width
+                  </Label>
+                  <Select value={column.width || "auto"} onValueChange={(value) => updateColumn(index, { width: value })}>
+                    <SelectTrigger className="h-9" id={`col-width-${index}`} aria-label={`Column ${index + 1} width`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto</SelectItem>
+                      <SelectItem value="25%">25%</SelectItem>
+                      <SelectItem value="33.33%">33.33%</SelectItem>
+                      <SelectItem value="50%">50%</SelectItem>
+                      <SelectItem value="66.67%">66.67%</SelectItem>
+                      <SelectItem value="75%">75%</SelectItem>
+                      <SelectItem value="100%">100%</SelectItem>
+                      <SelectItem value="200px">200px</SelectItem>
+                      <SelectItem value="300px">300px</SelectItem>
+                      <SelectItem value="1fr">1fr (flex)</SelectItem>
+                      <SelectItem value="2fr">2fr (flex)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500">Equal width in grid mode</p>
+              )}
             </div>
           ))}
         </div>
@@ -412,6 +677,28 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
 
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
         <div className="space-y-3">
+          <div className="grid grid-cols-12 gap-2 items-center">
+            <div className="col-span-4">
+              <Label htmlFor="columns-layout-mode">Layout</Label>
+            </div>
+            <div className="col-span-8">
+              <Select
+                value={layoutMode}
+                onValueChange={(value) =>
+                  updateContent({ layoutMode: value as ColumnsData["layoutMode"] })
+                }
+              >
+                <SelectTrigger className="h-9" id="columns-layout-mode" aria-label="Columns layout mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="flex">Flex</SelectItem>
+                  <SelectItem value="grid">Grid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="grid grid-cols-12 gap-2 items-center">
             <div className="col-span-4">
               <Label htmlFor="columns-direction">Direction</Label>
@@ -437,6 +724,36 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
               <Input id="columns-gap" className="h-9" value={data.gap || "20px"} onChange={(e) => updateContent({ gap: e.target.value })} placeholder="e.g. 10px, 2rem" aria-label="Gap between columns" />
             </div>
           </div>
+
+          {layoutMode === "flex" && data.direction !== "column" && (
+            <div className="grid grid-cols-12 gap-2 items-center">
+              <div className="col-span-4">
+                <Label htmlFor="columns-min-width">Min Width</Label>
+              </div>
+              <div className="col-span-8">
+                <Input
+                  id="columns-min-width"
+                  className="h-9"
+                  value={data.minColumnWidth || "220px"}
+                  onChange={(e) => updateContent({ minColumnWidth: e.target.value })}
+                  placeholder="220px"
+                  aria-label="Minimum column width"
+                />
+              </div>
+            </div>
+          )}
+
+          {layoutMode === "grid" && (
+            <p className="text-xs text-gray-500">
+              Grid mode uses equal-width columns automatically.
+            </p>
+          )}
+
+          {layoutMode === "flex" && data.direction !== "column" && (
+            <p className="text-xs text-gray-500">
+              Flex row keeps columns on one line until they reach the minimum width, then wraps.
+            </p>
+          )}
         </div>
       </CollapsibleCard>
 
@@ -476,6 +793,60 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
                   <SelectItem value="right">Right</SelectItem>
                   <SelectItem value="space-between">Space Between</SelectItem>
                   <SelectItem value="space-around">Space Around</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-12 gap-2 items-center">
+            <div className="col-span-4">
+              <Label htmlFor="column-vertical-align">Column Vertical</Label>
+            </div>
+            <div className="col-span-8">
+              <Select
+                value={data.columnVerticalAlignment || "top"}
+                onValueChange={(value) =>
+                  updateContent({
+                    columnVerticalAlignment:
+                      value as ColumnsData["columnVerticalAlignment"],
+                  })
+                }
+              >
+                <SelectTrigger className="h-9" id="column-vertical-align" aria-label="Column vertical alignment">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="top">Top</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="bottom">Bottom</SelectItem>
+                  <SelectItem value="stretch">Stretch</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-12 gap-2 items-center">
+            <div className="col-span-4">
+              <Label htmlFor="column-horizontal-align">Column Horizontal</Label>
+            </div>
+            <div className="col-span-8">
+              <Select
+                value={data.columnHorizontalAlignment || "stretch"}
+                onValueChange={(value) =>
+                  updateContent({
+                    columnHorizontalAlignment:
+                      value as ColumnsData["columnHorizontalAlignment"],
+                  })
+                }
+              >
+                <SelectTrigger className="h-9" id="column-horizontal-align" aria-label="Column horizontal alignment">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stretch">Stretch</SelectItem>
+                  <SelectItem value="left">Left</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="right">Right</SelectItem>
                 </SelectContent>
               </Select>
             </div>

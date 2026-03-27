@@ -14,10 +14,16 @@ Nextpress uses [PGlite](https://pglite.dev/) (embedded PostgreSQL) for local dev
 
 ## Self-Hosting
 
-One-command install on any Linux server:
+One-command install on any Linux server (pulls the latest version by default):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/ft-packaging/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | sudo bash
+```
+
+To install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | sudo bash -s -- --version beta-v1.0.1
 ```
 
 ## License

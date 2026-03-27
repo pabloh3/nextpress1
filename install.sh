@@ -10,10 +10,10 @@ NC='\033[0m' # No Color
 # ============================================
 # CONFIGURATION - Edit these values as needed
 # ============================================
-COMPOSE_URL="https://raw.githubusercontent.com/pabloh3/nextpress1/ft-packaging/docker-compose.prod.yml"
+COMPOSE_URL="https://raw.githubusercontent.com/pabloh3/nextpress1/main/docker-compose.prod.yml"
 INSTALL_DIR="/opt/nextpress"
 DEFAULT_DOMAIN="nextpress.localhost"
-DEFAULT_VERSION="beta-v1.0.0"
+DEFAULT_VERSION="latest"
 # ============================================
 
 # Spinner for long-running commands (ASCII compatible)
@@ -74,7 +74,7 @@ while [[ $# -gt 0 ]]; do
       echo ""
       echo "Examples:"
       echo "  ./install.sh                      # Install latest"
-      echo "  ./install.sh --version beta-v1.0.0  # Install specific version"
+      echo "  ./install.sh --version beta-v1.0.1  # Install specific version"
       exit 0
       ;;
     *)
@@ -91,8 +91,8 @@ echo ""
 # 1. Root check
 if [ "$EUID" -ne 0 ]; then
   echo -e "${RED}Please run this script with sudo${NC}"
-  echo "Usage: curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/ft-packaging/install.sh | sudo bash"
-  echo "       curl -fsSL ... | sudo bash -s -- --version beta-v1.0.0"
+  echo "Usage: curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | sudo bash"
+  echo "       curl -fsSL ... | sudo bash -s -- --version beta-v1.0.1"
   exit 1
 fi
 
@@ -180,7 +180,7 @@ echo -e "  ${GREEN}Caddy configuration ready${NC}"
 
 # 8. Download cleanup script
 echo -e "${YELLOW}Downloading cleanup script...${NC}"
-CLEANUP_URL="https://raw.githubusercontent.com/pabloh3/nextpress1/ft-packaging/cleanup.sh"
+CLEANUP_URL="https://raw.githubusercontent.com/pabloh3/nextpress1/main/cleanup.sh"
 if ! run_with_spinner "Downloading cleanup.sh" curl -fsSL "$CLEANUP_URL" -o cleanup.sh; then
   echo -e "${YELLOW}Warning: Failed to download cleanup script (non-critical)${NC}"
 else

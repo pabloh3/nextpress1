@@ -13,6 +13,7 @@ export const CONFIG = {
 			"image/png",
 			"image/gif",
 			"image/webp",
+			"image/svg+xml",
 			"video/mp4",
 			"video/webm",
 			"audio/mp3",

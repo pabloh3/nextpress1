@@ -251,7 +251,7 @@ export function ImageDropzone({
           </>
         )}
         <p className="text-xs text-gray-500 mt-4">
-          Supported: JPG, PNG, GIF, WebP (Max {Math.round(maxSize / 1024 / 1024)}MB)
+          Supported: JPG, PNG, GIF, WebP, SVG (Max {Math.round(maxSize / 1024 / 1024)}MB)
         </p>
       </div>
     </div>

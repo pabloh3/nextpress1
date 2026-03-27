@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import type { JSX } from "react";
 import type { BlockConfig, BlockContent } from "@shared/schema-types";
 import type { BlockDefinition, BlockComponentProps } from "../types.ts";
@@ -11,6 +11,7 @@ import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, Maximize, Settings, Link, Wrench } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
+import { useImageResize } from "./use-image-resize";
 
 // ============================================================================
 // TYPES
@@ -35,7 +36,7 @@ type ImageContent = {
   target?: string;
   rel?: string;
   title?: string;
-  id?: number;
+  id?: string;
 };
 
 const DEFAULT_CONTENT: ImageContent = {
@@ -62,9 +63,27 @@ const DEFAULT_CONTENT: ImageContent = {
 interface ImageRendererProps {
   content: ImageContent;
   styles?: React.CSSProperties;
+  isEditing?: boolean;
+  isSelected?: boolean;
+  onStylesChange?: (updates: Partial<React.CSSProperties>) => void;
 }
 
-function ImageRenderer({ content, styles }: ImageRendererProps): JSX.Element | null {
+/**
+ * Shared resize handle styles for the corner drag handles.
+ * Positioned absolutely within the figure wrapper.
+ */
+const HANDLE_BASE_STYLE: React.CSSProperties = {
+  position: "absolute",
+  width: 12,
+  height: 12,
+  background: "#3b82f6",
+  border: "2px solid #fff",
+  borderRadius: "50%",
+  zIndex: 10,
+  boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+};
+
+function ImageRenderer({ content, styles, isEditing, isSelected, onStylesChange }: ImageRendererProps): JSX.Element | null {
   const url = content?.kind === 'media' && content.mediaType === 'image'
     ? content.url
     : '';
@@ -79,6 +98,17 @@ function ImageRenderer({ content, styles }: ImageRendererProps): JSX.Element | n
   const rel = content?.rel as string | undefined;
   const title = content?.title as string | undefined;
 
+  const showHandles = isEditing && isSelected;
+
+  /** Commits the resized width to block styles */
+  const handleResizeEnd = useCallback((width: number) => {
+    onStylesChange?.({ width: `${width}px`, height: "auto" });
+  }, [onStylesChange]);
+
+  const { imgRef, createHandleMouseDown } = useImageResize({
+    onResizeEnd: handleResizeEnd,
+  });
+
   if (!url) return null;
 
   const wrapperClasses = [
@@ -91,9 +121,11 @@ function ImageRenderer({ content, styles }: ImageRendererProps): JSX.Element | n
 
   const imgEl = (
     <img
+      ref={showHandles ? imgRef : undefined}
       src={url}
       alt={alt}
       style={{ ...styles }}
+      draggable={false}
     />
   );
 
@@ -110,11 +142,40 @@ function ImageRenderer({ content, styles }: ImageRendererProps): JSX.Element | n
   ) : imgEl;
 
   return (
-    <figure className={wrapperClasses} style={{ padding: styles?.padding, margin: styles?.margin }}>
+    <figure
+      className={wrapperClasses}
+      style={{ padding: styles?.padding, margin: styles?.margin, position: "relative" }}
+    >
       {contentEl}
       {caption ? (
         <figcaption className="wp-element-caption">{caption}</figcaption>
       ) : null}
+
+      {/* Resize handles — only visible when block is selected in editor */}
+      {showHandles && (
+        <>
+          <div
+            onMouseDown={createHandleMouseDown("bottom-right")}
+            style={{
+              ...HANDLE_BASE_STYLE,
+              bottom: caption ? 28 : -6,
+              right: -6,
+              cursor: "nwse-resize",
+            }}
+            title="Drag to resize"
+          />
+          <div
+            onMouseDown={createHandleMouseDown("bottom-left")}
+            style={{
+              ...HANDLE_BASE_STYLE,
+              bottom: caption ? 28 : -6,
+              left: -6,
+              cursor: "nesw-resize",
+            }}
+            title="Drag to resize"
+          />
+        </>
+      )}
     </figure>
   );
 }
@@ -126,14 +187,29 @@ function ImageRenderer({ content, styles }: ImageRendererProps): JSX.Element | n
 export function ImageBlockComponent({
   value,
   onChange,
+  isPreview,
+  isSelected,
 }: BlockComponentProps) {
-  const { content, styles } = useBlockState<ImageContent>({
+  const { content, styles, setStyles } = useBlockState<ImageContent>({
     value,
     getDefaultContent: () => DEFAULT_CONTENT,
     onChange,
   });
 
-  return <ImageRenderer content={content} styles={styles} />;
+  /** Called by resize handles to commit new width to block styles */
+  const handleStylesChange = useCallback((updates: Partial<React.CSSProperties>) => {
+    setStyles((prev) => ({ ...prev, ...updates }));
+  }, [setStyles]);
+
+  return (
+    <ImageRenderer
+      content={content}
+      styles={styles}
+      isEditing={!isPreview}
+      isSelected={isSelected}
+      onStylesChange={handleStylesChange}
+    />
+  );
 }
 
 // ============================================================================

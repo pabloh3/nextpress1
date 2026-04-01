@@ -95,6 +95,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount HTML rendering routes (must come before static routes)
   app.use('/', createRenderRoutes(deps));
 
+  // Vendor files for published pages (animation libraries, etc.)
+  app.use(
+    '/vendor',
+    express.static(path.join(__dirname, '../../dist/public/vendor'))
+  );
+
   // Admin static assets
   app.use(
     '/admin/assets',

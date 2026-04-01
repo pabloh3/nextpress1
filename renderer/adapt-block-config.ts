@@ -1,5 +1,98 @@
 import type { BlockConfig, BlockContent } from "@shared/schema-types";
 import type { BlockData } from "./react/block-types";
+import type { TokenEntry, BlockAnimation } from "@shared/schema-types";
+import { getEntryAnimationAttributes } from "@shared/animation-utils";
+
+/**
+ * Converts camelCase CSS property to kebab-case for CSS rules.
+ */
+function camelToKebab(str: string): string {
+	return str.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+}
+
+/**
+ * Resolves tokenMap entries to inline styles for SSR.
+ * All entries (token-based and custom) store their resolved CSS value in entry.style.
+ * For custom entries with unitCategory, the unit is appended if the style is purely numeric.
+ */
+function resolveTokenMapForSSR(
+	blockId: string,
+	tokenMap: Record<string, TokenEntry>,
+	units: Record<string, string>,
+): { style: Record<string, string>; modifierCSS: string } {
+	const style: Record<string, string> = {};
+	const modifierEntries: Array<{ entry: TokenEntry; resolvedValue: string }> = [];
+
+	for (const entry of Object.values(tokenMap)) {
+		let resolvedValue: string | null = null;
+
+		if (entry.style) {
+			// If the style is purely numeric and has a unitCategory, append the active unit
+			const isNumeric = /^\d*\.?\d+$/.test(entry.style);
+			if (isNumeric && entry.unitCategory && units[entry.unitCategory]) {
+				resolvedValue = `${entry.style}${units[entry.unitCategory]}`;
+			} else {
+				resolvedValue = entry.style;
+			}
+		}
+
+		if (!resolvedValue) continue;
+
+		if (entry.modifier) {
+			modifierEntries.push({ entry, resolvedValue });
+		} else {
+			style[entry.property] = resolvedValue;
+		}
+	}
+
+	// Generate modifier CSS rules using blockId
+	const modifierCSS = modifierEntries
+		.map(({ entry, resolvedValue }) => {
+			if (!entry.modifier) return "";
+			const cssProp = camelToKebab(entry.property);
+			const selector = `.block-${blockId}`;
+
+			// State modifiers: hover, focus, active, etc.
+			const stateMap: Record<string, string> = {
+				hover: ":hover", focus: ":focus", active: ":active",
+				"focus-within": ":focus-within", "focus-visible": ":focus-visible",
+				disabled: ":disabled", first: ":first-child", last: ":last-child",
+			};
+			if (stateMap[entry.modifier]) {
+				return `${selector}${stateMap[entry.modifier]} { ${cssProp}: ${resolvedValue}; }`;
+			}
+
+			// Responsive modifiers: sm, md, lg, xl, 2xl
+			const breakpoints: Record<string, string> = {
+				sm: "640px", md: "768px", lg: "1024px", xl: "1280px", "2xl": "1536px",
+			};
+			if (breakpoints[entry.modifier]) {
+				return `@media (min-width: ${breakpoints[entry.modifier]}) { ${selector} { ${cssProp}: ${resolvedValue}; } }`;
+			}
+
+			return "";
+		})
+		.filter(Boolean)
+		.join("\n");
+
+	return { style, modifierCSS };
+}
+
+
+
+/**
+ * Collects modifier CSS rules for a block's tokenMap entries for SSR injection.
+ * Called separately from block adaptation to keep concerns separate.
+ */
+export function collectBlockModifierCSS(block: BlockConfig): string {
+	if (!block.other?.tokenMap) return "";
+	const { modifierCSS } = resolveTokenMapForSSR(
+		block.id,
+		block.other.tokenMap,
+		block.other?.units || {},
+	);
+	return modifierCSS;
+}
 
 /**
  * Transforms BlockConfig from database to BlockData for renderer
@@ -34,14 +127,21 @@ export function adaptBlockConfigToBlockData(
 		return null;
 	}
 
-	// Merge styles
+	// Resolve tokenMap values for SSR (all entries have resolved CSS in entry.style)
+	const tokenResult = block.other?.tokenMap
+		? resolveTokenMapForSSR(block.id, block.other.tokenMap, block.other?.units || {})
+		: { style: {}, modifierCSS: "" };
+	const tokenStyles = tokenResult.style;
+
+	// Merge styles: block.styles + content defaults + token custom values
 	const mergedStyles = {
 		...block.styles,
 		...(contentProps.style || {}),
+		...tokenStyles,
 	};
 
 	// Merge classNames
-	const mergedClassName = [block.other?.classNames, contentProps.className]
+	const mergedClassName = [`block-${block.id}`, block.other?.classNames, contentProps.className]
 		.filter(Boolean)
 		.join(" ");
 
@@ -63,6 +163,7 @@ export function adaptBlockConfigToBlockData(
 		attributes: {
 			...block.other?.attributes,
 			...(contentProps.attributes || {}),
+			...(block.other?.animation?.entry ? getEntryAnimationAttributes(block.other.animation.entry) : {}),
 		},
 		// Merge settings into props
 		...block.settings,

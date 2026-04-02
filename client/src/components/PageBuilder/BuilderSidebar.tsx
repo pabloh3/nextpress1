@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import BlockLibrary from './BlockLibrary';
 import BlockSettings from './BlockSettings';
-import PageSettings from './PageSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { ButtonGroup } from '@/components/ui/button-group';
-import { Plus, Settings, Sidebar, FileText, Palette } from 'lucide-react';
-import type { Post, Template, Page } from '@shared/schema-types';
+import { Plus, Settings, Sidebar } from 'lucide-react';
 
 export function BuilderSidebar({
   activeTab,
@@ -17,11 +14,6 @@ export function BuilderSidebar({
   setHoverHighlight,
   sidebarVisible,
   onToggleSidebar,
-  page,
-  isTemplate,
-  onPageUpdate,
-  onPageMetaChange,
-  contentType = 'page',
 }: {
   activeTab: 'blocks' | 'settings';
   setActiveTab: (tab: 'blocks' | 'settings') => void;
@@ -30,34 +22,7 @@ export function BuilderSidebar({
   setHoverHighlight: (area: 'padding' | 'margin' | null) => void;
   sidebarVisible: boolean;
   onToggleSidebar: () => void;
-  page?: Post | Template | Page;
-  isTemplate?: boolean;
-  onPageUpdate?: (updatedPage: Post | Template | Page) => void;
-  onPageMetaChange?: (
-    meta: Partial<{ title: string; slug: string; status: string }>,
-  ) => void;
-  contentType?: 'page' | 'post';
 }) {
-  const [userManuallyChangedView, setUserManuallyChangedView] = useState(false);
-  const [settingsViewState, setSettingsViewState] = useState<'page' | 'block'>(() =>
-    selectedBlock ? 'block' : 'page'
-  );
-
-  /** Adjusting state during render: track previous selectedBlock identity */
-  const [prevSelectedBlockId, setPrevSelectedBlockId] = useState<string | null>(
-    selectedBlock?.id ?? null,
-  );
-  const currentBlockId = selectedBlock?.id ?? null;
-  if (currentBlockId !== prevSelectedBlockId) {
-    setPrevSelectedBlockId(currentBlockId);
-    if (!userManuallyChangedView) {
-      setSettingsViewState(selectedBlock ? 'block' : 'page');
-    }
-    // Reset manual override when block selection changes
-    if (userManuallyChangedView) {
-      setUserManuallyChangedView(false);
-    }
-  }
   return (
     <div className="w-80 sm:w-80 lg:w-80 bg-white border-r border-gray-200 flex flex-col min-h-0 transition-all duration-300 ease-out shadow-sm">
       <div className="p-4 border-b border-gray-200 flex items-center gap-2 w-full justify-between bg-white">
@@ -102,53 +67,17 @@ export function BuilderSidebar({
           <div className="h-full overflow-x-hidden bg-gray-50 rounded-lg">
             <ScrollArea className="h-full">
               <div className="max-w-full pr-2">
-                {/* Toggle between Page and Block Settings */}
-                <div className="mb-4 w-full">
-                  <ButtonGroup className="w-full">
-                    <Button
-                      variant={settingsViewState === 'page' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setSettingsViewState('page');
-                        setUserManuallyChangedView(true);
-                      }}
-                      className="flex-1">
-                      <FileText className="w-4 h-4 mr-2" />
-                      Page
-                    </Button>
-                    <Button
-                      variant={settingsViewState === 'block' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setSettingsViewState('block');
-                        setUserManuallyChangedView(true);
-                      }}
-                      className="flex-1"
-                      disabled={!selectedBlock}>
-                      <Palette className="w-4 h-4 mr-2" />
-                      Block
-                    </Button>
-                  </ButtonGroup>
-                </div>
-
-                {/* Show PageSettings when view is 'page' or no block selected */}
-                {settingsViewState === 'page' || !selectedBlock ? (
-                  <PageSettings
-                    page={page}
-                    isTemplate={isTemplate}
-                    onUpdate={onPageUpdate}
-                    onMetaChange={onPageMetaChange}
-                    contentType={contentType}
-                  />
-                ) : selectedBlock ? (
+                {selectedBlock ? (
                   <BlockSettings
                     block={selectedBlock}
-                    onUpdate={(updates) =>
-                      updateBlock(selectedBlock.id, updates)
-                    }
+                    onUpdate={(updates) => updateBlock(selectedBlock.id, updates)}
                     onHoverArea={(area) => setHoverHighlight(area)}
                   />
-                ) : null}
+                ) : (
+                  <div className="p-6 text-center text-gray-500 text-sm">
+                    Select a block to edit its settings
+                  </div>
+                )}
               </div>
               <ScrollBar orientation="vertical" />
             </ScrollArea>

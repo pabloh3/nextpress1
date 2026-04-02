@@ -2,8 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Helmet } from "react-helmet";
 import BlockRenderer from "@/components/PageBuilder/BlockRenderer";
+import { getGoogleFontUrl } from "@shared/google-fonts";
 import type { Post } from "@shared/schema-types";
 import type { BlockConfig } from "@shared/schema-types";
+import type { PageOther } from "@shared/schema-types";
 
 /**
  * Extended post data type for public page rendering.
@@ -99,13 +101,27 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
   const blocks: BlockConfig[] = (data.builderData || data.blocks as BlockConfig[]) || [];
   const publishDate = data.publishedAt ? new Date(data.publishedAt) : new Date();
 
+  // Extract page other settings
+  const pageOther = (data as { other?: PageOther })?.other;
+  const seo = pageOther?.seo;
+  const design = pageOther?.design;
+
   // SEO meta information
-  const metaTitle = `${data.title} | Your Site`;
-  const metaDescription = data.excerpt || `Read ${data.title} on our website.`;
-  const canonicalUrl = `${window.location.origin}/${data.type}/${data.slug}`;
+  const metaTitle = seo?.metaTitle || `${data.title} | Your Site`;
+  const metaDescription = seo?.metaDescription || data.excerpt || `Read ${data.title} on our website.`;
+  const canonicalUrl = seo?.canonicalUrl || `${window.location.origin}/${type}/${data.slug}`;
+  const googleFontUrl = getGoogleFontUrl(design?.fontFamily);
 
   return (
-    <div className="min-h-screen bg-white" data-testid={`public-${type}-view`}>
+    <div 
+      className="min-h-screen" 
+      data-testid={`public-${type}-view`}
+      style={{
+        backgroundColor: design?.backgroundColor?.style || '#ffffff',
+        color: design?.textColor?.style || undefined,
+        fontFamily: design?.fontFamily || undefined,
+      }}
+    >
       {/* SEO Meta Tags */}
       <Helmet>
         <title>{metaTitle}</title>
@@ -124,6 +140,19 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
           <meta name="twitter:image" content={data.featuredImage} />
         )}
         <link rel="canonical" href={canonicalUrl} />
+        {googleFontUrl && (
+          <>
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+            <link rel="stylesheet" href={googleFontUrl} />
+          </>
+        )}
+        {seo?.noIndex && (
+          <meta name="robots" content="noindex, nofollow" />
+        )}
+        {seo?.customMeta?.filter(m => m.name && m.content).map((meta, i) => (
+          <meta key={`custom-${i}`} name={meta.name} content={meta.content} />
+        ))}
         
         {/* Article specific meta for posts */}
         {type === 'post' && (
@@ -138,7 +167,10 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
       <div className="w-full">
         {/* Handle pages with traditional content (non-page builder) */}
         {!data.usePageBuilder && data.content ? (
-          <div className="max-w-4xl mx-auto px-6 py-12">
+          <div 
+            className="mx-auto px-6 py-12" 
+            style={{ maxWidth: design?.containerWidth || '56rem' }}
+          >
             <article className="prose prose-lg max-w-none">
               <header className="mb-8">
                 <h1 className="text-4xl font-bold text-gray-900 mb-4" data-testid="page-title">
@@ -169,7 +201,10 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
           /* Page Builder content */
           <>
             {blocks.length === 0 ? (
-              <div className="max-w-4xl mx-auto px-6 py-12">
+              <div 
+                className="mx-auto px-6 py-12"
+                style={{ maxWidth: design?.containerWidth || '56rem' }}
+              >
                 <div className="text-center">
                   <h1 className="text-4xl font-bold text-gray-900 mb-4" data-testid="page-title">
                     {data.title}
@@ -180,7 +215,14 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
                 </div>
               </div>
             ) : (
-              <div className="w-full" data-testid="page-builder-content">
+              <div 
+                className="w-full mx-auto" 
+                data-testid="page-builder-content"
+                style={{
+                  maxWidth: design?.containerWidth || undefined,
+                  padding: design?.padding || undefined,
+                }}
+              >
                 {blocks.map((block) => (
                   <div key={block.id} className="block-container">
                     <BlockRenderer

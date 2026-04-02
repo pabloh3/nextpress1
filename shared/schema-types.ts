@@ -102,11 +102,42 @@ export type BlockContent =
 			alt?: string;
 			caption?: string;
 			mediaType: "image" | "video" | "audio";
-	  }
+	}
 	| { kind: "html"; value: string; sanitized: boolean }
-	| { kind: "structured"; data: Record<string, unknown> } // For complex blocks like tables, columns
-	| { kind: "empty" } // Explicitly empty block
-	| undefined; // No content set
+	| { kind: "structured"; data: Record<string, unknown> }
+	| { kind: "empty" }
+	| undefined;
+
+/** Custom meta tag entry for SEO */
+export interface MetaTagEntry {
+  name: string;
+  content: string;
+}
+
+/** Per-page SEO settings stored in page.other.seo */
+export interface PageSeoSettings {
+  metaTitle?: string;
+  metaDescription?: string;
+  canonicalUrl?: string;
+  noIndex?: boolean;
+  customMeta?: MetaTagEntry[];
+}
+
+/** Per-page design settings stored in page.other.design */
+export interface PageDesignSettings {
+  fontFamily?: string;
+  containerWidth?: string;
+  padding?: string;
+  backgroundColor?: TokenEntry;
+  textColor?: TokenEntry;
+}
+
+/** Structure for page.other jsonb field */
+export interface PageOther {
+  seo?: PageSeoSettings;
+  design?: PageDesignSettings;
+  [key: string]: unknown;
+}
 
 /**
  * Core block configuration for PageBuilder runtime
@@ -116,6 +147,47 @@ export type BlockContent =
  * Version tracking happens at the page level via PageVersionEntry, not at individual block level.
  * This ensures atomic rollback of entire page state rather than per-block versioning.
  */
+
+/**
+ * Design token entry for a single CSS property.
+ * Stores either a Tailwind token reference (value+variant) or a custom value (style).
+ */
+export interface TokenEntry {
+  property: string;         // CSS property: "backgroundColor", "paddingTop", "fontSize"
+  value: string;            // base token: "blue", "5", "lg" (empty string when custom)
+  variant: string | null;   // shade/variant: "500", null
+  alias: string;            // Tailwind prefix hint for UI: "bg", "pt", "text"
+  modifier?: string;        // optional state/responsive: "hover", "md", "focus"
+  other?: string;           // catch-all for values that don't fit structured fields
+  style?: string;           // custom raw value: "23", "#ff5500", "1.5" (set when user picks custom)
+  unitCategory?: string;    // category for unit resolution: "spacing", "font", "dimension", "border"
+}
+
+/** Entry animation config — scroll-triggered via AOS */
+export interface EntryAnimation {
+  name: string;        // Animate.css name: "fadeInUp", "bounceIn", "zoomIn"
+  duration?: number;   // ms (default: 1000)
+  delay?: number;      // ms (default: 0)
+  once?: boolean;      // Play once only? (default: true)
+}
+
+/** Hover animation config — CSS :hover rule */
+export interface HoverAnimation {
+  name: string;        // Animate.css name: "pulse", "rubberBand", "tada"
+}
+
+/** Loop animation config — continuous CSS animation */
+export interface LoopAnimation {
+  name: string;        // Animate.css name: "bounce", "heartBeat", "swing"
+}
+
+/** Block animation configuration — one animation per category max */
+export interface BlockAnimation {
+  entry?: EntryAnimation;
+  hover?: HoverAnimation;
+  loop?: LoopAnimation;
+}
+
 export interface BlockConfig {
 	// Core identity & type
 	id: string; // Unique instance ID
@@ -150,11 +222,14 @@ export interface BlockConfig {
 
 	// User overrides & extensions
 	other?: {
-		css?: string; // Custom CSS string added by user in editor
-		classNames?: string; // CSS class names
-		js?: string; // Custom JavaScript
-		html?: string; // Custom HTML override
-		attributes?: Record<string, any>; // HTML attributes
-		metadata?: Record<string, any>; // Any additional custom data
-	};
+		css?: string;
+		classNames?: string;
+		js?: string;
+		html?: string;
+		attributes?: Record<string, any>;
+		metadata?: Record<string, any>;
+		tokenMap?: Record<string, TokenEntry>;
+		units?: Record<string, string>;
+		animation?: BlockAnimation | null;
+	}
 }

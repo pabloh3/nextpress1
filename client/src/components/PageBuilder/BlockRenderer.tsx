@@ -5,6 +5,8 @@ import type { BlockConfig } from '@shared/schema-types';
 import { blockRegistry } from './blocks';
 import { Droppable, Draggable } from '@/lib/dnd';
 import { useBlockActions } from './BlockActionsContext';
+import { resolveTokenMap, generateBlockModifierCSS } from '@/lib/tailwind-tokens';
+import { generateBlockAnimationCSS } from '@/lib/animation-presets';
 
 export function ContainerChildren({
   block,
@@ -187,6 +189,36 @@ export default function BlockRenderer({
         ? 'flex-end'
         : 'flex-start';
 
+  // Resolve tokenMap to inline styles + modifier CSS
+  const tokenResolution = block.other?.tokenMap
+    ? resolveTokenMap(block.other.tokenMap, block.other?.units || {})
+    : null;
+
+  // Merge styles: tokenMap resolved styles take priority over block.styles
+  const mergedStyles: React.CSSProperties = {
+    ...block.styles,
+    ...(tokenResolution?.style || {}),
+  };
+
+  // Create a patched block with token-resolved styles for the component
+  const patchedBlock: typeof block = {
+    ...block,
+    styles: mergedStyles,
+  };
+
+  // Generate modifier CSS (hover states, responsive) from token system
+  const modifierCSS = tokenResolution?.modifierEntries?.length
+    ? generateBlockModifierCSS(block.id, tokenResolution.modifierEntries)
+    : "";
+
+  // Generate animation CSS (hover/loop animations)
+  const animationCSS = block.other?.animation
+    ? generateBlockAnimationCSS(block.id, block.other.animation)
+    : "";
+
+  // Combined CSS to inject
+  const injectedCSS = [modifierCSS, animationCSS].filter(Boolean).join("\n");
+
   const renderContent = () => {
     if (import.meta.env.DEBUG_BUILDER) {
       console.debug('Rendering block:', block.name);
@@ -198,7 +230,7 @@ export default function BlockRenderer({
       const BlockComponent = def.component;
       return (
         <BlockComponent
-          value={block}
+          value={patchedBlock}
           onChange={(updated) => {
             onBlockChange?.(updated);
           }}
@@ -213,7 +245,7 @@ export default function BlockRenderer({
     // Fallback
     return (
       <div
-        style={block.styles}
+        style={mergedStyles}
         className="p-4 border border-dashed border-gray-300 rounded">
         <div className="text-center text-gray-400">
           {blockRegistry[block.name]?.label || block.name} block
@@ -290,7 +322,7 @@ export default function BlockRenderer({
       <div
         className={`${!isPreview ? 'cursor-pointer' : ''} transition-all duration-200`}>
         <div
-          className={`${!isPreview && effectiveSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''} ${!isPreview && isHovered && !effectiveSelected ? 'ring-1 ring-gray-300' : ''} relative`}
+          className={`block-${block.id} ${!isPreview && effectiveSelected ? 'block-ring-fade' : ''} ${!isPreview && isHovered && !effectiveSelected ? 'ring-1 ring-gray-300' : ''} relative`}
           style={{
             display: 'flex',
             justifyContent,
@@ -348,8 +380,11 @@ export default function BlockRenderer({
               }}
             />
           )}
-          {contentEl}
+          <div style={{ width: mergedStyles?.width || '100%' }}>
+            {contentEl}
+          </div>
         </div>
+        {injectedCSS && <style dangerouslySetInnerHTML={{ __html: injectedCSS }} />}
         {isContainer && !childrenHandledInRenderer && (
           <ContainerChildren
             block={block}

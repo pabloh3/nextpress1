@@ -1,5 +1,5 @@
 // blocks/heading/HeadingBlock.tsx
-import { Heading1, Type, Settings, AlignLeft } from "lucide-react";
+import { Heading1, Type, Settings } from "lucide-react";
 import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import type { BlockConfig, BlockContent } from "@shared/schema-types";
 import { Label } from "@/components/ui/label";
@@ -36,17 +36,19 @@ const DEFAULT_CONTENT: HeadingContent = {
 
 const HEADING_LEVELS = [1, 2, 3, 4, 5, 6] as const;
 
-const TEXT_ALIGN_OPTIONS = [
-  { value: "left" as const, label: "Left" },
-  { value: "center" as const, label: "Center" },
-  { value: "right" as const, label: "Right" },
-  { value: "justify" as const, label: "Justify" },
-] as const;
+/** Default font sizes per heading level — Tailwind's CSS reset strips browser defaults */
+const HEADING_FONT_SIZES: Record<number, string> = {
+  1: "2.5rem",
+  2: "2rem",
+  3: "1.75rem",
+  4: "1.5rem",
+  5: "1.25rem",
+  6: "1rem",
+};
 
 const SETTINGS_SECTIONS = {
   content: { title: "Content", icon: Type, defaultOpen: true },
   settings: { title: "Settings", icon: Settings, defaultOpen: true },
-  alignment: { title: "Alignment", icon: AlignLeft, defaultOpen: false },
   advanced: { title: "Advanced", icon: Settings, defaultOpen: false },
 } as const;
 
@@ -90,18 +92,6 @@ function getOptionButtonClassName(isActive: boolean): string {
   return `${base} ${isActive ? active : inactive}`;
 }
 
-/**
- * Get alignment button className (smaller text)
- */
-function getAlignmentButtonClassName(isActive: boolean): string {
-  const base = "h-9 px-3 text-xs font-medium rounded-md transition-all";
-  const active = "bg-gray-200 text-gray-800 hover:bg-gray-300";
-  const inactive =
-    "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300";
-
-  return `${base} ${isActive ? active : inactive}`;
-}
-
 // ============================================================================
 // RENDERER
 // ============================================================================
@@ -117,8 +107,14 @@ function HeadingRenderer({ content, styles }: HeadingRendererProps) {
   const Tag = `h${level}` as keyof JSX.IntrinsicElements;
   const className = buildHeadingClassName(content);
 
+  // Apply default font size per level unless explicitly overridden by styles
+  const mergedStyles: React.CSSProperties = {
+    fontSize: HEADING_FONT_SIZES[level],
+    ...styles,
+  };
+
   return (
-    <Tag id={content.anchor} className={className} style={styles}>
+    <Tag id={content.anchor} className={className} style={mergedStyles}>
       {textContent}
     </Tag>
   );
@@ -178,8 +174,6 @@ function LegacyHeadingSettings({ block, onUpdate }: HeadingSettingsProps) {
   // Derived data
   const textValue = content?.kind === "text" ? content.value : "";
   const currentLevel = content?.level || 2;
-  const currentAlign = content?.textAlign || "left";
-
   // Render
   return (
     <div className="space-y-4">
@@ -229,34 +223,6 @@ function LegacyHeadingSettings({ block, onUpdate }: HeadingSettingsProps) {
                 aria-label={`Heading level ${level}`}
               >
                 H{level}
-              </button>
-            ))}
-          </div>
-        </div>
-      </CollapsibleCard>
-
-      {/* Alignment Section */}
-      <CollapsibleCard
-        title={SETTINGS_SECTIONS.alignment.title}
-        icon={SETTINGS_SECTIONS.alignment.icon}
-        defaultOpen={SETTINGS_SECTIONS.alignment.defaultOpen}
-      >
-        <div className="space-y-3">
-          <Label className="text-sm font-medium text-gray-700">
-            Text Alignment
-          </Label>
-          <div className="flex flex-wrap gap-2">
-            {TEXT_ALIGN_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => updateContent({ textAlign: option.value })}
-                className={getAlignmentButtonClassName(
-                  currentAlign === option.value
-                )}
-                aria-label={`Text align ${option.label}`}
-              >
-                {option.label}
               </button>
             ))}
           </div>

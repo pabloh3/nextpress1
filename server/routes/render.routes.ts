@@ -5,11 +5,15 @@ import { safeTryAsync } from "../utils";
 import path from "path";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
-import { adaptBlockConfigToBlockData } from "../../renderer/adapt-block-config";
+import { adaptBlockConfigToBlockData, collectBlockModifierCSS } from "../../renderer/adapt-block-config";
 import { renderBlocksToHtml, getHydrationScript } from "../../renderer/to-html";
 import { PageTemplate } from "../../renderer/templates/page";
+import type { PageRenderOptions } from "../../renderer/templates/page";
 import type { BlockConfig } from "@shared/schema-types";
+import type { BlockAnimation } from "@shared/schema-types";
 import type { BlockData } from "../../renderer/react/block-types";
+
+import { generateBlockAnimationCSS } from "@shared/animation-utils";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,6 +77,26 @@ export function createRenderRoutes(deps: Deps): Router {
 	});
 
 	/**
+	 * GET /robots.txt - Serve robots.txt with sensible defaults
+	 * References site URL for sitemap location
+	 */
+	router.get("/robots.txt", (req, res) => {
+		const settings = getSiteSettings(req);
+		const siteUrl = settings?.url || `${req.protocol}://${req.get("host")}`;
+
+		const lines: string[] = [
+			"User-agent: *",
+			"Disallow: /admin",
+			"Disallow: /api",
+			"",
+			`Sitemap: ${siteUrl}/sitemap.xml`,
+		];
+
+		res.setHeader("Content-Type", "text/plain");
+		res.send(lines.join("\n"));
+	});
+
+	/**
 	 * GET /posts/:id - Render single post as HTML
 	 * Uses 'single-post' template from active theme
 	 */
@@ -118,7 +142,7 @@ export function createRenderRoutes(deps: Deps): Router {
 		asyncHandler(async (req, res) => {
 			const { err } = await safeTryAsync(async () => {
 				const pageId = req.params.id;
-				const page = await models.posts.findById(pageId); // Pages use same storage as posts
+				const page = await models.pages.findById(pageId);
 
 				if (!page) {
 					const html = themeManager.render404();
@@ -275,20 +299,68 @@ export function createRenderRoutes(deps: Deps): Router {
 					.filter(Boolean)
 					.join("\n");
 
+				// Collect animation CSS rules (hover/loop) from blocks using shared utility
+				const animationCssRules = blocks
+					.filter((b) => b.other?.animation)
+					.map((b) => generateBlockAnimationCSS(b.id, b.other!.animation!))
+					.filter(Boolean)
+					.join("\n");
+
+				// Collect modifier CSS rules (hover states, responsive) from token system
+				const modifierCssRules = blocks
+					.map((b) => collectBlockModifierCSS(b))
+					.filter(Boolean)
+					.join("\n");
+
+				// Check if any blocks have animations
+				const hasAnimations = blocks.some((b) => b.other?.animation);
+				const hasEntryAnimations = blocks.some((b) => b.other?.animation?.entry);
+
+				// Build headScripts with conditional animation assets
+				const headParts: string[] = [];
+				if (allCustomCss) headParts.push(`<style>${allCustomCss}</style>`);
+				if (animationCssRules) headParts.push(`<style>${animationCssRules}</style>`);
+				if (modifierCssRules) headParts.push(`<style>${modifierCssRules}</style>`);
+				if (hasAnimations) headParts.push(`<link rel="stylesheet" href="/vendor/animate.min.css">`);
+				if (hasEntryAnimations) headParts.push(`<link rel="stylesheet" href="/vendor/aos.css">`);
+				const headScripts = headParts.filter(Boolean).join("\n");
+
+				// Build bodyScripts with conditional AOS init
+				const bodyParts: string[] = [];
+				if (hasEntryAnimations) {
+					bodyParts.push(`<script src="/vendor/aos.js"></script>`);
+					bodyParts.push(`<script>AOS.init({useClassNames:true,initClassName:false,animatedClassName:"animate__animated",once:true,duration:1000,offset:120,easing:"ease"});</script>`);
+				}
+				const bodyScripts = bodyParts.join("\n");
+
 				// Get hydration script
 				const hydrateScript = getHydrationScript();
 
-				// Build full HTML page
-				// Pages don't have description field, use empty string or extract from blocks if needed
-				const pageDescription = "";
+				// Build full HTML page — extract SEO + design from page.other
+				const pageOther = (page.other && typeof page.other === 'object') ? page.other as Record<string, any> : {};
+				const seo = pageOther.seo || {};
+				const design = pageOther.design || {};
+
+				const pageDescription = seo.metaDescription || "";
+				const renderOptions: PageRenderOptions = {
+					fontFamily: design.fontFamily || undefined,
+					containerWidth: design.containerWidth || undefined,
+					padding: design.padding || undefined,
+					backgroundColor: design.backgroundColor?.style || undefined,
+					textColor: design.textColor?.style || undefined,
+					noIndex: seo.noIndex || false,
+					customMeta: Array.isArray(seo.customMeta) ? seo.customMeta : undefined,
+				};
+
 				const html = PageTemplate(
-					page.title || "Untitled Page",
+					seo.metaTitle || page.title || "Untitled Page",
 					pageDescription,
-					`${req.protocol}://${req.get("host")}${req.originalUrl}`,
-					allCustomCss ? `<style>${allCustomCss}</style>` : "", // headScripts (CSS injection)
+					seo.canonicalUrl || `${req.protocol}://${req.get("host")}${req.originalUrl}`,
+					headScripts,
 					blockContentHtml,
-					"", // bodyScripts
+					bodyScripts,
 					hydrateScript,
+					renderOptions,
 				);
 
 				res.setHeader("Content-Type", "text/html");

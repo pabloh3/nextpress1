@@ -29,7 +29,7 @@ export function createPublicRoutes(deps: Deps): Router {
     '/page/:slug',
     asyncHandler(async (req, res) => {
       const { err, result } = await safeTryAsync(async () => {
-        const page = await models.posts.findBySlug(req.params.slug);
+        const page = await models.pages.findBySlug(req.params.slug);
         if (!page) {
           return res.status(404).json({ message: 'Page not found' });
         }
@@ -91,12 +91,12 @@ export function createPublicRoutes(deps: Deps): Router {
         let page: any;
 
         if (homepage && homepage.value) {
-          page = await models.posts.findBySlug(homepage.value);
+          page = await models.pages.findBySlug(homepage.value);
         }
 
         // If no specific homepage set, try to get the first published page
         if (!page) {
-          page = await models.posts.findFirst([
+          page = await models.pages.findFirst([
             { where: 'status', equals: 'publish' },
           ]);
         }

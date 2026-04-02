@@ -51,7 +51,7 @@ export function BuilderCanvas({
                          <div
                            ref={provided.innerRef}
                            {...provided.draggableProps}
-                           className={`relative group ${snapshot.isDragging ? 'opacity-50' : ''} ${selectedBlockId === block.id ? 'ring-2 ring-blue-500' : ''}`}
+                           className={`relative group ${snapshot.isDragging ? 'opacity-50' : ''}`}
                            onClick={() => {
                              actions?.onSelect(block.id);
                            }}

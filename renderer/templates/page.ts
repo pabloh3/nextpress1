@@ -2,6 +2,19 @@
  * Defines the static HTML page shell as a template literal string.
  * Placeholders are used for dynamic content injection.
  */
+
+import { getGoogleFontUrl } from '@shared/google-fonts';
+
+export interface PageRenderOptions {
+  fontFamily?: string;
+  containerWidth?: string;
+  padding?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  noIndex?: boolean;
+  customMeta?: Array<{ name: string; content: string }>;
+}
+
 export const PageTemplate = (
 	pageTitle: string,
 	description: string,
@@ -10,7 +23,15 @@ export const PageTemplate = (
 	blockContentHtml: string,
 	bodyScripts: string,
 	hydrateScript: string = "",
+	options: PageRenderOptions = {},
 ): string => {
+	const googleFontUrl = getGoogleFontUrl(options.fontFamily);
+	const googleFontLink = googleFontUrl
+		? `<link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link rel="stylesheet" href="${googleFontUrl}">`
+		: '';
+
 	// We use backticks (`) to define the template literal
 	return `<!DOCTYPE html>
   <html lang="en">
@@ -21,7 +42,10 @@ export const PageTemplate = (
       <title>${pageTitle}</title>
       <meta name="description" content="${description}">
       <link rel="canonical" href="${canonicalUrl}">
+      ${options.noIndex ? '<meta name="robots" content="noindex, nofollow">' : ''}
+      ${(options.customMeta || []).filter(m => m.name && m.content).map(m => `<meta name="${m.name}" content="${m.content}">`).join('\n      ')}
       
+      ${googleFontLink}
       <link rel="stylesheet" href="/assets/css/main.css">
   
       <style>
@@ -33,11 +57,11 @@ export const PageTemplate = (
         body {
           margin: 0;
           padding: 0;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          font-family: ${options.fontFamily || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'};
           font-size: 16px;
           line-height: 1.6;
-          color: #333;
-          background-color: #fff;
+          color: ${options.textColor || '#333'};
+          background-color: ${options.backgroundColor || '#fff'};
         }
         
         #page {
@@ -48,10 +72,10 @@ export const PageTemplate = (
         
         #main-content {
           flex: 1;
-          max-width: 1200px;
+          max-width: ${options.containerWidth || '1200px'};
           width: 100%;
           margin: 0 auto;
-          padding: 2rem 1rem;
+          padding: ${options.padding || '2rem 1rem'};
         }
         
         /* WordPress block styles */

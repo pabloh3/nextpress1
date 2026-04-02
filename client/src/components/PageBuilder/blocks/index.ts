@@ -138,6 +138,10 @@ export function getDefaultBlock(type: string, id: string): BlockConfig | null {
       ...def.defaultStyles,
     },
     settings: {},
+    other: {
+      tokenMap: {},
+      units: { spacing: "px", font: "rem", dimension: "px", border: "px" },
+    },
   };
 
   // Only add children array for containers

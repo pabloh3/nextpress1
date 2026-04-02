@@ -258,8 +258,7 @@ describe('BlockRenderer', () => {
         />
       )
 
-      const paragraphElement = document.querySelector('.wp-block-paragraph')
-      const highlight = paragraphElement?.parentElement!
+      const highlight = document.querySelector('.block-test-block')
       expect(highlight).toHaveClass('ring-2', 'ring-blue-500')
     })
 

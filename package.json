@@ -132,6 +132,8 @@
     "@types/ws": "^8.5.13",
     "@vitejs/plugin-react": "^4.3.2",
     "@vitest/ui": "^3.2.4",
+    "animate.css": "4.1.1",
+    "aos": "2.3.4",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.30.4",
     "drizzle-orm": "^0.39.1",

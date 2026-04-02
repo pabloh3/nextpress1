@@ -34,11 +34,17 @@ import {
   Rows,
   Grid3X3,
   Minus,
-  Settings
+  Settings,
+  Sparkles
 } from "lucide-react";
 import type { BlockConfig } from "@shared/schema-types";
 import { blockRegistry } from "./blocks";
 import { getBlockStateAccessor } from "./blocks/blockStateRegistry";
+import TokenColorPicker from "./TokenColorPicker"
+import TokenSpacingPicker from "./TokenSpacingPicker"
+import AnimationPicker from "./AnimationPicker"
+import { propertyAliasMap, propertyUnitCategoryMap, unitCategories } from "@/lib/tailwind-tokens"
+import type { TokenEntry, BlockAnimation } from "@shared/schema-types"
 
 interface BlockSettingsProps {
   block: BlockConfig;
@@ -105,6 +111,55 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
     setCustomCss(css);
     onUpdate({ customCss: css });
   };
+
+  // Token system helpers
+  const getTokenEntry = (property: string): TokenEntry | undefined => {
+    return block.other?.tokenMap?.[property]
+  }
+
+  const updateTokenEntry = (entry: TokenEntry) => {
+    const currentOther = block.other || {}
+    const currentTokenMap = currentOther.tokenMap || {}
+    onUpdate({
+      other: {
+        ...currentOther,
+        tokenMap: {
+          ...currentTokenMap,
+          [entry.property]: entry,
+        },
+      },
+    })
+  }
+
+  const getUnits = (): Record<string, string> => {
+    return block.other?.units || { spacing: "px", font: "rem", dimension: "px", border: "px" }
+  }
+
+  const updateUnit = (category: string, unit: string) => {
+    const currentOther = block.other || {}
+    const currentUnits = currentOther.units || {}
+    onUpdate({
+      other: {
+        ...currentOther,
+        units: {
+          ...currentUnits,
+          [category]: unit,
+        },
+      },
+    })
+  }
+
+  // Animation system helper
+  // Uses null (not undefined) to clear animation, because deepMerge skips undefined values
+  const updateAnimation = (animation: BlockAnimation | undefined) => {
+    const currentOther = block.other || {}
+    onUpdate({
+      other: {
+        ...currentOther,
+        animation: animation ?? null,
+      },
+    })
+  }
 
   // Utility functions for parsing and formatting values
   const parseSpacingValue = (value: string | number | undefined): { number: string; unit: string } => {
@@ -312,18 +367,12 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
               <Type className="w-3 h-3" />
               Text Color
             </Label>
-            <div className="flex gap-3 mt-2">
-              <Input
-                type="color"
-                value={block.styles?.color || '#000000'}
-                onChange={(e) => updateStyles({ color: e.target.value })}
-                className="w-12 h-9 p-1 border-gray-200 rounded-none focus:outline-none focus:ring-2 focus:ring-gray-400"
-              />
-              <Input
-                value={block.styles?.color || '#000000'}
-                onChange={(e) => updateStyles({ color: e.target.value })}
-                placeholder="#000000"
-                className="flex-1 h-9 text-sm border-gray-200 rounded-none focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+            <div className="mt-2">
+              <TokenColorPicker
+                property="color"
+                currentEntry={getTokenEntry("color")}
+                currentStyleValue={block.styles?.color as string | undefined}
+                onChange={updateTokenEntry}
               />
             </div>
           </div>
@@ -334,18 +383,12 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
               <Square className="w-3 h-3" />
               Background Color
             </Label>
-            <div className="flex gap-3 mt-2">
-              <Input
-                type="color"
-                value={block.styles?.backgroundColor || '#ffffff'}
-                onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
-                className="w-12 h-9 p-1 border-gray-200 rounded-none focus:outline-none focus:ring-2 focus:ring-gray-400"
-              />
-              <Input
-                value={block.styles?.backgroundColor || '#ffffff'}
-                onChange={(e) => updateStyles({ backgroundColor: e.target.value })}
-                placeholder="#ffffff"
-                className="flex-1 h-9 text-sm border-gray-200 rounded-none focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+            <div className="mt-2">
+              <TokenColorPicker
+                property="backgroundColor"
+                currentEntry={getTokenEntry("backgroundColor")}
+                currentStyleValue={block.styles?.backgroundColor as string | undefined}
+                onChange={updateTokenEntry}
               />
             </div>
           </div>
@@ -353,7 +396,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
 
         {/* Spacing */}
         <CollapsibleCard title="Spacing" icon={Move} defaultOpen={true}>
-            {/* Padding - 4-Input Grid */}
+            {/* Padding */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
@@ -363,171 +406,60 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                 <div className="flex items-center gap-2">
                   <select 
                     className="h-7 px-2 text-xs border border-gray-200 rounded-none bg-white focus:outline-none focus:ring-1 focus:ring-gray-400"
-                    value={parseSpacingValue(getPaddingValues().top).unit}
-                    onChange={(e) => {
-                      const currentValues = getPaddingValues();
-                      const newUnit = e.target.value;
-                      updateStyles({
-                        paddingTop: formatSpacingValue(parseSpacingValue(currentValues.top).number, newUnit),
-                        paddingRight: formatSpacingValue(parseSpacingValue(currentValues.right).number, newUnit),
-                        paddingBottom: formatSpacingValue(parseSpacingValue(currentValues.bottom).number, newUnit),
-                        paddingLeft: formatSpacingValue(parseSpacingValue(currentValues.left).number, newUnit),
-                      });
-                    }}
+                    value={getUnits().spacing || "px"}
+                    onChange={(e) => updateUnit("spacing", e.target.value)}
                   >
-                    <option value="px">px</option>
-                    <option value="rem">rem</option>
-                    <option value="em">em</option>
-                    <option value="%">%</option>
+                    {(unitCategories.spacing || ["px", "rem", "em", "%"]).map((u) => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Input
-                    value={parseSpacingValue(getPaddingValues().top).number}
-                    onChange={(e) => {
-                      const unit = parseSpacingValue(getPaddingValues().top).unit;
-                      updateStyles({ paddingTop: formatSpacingValue(e.target.value, unit) });
-                    }}
-                    placeholder="0"
-                    className="h-8 text-xs border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400 text-center"
-                    onMouseEnter={() => onHoverArea?.('padding')}
-                    onMouseLeave={() => onHoverArea?.(null)}
-                  />
-                  <div className="text-xs text-gray-500 text-center mt-1">Top</div>
-                </div>
-                <div>
-                  <Input
-                    value={parseSpacingValue(getPaddingValues().right).number}
-                    onChange={(e) => {
-                      const unit = parseSpacingValue(getPaddingValues().right).unit;
-                      updateStyles({ paddingRight: formatSpacingValue(e.target.value, unit) });
-                    }}
-                    placeholder="0"
-                    className="h-8 text-xs border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400 text-center"
-                    onMouseEnter={() => onHoverArea?.('padding')}
-                    onMouseLeave={() => onHoverArea?.(null)}
-                  />
-                  <div className="text-xs text-gray-500 text-center mt-1">Right</div>
-                </div>
-                <div>
-                  <Input
-                    value={parseSpacingValue(getPaddingValues().bottom).number}
-                    onChange={(e) => {
-                      const unit = parseSpacingValue(getPaddingValues().bottom).unit;
-                      updateStyles({ paddingBottom: formatSpacingValue(e.target.value, unit) });
-                    }}
-                    placeholder="0"
-                    className="h-8 text-xs border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400 text-center"
-                    onMouseEnter={() => onHoverArea?.('padding')}
-                    onMouseLeave={() => onHoverArea?.(null)}
-                  />
-                  <div className="text-xs text-gray-500 text-center mt-1">Bottom</div>
-                </div>
-                <div>
-                  <Input
-                    value={parseSpacingValue(getPaddingValues().left).number}
-                    onChange={(e) => {
-                      const unit = parseSpacingValue(getPaddingValues().left).unit;
-                      updateStyles({ paddingLeft: formatSpacingValue(e.target.value, unit) });
-                    }}
-                    placeholder="0"
-                    className="h-8 text-xs border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400 text-center"
-                    onMouseEnter={() => onHoverArea?.('padding')}
-                    onMouseLeave={() => onHoverArea?.(null)}
-                  />
-                  <div className="text-xs text-gray-500 text-center mt-1">Left</div>
-                </div>
+                {(["paddingTop", "paddingRight", "paddingBottom", "paddingLeft"] as const).map((prop) => {
+                  const labels: Record<string, string> = { paddingTop: "Top", paddingRight: "Right", paddingBottom: "Bottom", paddingLeft: "Left" }
+                  return (
+                    <div key={prop} onMouseEnter={() => onHoverArea?.('padding')} onMouseLeave={() => onHoverArea?.(null)}>
+                      <TokenSpacingPicker
+                        property={prop}
+                        currentEntry={getTokenEntry(prop)}
+                        currentStyleValue={getPaddingValues()[labels[prop].toLowerCase() as 'top' | 'right' | 'bottom' | 'left']}
+                        currentUnit={getUnits().spacing || "px"}
+                        onUnitChange={(u) => updateUnit("spacing", u)}
+                        onChange={updateTokenEntry}
+                      />
+                      <div className="text-xs text-gray-500 text-center mt-1">{labels[prop]}</div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
             
-            {/* Margin - 4-Input Grid */}
+            {/* Margin */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                   <Circle className="w-3 h-3" />
                   Margin
                 </Label>
-                <div className="flex items-center gap-2">
-                  <select 
-                    className="h-7 px-2 text-xs border border-gray-200 rounded-none bg-white focus:outline-none focus:ring-1 focus:ring-gray-400"
-                    value={parseSpacingValue(getMarginValues().top).unit}
-                    onChange={(e) => {
-                      const currentValues = getMarginValues();
-                      const newUnit = e.target.value;
-                      updateStyles({
-                        marginTop: formatSpacingValue(parseSpacingValue(currentValues.top).number, newUnit),
-                        marginRight: formatSpacingValue(parseSpacingValue(currentValues.right).number, newUnit),
-                        marginBottom: formatSpacingValue(parseSpacingValue(currentValues.bottom).number, newUnit),
-                        marginLeft: formatSpacingValue(parseSpacingValue(currentValues.left).number, newUnit),
-                      });
-                    }}
-                  >
-                    <option value="px">px</option>
-                    <option value="rem">rem</option>
-                    <option value="em">em</option>
-                    <option value="%">%</option>
-                  </select>
-                </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Input
-                    value={parseSpacingValue(getMarginValues().top).number}
-                    onChange={(e) => {
-                      const unit = parseSpacingValue(getMarginValues().top).unit;
-                      updateStyles({ marginTop: formatSpacingValue(e.target.value, unit) });
-                    }}
-                    placeholder="0"
-                    className="h-8 text-xs border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400 text-center"
-                    onMouseEnter={() => onHoverArea?.('margin')}
-                    onMouseLeave={() => onHoverArea?.(null)}
-                  />
-                  <div className="text-xs text-gray-500 text-center mt-1">Top</div>
-                </div>
-                <div>
-                  <Input
-                    value={parseSpacingValue(getMarginValues().right).number}
-                    onChange={(e) => {
-                      const unit = parseSpacingValue(getMarginValues().right).unit;
-                      updateStyles({ marginRight: formatSpacingValue(e.target.value, unit) });
-                    }}
-                    placeholder="0"
-                    className="h-8 text-xs border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400 text-center"
-                    onMouseEnter={() => onHoverArea?.('margin')}
-                    onMouseLeave={() => onHoverArea?.(null)}
-                  />
-                  <div className="text-xs text-gray-500 text-center mt-1">Right</div>
-                </div>
-                <div>
-                  <Input
-                    value={parseSpacingValue(getMarginValues().bottom).number}
-                    onChange={(e) => {
-                      const unit = parseSpacingValue(getMarginValues().bottom).unit;
-                      updateStyles({ marginBottom: formatSpacingValue(e.target.value, unit) });
-                    }}
-                    placeholder="0"
-                    className="h-8 text-xs border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400 text-center"
-                    onMouseEnter={() => onHoverArea?.('margin')}
-                    onMouseLeave={() => onHoverArea?.(null)}
-                  />
-                  <div className="text-xs text-gray-500 text-center mt-1">Bottom</div>
-                </div>
-                <div>
-                  <Input
-                    value={parseSpacingValue(getMarginValues().left).number}
-                    onChange={(e) => {
-                      const unit = parseSpacingValue(getMarginValues().left).unit;
-                      updateStyles({ marginLeft: formatSpacingValue(e.target.value, unit) });
-                    }}
-                    placeholder="0"
-                    className="h-8 text-xs border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400 text-center"
-                    onMouseEnter={() => onHoverArea?.('margin')}
-                    onMouseLeave={() => onHoverArea?.(null)}
-                  />
-                  <div className="text-xs text-gray-500 text-center mt-1">Left</div>
-                </div>
+                {(["marginTop", "marginRight", "marginBottom", "marginLeft"] as const).map((prop) => {
+                  const labels: Record<string, string> = { marginTop: "Top", marginRight: "Right", marginBottom: "Bottom", marginLeft: "Left" }
+                  return (
+                    <div key={prop} onMouseEnter={() => onHoverArea?.('margin')} onMouseLeave={() => onHoverArea?.(null)}>
+                      <TokenSpacingPicker
+                        property={prop}
+                        currentEntry={getTokenEntry(prop)}
+                        currentStyleValue={getMarginValues()[labels[prop].toLowerCase() as 'top' | 'right' | 'bottom' | 'left']}
+                        currentUnit={getUnits().spacing || "px"}
+                        onUnitChange={(u) => updateUnit("spacing", u)}
+                        onChange={updateTokenEntry}
+                      />
+                      <div className="text-xs text-gray-500 text-center mt-1">{labels[prop]}</div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
         </CollapsibleCard>
@@ -735,6 +667,17 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
         <TabsContent value="style" className="space-y-4 mt-4">
           <div className="bg-gray-50 rounded-none p-4 border border-gray-200">
             {renderStyleSettings()}
+
+            {/* Animation Section */}
+            <div className="mt-6">
+              <CollapsibleCard title="Animations" icon={Sparkles} defaultOpen={false}>
+                <AnimationPicker
+                  animation={block.other?.animation}
+                  blockId={block.id}
+                  onChange={updateAnimation}
+                />
+              </CollapsibleCard>
+            </div>
           </div>
         </TabsContent>
 

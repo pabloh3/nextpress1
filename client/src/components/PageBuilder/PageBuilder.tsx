@@ -9,6 +9,7 @@ import { useUndoRedo } from '../../hooks/useUndoRedo';
 import { BuilderSidebar } from './BuilderSidebar';
 import { BuilderTopBar } from './BuilderTopBar';
 import { BuilderCanvas } from './BuilderCanvas';
+import PageSettingsModal from './PageSettings';
 import { blockRegistry } from './blocks';
 import { BlockActionsProvider } from './BlockActionsContext';
 import { savePageDraftWithHistory } from '@/lib/pageDraftStorage';
@@ -18,6 +19,7 @@ import {
   deleteBlockDeep,
   duplicateBlockDeep,
 } from '@/lib/handlers/treeUtils';
+import '@/lib/animate.min.css';
 
 function useMountEffect(effect: () => void | (() => void)) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -214,6 +216,7 @@ export default function PageBuilder({
     'padding' | 'margin' | null
   >(null);
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [pageSettingsOpen, setPageSettingsOpen] = useState(false);
 
   // Parent notification is now done procedurally in commitBlocks
 
@@ -392,11 +395,6 @@ export default function PageBuilder({
               setHoverHighlight={setHoverHighlight}
               sidebarVisible={sidebarVisible}
               onToggleSidebar={toggleSidebar}
-              page={data}
-              isTemplate={isTemplate}
-              onPageUpdate={onSave}
-              onPageMetaChange={onPageMetaChange}
-              contentType={resolvedContentType}
             />
           )}
           <div className="flex-1 flex flex-col">
@@ -413,6 +411,7 @@ export default function PageBuilder({
               onRedo={redo}
               canUndo={canUndo}
               canRedo={canRedo}
+              onPageSettingsClick={() => setPageSettingsOpen(true)}
             />
             <BuilderCanvas
               blocks={blocks}
@@ -426,6 +425,16 @@ export default function PageBuilder({
             />
           </div>
         </DragDropContext>
+        <PageSettingsModal
+          key={data?.id}
+          open={pageSettingsOpen}
+          onOpenChange={setPageSettingsOpen}
+          page={data}
+          isTemplate={isTemplate}
+          onUpdate={onSave}
+          onMetaChange={onPageMetaChange}
+          contentType={resolvedContentType}
+        />
       </BlockActionsProvider>
     </div>
   );

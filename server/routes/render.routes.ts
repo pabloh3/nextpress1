@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import { adaptBlockConfigToBlockData, collectBlockModifierCSS } from "../../renderer/adapt-block-config";
 import { renderBlocksToHtml, getHydrationScript } from "../../renderer/to-html";
 import { PageTemplate } from "../../renderer/templates/page";
+import type { PageRenderOptions } from "../../renderer/templates/page";
 import type { BlockConfig } from "@shared/schema-types";
 import type { BlockAnimation } from "@shared/schema-types";
 import type { BlockData } from "../../renderer/react/block-types";
@@ -76,6 +77,26 @@ export function createRenderRoutes(deps: Deps): Router {
 	});
 
 	/**
+	 * GET /robots.txt - Serve robots.txt with sensible defaults
+	 * References site URL for sitemap location
+	 */
+	router.get("/robots.txt", (req, res) => {
+		const settings = getSiteSettings(req);
+		const siteUrl = settings?.url || `${req.protocol}://${req.get("host")}`;
+
+		const lines: string[] = [
+			"User-agent: *",
+			"Disallow: /admin",
+			"Disallow: /api",
+			"",
+			`Sitemap: ${siteUrl}/sitemap.xml`,
+		];
+
+		res.setHeader("Content-Type", "text/plain");
+		res.send(lines.join("\n"));
+	});
+
+	/**
 	 * GET /posts/:id - Render single post as HTML
 	 * Uses 'single-post' template from active theme
 	 */
@@ -121,7 +142,7 @@ export function createRenderRoutes(deps: Deps): Router {
 		asyncHandler(async (req, res) => {
 			const { err } = await safeTryAsync(async () => {
 				const pageId = req.params.id;
-				const page = await models.posts.findById(pageId); // Pages use same storage as posts
+				const page = await models.pages.findById(pageId);
 
 				if (!page) {
 					const html = themeManager.render404();
@@ -315,16 +336,31 @@ export function createRenderRoutes(deps: Deps): Router {
 				// Get hydration script
 				const hydrateScript = getHydrationScript();
 
-				// Build full HTML page
-				const pageDescription = "";
+				// Build full HTML page — extract SEO + design from page.other
+				const pageOther = (page.other && typeof page.other === 'object') ? page.other as Record<string, any> : {};
+				const seo = pageOther.seo || {};
+				const design = pageOther.design || {};
+
+				const pageDescription = seo.metaDescription || "";
+				const renderOptions: PageRenderOptions = {
+					fontFamily: design.fontFamily || undefined,
+					containerWidth: design.containerWidth || undefined,
+					padding: design.padding || undefined,
+					backgroundColor: design.backgroundColor?.style || undefined,
+					textColor: design.textColor?.style || undefined,
+					noIndex: seo.noIndex || false,
+					customMeta: Array.isArray(seo.customMeta) ? seo.customMeta : undefined,
+				};
+
 				const html = PageTemplate(
-					page.title || "Untitled Page",
+					seo.metaTitle || page.title || "Untitled Page",
 					pageDescription,
-					`${req.protocol}://${req.get("host")}${req.originalUrl}`,
+					seo.canonicalUrl || `${req.protocol}://${req.get("host")}${req.originalUrl}`,
 					headScripts,
 					blockContentHtml,
 					bodyScripts,
 					hydrateScript,
+					renderOptions,
 				);
 
 				res.setHeader("Content-Type", "text/html");

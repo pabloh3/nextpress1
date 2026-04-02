@@ -156,6 +156,17 @@
   to { opacity: 1; }
 }
 
+/* Block selection ring: visible briefly then fades out so content is unobstructed */
+@keyframes block-ring-fade {
+  0%   { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #3b82f6; }
+  60%  { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #3b82f6; }
+  100% { box-shadow: 0 0 0 2px transparent, 0 0 0 4px transparent; }
+}
+
+.block-ring-fade {
+  animation: block-ring-fade 2s ease-out forwards;
+}
+
 
 
 @layer base {

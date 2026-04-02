@@ -26,6 +26,7 @@ export function usePageSave({
 		slug?: string;
 		status?: string;
 		version?: number;
+		other?: Record<string, unknown>;
 	};
 	contentType?: SaveContentType;
 }) {
@@ -49,6 +50,10 @@ export function usePageSave({
 
 			if (contentType === "page") {
 				payload.version = pageMeta?.version ?? (data as Page).version ?? 0;
+			}
+
+			if (pageMeta?.other) {
+				payload.other = pageMeta.other;
 			}
 
 			const response = await apiRequest("PUT", endpoint, payload);

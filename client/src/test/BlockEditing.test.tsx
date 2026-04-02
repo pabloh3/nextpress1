@@ -68,37 +68,8 @@ describe('Block Editing', () => {
       });
     });
 
-    it('should update text alignment', () => {
-      const block: BlockConfig = {
-        id: 'heading-1',
-        name: 'core/heading',
-        type: 'block',
-        parentId: null,
-        content: { kind: 'text', value: 'Test', level: 2 } as any,
-        styles: {},
-        children: [],
-        settings: {},
-      };
-
-      const Settings = HeadingBlock.settings!;
-      render(<Settings block={block} onUpdate={mockOnUpdate} />);
-
-      // Click on Alignment header to expand it (defaultOpen=false)
-      const alignmentHeader = screen.getByText('Alignment');
-      fireEvent.click(alignmentHeader);
-
-      const centerButton = screen.getByLabelText('Text align Center');
-      fireEvent.click(centerButton);
-
-      expect(mockOnUpdate).toHaveBeenCalledWith({
-        content: {
-          kind: 'text',
-          value: 'Test',
-          level: 2,
-          textAlign: 'center',
-        },
-      });
-    });
+    // Text alignment is now handled by the Style tab in BlockSettings (styles.textAlign),
+    // not by the heading's own settings panel. See Bug #3 fix.
   });
 
   describe('TextBlock Editing', () => {

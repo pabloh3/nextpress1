@@ -150,12 +150,13 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
   }
 
   // Animation system helper
+  // Uses null (not undefined) to clear animation, because deepMerge skips undefined values
   const updateAnimation = (animation: BlockAnimation | undefined) => {
     const currentOther = block.other || {}
     onUpdate({
       other: {
         ...currentOther,
-        animation,
+        animation: animation ?? null,
       },
     })
   }

@@ -322,7 +322,7 @@ export default function BlockRenderer({
       <div
         className={`${!isPreview ? 'cursor-pointer' : ''} transition-all duration-200`}>
         <div
-          className={`block-${block.id} ${!isPreview && effectiveSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''} ${!isPreview && isHovered && !effectiveSelected ? 'ring-1 ring-gray-300' : ''} relative`}
+          className={`block-${block.id} ${!isPreview && effectiveSelected ? 'block-ring-fade' : ''} ${!isPreview && isHovered && !effectiveSelected ? 'ring-1 ring-gray-300' : ''} relative`}
           style={{
             display: 'flex',
             justifyContent,
@@ -380,7 +380,9 @@ export default function BlockRenderer({
               }}
             />
           )}
-          {contentEl}
+          <div style={{ width: mergedStyles?.width || '100%' }}>
+            {contentEl}
+          </div>
         </div>
         {injectedCSS && <style dangerouslySetInnerHTML={{ __html: injectedCSS }} />}
         {isContainer && !childrenHandledInRenderer && (

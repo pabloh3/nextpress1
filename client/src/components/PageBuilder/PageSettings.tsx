@@ -1,9 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -11,13 +25,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { X, Plus } from 'lucide-react';
+import TokenColorPicker from './TokenColorPicker';
+import { useContentLists } from '@/hooks/useContentLists';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { useContentLists } from '@/hooks/useContentLists';
-import { Save } from 'lucide-react';
-import type { Page, Post, Template } from '@shared/schema-types';
+import type {
+  Page,
+  Post,
+  Template,
+  TokenEntry,
+  PageSeoSettings,
+  PageDesignSettings,
+  PageOther,
+  MetaTagEntry,
+} from '@shared/schema-types';
 
-interface PageSettingsProps {
+interface PageSettingsModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   page: Page | Post | Template | undefined;
   isTemplate?: boolean;
   onUpdate?: (updatedPage: Page | Post | Template) => void;
@@ -25,291 +52,504 @@ interface PageSettingsProps {
   contentType?: 'page' | 'post';
 }
 
+const FONT_OPTIONS = [
+  { value: 'system-ui', label: 'System Default' },
+  { value: 'Inter, sans-serif', label: 'Inter' },
+  { value: 'Georgia, serif', label: 'Georgia' },
+  { value: 'Roboto, sans-serif', label: 'Roboto' },
+  { value: 'Merriweather, serif', label: 'Merriweather' },
+  { value: 'Lato, sans-serif', label: 'Lato' },
+  { value: '"Open Sans", sans-serif', label: 'Open Sans' },
+  { value: '"Playfair Display", serif', label: 'Playfair Display' },
+  { value: '"Source Sans Pro", sans-serif', label: 'Source Sans Pro' },
+  { value: 'Montserrat, sans-serif', label: 'Montserrat' },
+] as const;
+
+const CONTAINER_WIDTH_OPTIONS = [
+  { value: '960px', label: '960px' },
+  { value: '1024px', label: '1024px' },
+  { value: '1200px', label: '1200px (Default)' },
+  { value: '1440px', label: '1440px' },
+  { value: '100%', label: 'Full Width' },
+] as const;
+
 /**
- * Component to display and edit page properties.
- * Shows all page fields from schema and allows editing.
+ * PageSettingsModal - Dialog-based page settings editor
+ * Organized in three tabs: General, Design, and SEO
  */
-export default function PageSettings({
+export default function PageSettingsModal({
+  open,
+  onOpenChange,
   page,
   isTemplate = false,
   onUpdate,
   onMetaChange,
   contentType = 'page',
-}: PageSettingsProps) {
-  const [formData, setFormData] = useState({
-    title: (page as any)?.title || (page as Template)?.name || '',
-    slug: (page as any)?.slug || '',
-    status: (page as any)?.status || 'draft',
-    featuredImage: (page as any)?.featuredImage || '',
-    allowComments: (page as any)?.allowComments ?? true,
-    password: (page as any)?.password || '',
-    parentId: (page as Page)?.parentId || '',
-    menuOrder: (page as Page)?.menuOrder || 0,
-    templateId: (page as Page)?.templateId || '',
-  });
-
-  const [isSaving, setIsSaving] = useState(false);
+}: PageSettingsModalProps) {
+  const { pages, templates } = useContentLists();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { pages, templates } = useContentLists();
 
-  // Update form data when page changes
-  useEffect(() => {
-    if (page) {
-      setFormData({
-        title: (page as any)?.title || (page as Template)?.name || '',
-        slug: (page as any)?.slug || '',
-        status: (page as any)?.status || 'draft',
-        featuredImage: (page as any)?.featuredImage || '',
-        allowComments: (page as any)?.allowComments ?? true,
-        password: (page as any)?.password || '',
-        parentId: (page as Page)?.parentId || '',
-        menuOrder: (page as Page)?.menuOrder || 0,
-        templateId: (page as Page)?.templateId || '',
-      });
-    }
-  }, [page]);
+  // Extract current other field data
+  const pageOther = (page as { other?: PageOther })?.other;
+  const currentSeo = pageOther?.seo;
+  const currentDesign = pageOther?.design;
 
-  const handleFieldChange = (field: string, value: string | boolean | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (field === 'title' || field === 'slug' || field === 'status') {
-      onMetaChange?.({ [field]: value } as any);
-    }
-  };
+  // General tab state
+  const [title, setTitle] = useState((page as any)?.title ?? (page as any)?.name ?? '');
+  const [slug, setSlug] = useState((page as any)?.slug ?? '');
+  const [status, setStatus] = useState((page as any)?.status ?? 'draft');
+  const [featuredImage, setFeaturedImage] = useState((page as any)?.featuredImage ?? '');
+  const [allowComments, setAllowComments] = useState((page as any)?.allowComments ?? false);
+  const [password, setPassword] = useState((page as any)?.password ?? '');
+  const [parentId, setParentId] = useState((page as any)?.parentId ?? '');
+  const [menuOrder, setMenuOrder] = useState((page as any)?.menuOrder ?? 0);
+  const [templateId, setTemplateId] = useState((page as any)?.templateId ?? '');
 
-  const handleSave = async () => {
-    if (!page?.id) return;
+  // SEO tab state
+  const [metaTitle, setMetaTitle] = useState(currentSeo?.metaTitle ?? '');
+  const [metaDescription, setMetaDescription] = useState(currentSeo?.metaDescription ?? '');
+  const [canonicalUrl, setCanonicalUrl] = useState(currentSeo?.canonicalUrl ?? '');
+  const [noIndex, setNoIndex] = useState(currentSeo?.noIndex ?? false);
+  const [customMetaTags, setCustomMetaTags] = useState<MetaTagEntry[]>(
+    currentSeo?.customMeta ?? []
+  );
 
-    setIsSaving(true);
-    try {
-      const { apiRequest } = await import('@/lib/queryClient');
-      
-        if (isTemplate) {
-        const response = await apiRequest('PUT', `/api/templates/${page.id}`, {
-          name: formData.title ?? '',
-        });
-        const updated = await response.json();
-        onUpdate?.(updated);
-        queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
-      } else {
-        const isPage = contentType === 'page';
-        const endpoint = isPage ? `/api/pages/${page.id}` : `/api/posts/${page.id}`;
-        
-        const payload: any = {
-          title: formData.title ?? '',
-          slug: formData.slug ?? '',
-          status: formData.status ?? 'draft',
-          featuredImage: formData.featuredImage || undefined,
-          allowComments: formData.allowComments,
-          password: formData.password || undefined,
-        };
+  // Design tab state (pages only)
+  const [fontFamily, setFontFamily] = useState(currentDesign?.fontFamily ?? 'system-ui');
+  const [containerWidth, setContainerWidth] = useState(currentDesign?.containerWidth ?? '1200px');
+  const [padding, setPadding] = useState(currentDesign?.padding ?? '2rem 1rem');
+  const [backgroundColor, setBackgroundColor] = useState<TokenEntry | undefined>(
+    currentDesign?.backgroundColor
+  );
+  const [textColor, setTextColor] = useState<TokenEntry | undefined>(currentDesign?.textColor);
 
-        if (isPage) {
-          payload.parentId = formData.parentId || undefined;
-          payload.menuOrder = formData.menuOrder ?? 0;
-          payload.templateId = formData.templateId || undefined;
-        }
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!page?.id) throw new Error('Page ID is required');
 
-        const response = await apiRequest('PUT', endpoint, payload);
-        const updated = await response.json();
-        onUpdate?.(updated);
-        
-        queryClient.invalidateQueries({ queryKey: isPage ? ['/api/pages'] : ['/api/posts'] });
-        queryClient.invalidateQueries({ queryKey: [endpoint] });
+      // Build SEO settings
+      const seoSettings: PageSeoSettings = {
+        metaTitle: metaTitle || undefined,
+        metaDescription: metaDescription || undefined,
+        canonicalUrl: canonicalUrl || undefined,
+        noIndex,
+        customMeta: customMetaTags.length > 0 ? customMetaTags : undefined,
+      };
+
+      // Build Design settings (pages only)
+      const designSettings: PageDesignSettings | undefined =
+        contentType === 'page'
+          ? {
+              fontFamily,
+              containerWidth,
+              padding,
+              backgroundColor,
+              textColor,
+            }
+          : undefined;
+
+      // Build other field
+      const other: PageOther = {
+        seo: seoSettings,
+        ...(designSettings && { design: designSettings }),
+      };
+
+      // Build payload with all fields
+      const payload: any = {
+        title,
+        slug,
+        status,
+        featuredImage: featuredImage || undefined,
+        allowComments,
+        password: password || undefined,
+        other,
+      };
+
+      // Add page-specific fields
+      if (contentType === 'page') {
+        payload.parentId = parentId || undefined;
+        payload.menuOrder = menuOrder;
+        payload.templateId = templateId || undefined;
       }
+
+      const endpoint = isTemplate
+        ? `/api/templates/${page.id}`
+        : contentType === 'post'
+          ? `/api/posts/${page.id}`
+          : `/api/pages/${page.id}`;
+
+      const response = await apiRequest('PUT', endpoint, payload);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Notify parent of meta changes for main save button
+      if (onMetaChange) {
+        onMetaChange({ title, slug, status });
+      }
+
+      // Notify parent of full update
+      if (onUpdate) {
+        onUpdate(data);
+      }
+
+      // Invalidate queries
+      const queryKey = isTemplate
+        ? ['/api/templates']
+        : contentType === 'post'
+          ? ['/api/posts']
+          : ['/api/pages'];
+      queryClient.invalidateQueries({ queryKey });
 
       toast({
         title: 'Success',
         description: `${isTemplate ? 'Template' : contentType === 'page' ? 'Page' : 'Post'} settings saved successfully`,
       });
-    } catch (error: any) {
+
+      // Close modal
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to save settings',
         variant: 'destructive',
       });
-    } finally {
-      setIsSaving(false);
-    }
+    },
+  });
+
+  const handleSave = () => {
+    saveMutation.mutate();
   };
 
-  if (!page) {
-    return (
-      <div className="text-center text-gray-500 mt-8">
-        No page data available
-      </div>
-    );
-  }
+  const handleAddMetaTag = () => {
+    setCustomMetaTags([...customMetaTags, { name: '', content: '' }]);
+  };
 
-  if (isTemplate) {
-    return (
-      <div className="space-y-4">
-        <div className="grid gap-2">
-          <Label htmlFor="template-name">Name</Label>
-          <Input
-            id="template-name"
-            value={formData.title}
-            onChange={(e) => handleFieldChange('title', e.target.value)}
-          />
-        </div>
-        <Button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="w-full"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {isSaving ? 'Saving...' : 'Save Template'}
-        </Button>
-      </div>
-    );
-  }
+  const handleRemoveMetaTag = (index: number) => {
+    setCustomMetaTags(customMetaTags.filter((_, i) => i !== index));
+  };
 
-  const isPage = contentType === 'page';
+  const handleUpdateMetaTag = (index: number, field: 'name' | 'content', value: string) => {
+    const updated = [...customMetaTags];
+    updated[index] = { ...updated[index], [field]: value };
+    setCustomMetaTags(updated);
+  };
+
+  const handleBackgroundChange = (entry: TokenEntry) => {
+    setBackgroundColor(entry);
+  };
+
+  const handleTextColorChange = (entry: TokenEntry) => {
+    setTextColor(entry);
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-2">
-        <Label htmlFor="page-title">Title</Label>
-        <Input
-          id="page-title"
-          value={formData.title}
-          onChange={(e) => handleFieldChange('title', e.target.value)}
-          placeholder="Enter page title"
-        />
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh]">
+        <DialogHeader>
+          <DialogTitle>Page Settings</DialogTitle>
+        </DialogHeader>
 
-      <div className="grid gap-2">
-        <Label htmlFor="page-slug">Slug</Label>
-        <Input
-          id="page-slug"
-          value={formData.slug}
-          onChange={(e) => handleFieldChange('slug', e.target.value)}
-          placeholder="page-url-slug"
-        />
-      </div>
+        <Tabs defaultValue="general" className="flex-1">
+          <TabsList className={`grid w-full ${contentType === 'page' ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            <TabsTrigger value="general">General</TabsTrigger>
+            {contentType === 'page' && <TabsTrigger value="design">Design</TabsTrigger>}
+            <TabsTrigger value="seo">SEO</TabsTrigger>
+          </TabsList>
 
-      <div className="grid gap-2">
-        <Label htmlFor="page-status">Status</Label>
-        <Select
-          value={formData.status}
-          onValueChange={(value) => handleFieldChange('status', value)}
-        >
-          <SelectTrigger id="page-status">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="publish">Published</SelectItem>
-            <SelectItem value="private">Private</SelectItem>
-            <SelectItem value="trash">Trash</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+          <ScrollArea className="h-[calc(85vh-180px)] pr-4">
+            {/* General Tab */}
+            <TabsContent value="general" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Page title"
+                />
+              </div>
 
-      <div className="grid gap-2">
-        <Label htmlFor="page-featured-image">Featured Image URL</Label>
-        <Input
-          id="page-featured-image"
-          value={formData.featuredImage}
-          onChange={(e) => handleFieldChange('featuredImage', e.target.value)}
-          placeholder="https://example.com/image.jpg"
-        />
-      </div>
+              <div className="space-y-2">
+                <Label htmlFor="slug">Slug</Label>
+                <Input
+                  id="slug"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  placeholder="page-slug"
+                />
+              </div>
 
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="page-allow-comments"
-          checked={formData.allowComments}
-          onCheckedChange={(checked) =>
-            handleFieldChange('allowComments', checked === true)
-          }
-        />
-        <Label htmlFor="page-allow-comments" className="cursor-pointer">
-          Allow Comments
-        </Label>
-      </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger id="status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="publish">Publish</SelectItem>
+                    <SelectItem value="private">Private</SelectItem>
+                    <SelectItem value="trash">Trash</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-      <div className="grid gap-2">
-        <Label htmlFor="page-password">Password</Label>
-        <Input
-          id="page-password"
-          type="password"
-          value={formData.password}
-          onChange={(e) => handleFieldChange('password', e.target.value)}
-          placeholder="Leave empty for no password"
-        />
-      </div>
+              <div className="space-y-2">
+                <Label htmlFor="featuredImage">Featured Image URL</Label>
+                <Input
+                  id="featuredImage"
+                  value={featuredImage}
+                  onChange={(e) => setFeaturedImage(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
 
-      {isPage && (
-        <>
-          <div className="grid gap-2">
-            <Label htmlFor="page-parent">Parent Page</Label>
-            <Select
-              value={formData.parentId || '__none__'}
-              onValueChange={(value) =>
-                handleFieldChange('parentId', value === '__none__' ? '' : value)
-              }
-            >
-              <SelectTrigger id="page-parent">
-                <SelectValue placeholder="None (Top Level)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None (Top Level)</SelectItem>
-                {pages
-                  .filter((p) => p.id !== page.id)
-                  .map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.title}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="allowComments"
+                  checked={allowComments}
+                  onCheckedChange={(checked) => setAllowComments(checked === true)}
+                />
+                <Label htmlFor="allowComments" className="cursor-pointer">
+                  Allow Comments
+                </Label>
+              </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="page-menu-order">Menu Order</Label>
-            <Input
-              id="page-menu-order"
-              type="number"
-              value={formData.menuOrder}
-              onChange={(e) =>
-                handleFieldChange('menuOrder', parseInt(e.target.value) || 0)
-              }
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password Protection</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Leave empty for no protection"
+                />
+              </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="page-template">Template</Label>
-            <Select
-              value={formData.templateId || '__none__'}
-              onValueChange={(value) =>
-                handleFieldChange('templateId', value === '__none__' ? '' : value)
-              }
-            >
-              <SelectTrigger id="page-template">
-                <SelectValue placeholder="Default Template" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Default Template</SelectItem>
-                {templates.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </>
-      )}
+              {contentType === 'page' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="parentId">Parent Page</Label>
+                    <Select value={parentId || '__none__'} onValueChange={(val) => setParentId(val === '__none__' ? '' : val)}>
+                      <SelectTrigger id="parentId">
+                        <SelectValue placeholder="None (Top Level)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None (Top Level)</SelectItem>
+                        {pages
+                          ?.filter((p) => p.id !== page?.id)
+                          .map((p) => (
+                            <SelectItem key={p.id} value={p.id.toString()}>
+                              {p.title}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-      <Button
-        onClick={handleSave}
-        disabled={isSaving}
-        className="w-full mt-4"
-      >
-        <Save className="w-4 h-4 mr-2" />
-        {isSaving ? 'Saving...' : 'Save Settings'}
-      </Button>
-    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="menuOrder">Menu Order</Label>
+                    <Input
+                      id="menuOrder"
+                      type="number"
+                      value={menuOrder}
+                      onChange={(e) => setMenuOrder(Number(e.target.value))}
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="templateId">Template</Label>
+                    <Select value={templateId || '__none__'} onValueChange={(val) => setTemplateId(val === '__none__' ? '' : val)}>
+                      <SelectTrigger id="templateId">
+                        <SelectValue placeholder="Default Template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Default Template</SelectItem>
+                        {templates?.map((t) => (
+                          <SelectItem key={t.id} value={t.id.toString()}>
+                            {t.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+            </TabsContent>
+
+            {/* Design Tab - Pages Only */}
+            {contentType === 'page' && (
+              <TabsContent value="design" className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fontFamily">Font Family</Label>
+                  <Select value={fontFamily} onValueChange={setFontFamily}>
+                    <SelectTrigger id="fontFamily">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FONT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="containerWidth">Container Width</Label>
+                  <Select value={containerWidth} onValueChange={setContainerWidth}>
+                    <SelectTrigger id="containerWidth">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONTAINER_WIDTH_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="padding">Padding</Label>
+                  <Input
+                    id="padding"
+                    value={padding}
+                    onChange={(e) => setPadding(e.target.value)}
+                    placeholder="2rem 1rem"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Background Color</Label>
+                  <TokenColorPicker
+                    property="backgroundColor"
+                    currentEntry={backgroundColor}
+                    currentStyleValue={backgroundColor?.style}
+                    onChange={handleBackgroundChange}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Text Color</Label>
+                  <TokenColorPicker
+                    property="color"
+                    currentEntry={textColor}
+                    currentStyleValue={textColor?.style}
+                    onChange={handleTextColorChange}
+                  />
+                </div>
+              </TabsContent>
+            )}
+
+            {/* SEO Tab */}
+            <TabsContent value="seo" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="metaTitle">Meta Title</Label>
+                <Input
+                  id="metaTitle"
+                  value={metaTitle}
+                  onChange={(e) => setMetaTitle(e.target.value)}
+                  placeholder="Override page title for search engines"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="metaDescription">Meta Description</Label>
+                <Textarea
+                  id="metaDescription"
+                  value={metaDescription}
+                  onChange={(e) => setMetaDescription(e.target.value)}
+                  placeholder="Brief description for search results"
+                  rows={3}
+                />
+                <p className="text-xs text-gray-500">
+                  {metaDescription.length} / 160 characters
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="canonicalUrl">Canonical URL</Label>
+                <Input
+                  id="canonicalUrl"
+                  value={canonicalUrl}
+                  onChange={(e) => setCanonicalUrl(e.target.value)}
+                  placeholder="Custom canonical URL"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="noIndex">Hide from Search Engines</Label>
+                  <p className="text-xs text-gray-500">
+                    Prevent search engines from indexing this page
+                  </p>
+                </div>
+                <Switch id="noIndex" checked={noIndex} onCheckedChange={setNoIndex} />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Custom Meta Tags</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddMetaTag}
+                    className="gap-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add Tag
+                  </Button>
+                </div>
+
+                {customMetaTags.length > 0 && (
+                  <div className="space-y-3 mt-2">
+                    {customMetaTags.map((tag, index) => (
+                      <div key={index} className="flex gap-2 items-start">
+                        <Input
+                          placeholder="name"
+                          value={tag.name}
+                          onChange={(e) => handleUpdateMetaTag(index, 'name', e.target.value)}
+                          className="flex-1"
+                        />
+                        <Input
+                          placeholder="content"
+                          value={tag.content}
+                          onChange={(e) => handleUpdateMetaTag(index, 'content', e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveMetaTag(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </ScrollArea>
+        </Tabs>
+
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saveMutation.isPending}>
+            {saveMutation.isPending ? 'Saving...' : 'Save Settings'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

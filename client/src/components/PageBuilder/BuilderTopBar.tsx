@@ -7,6 +7,7 @@ import {
   Monitor,
   Sidebar,
   Settings as SettingsIcon,
+  Settings2,
   FileText,
   Pen,
   Palette,
@@ -33,6 +34,7 @@ export function BuilderTopBar({
   onRedo,
   canUndo,
   canRedo,
+  onPageSettingsClick,
 }: {
   data: any;
   isTemplate: boolean;
@@ -46,6 +48,7 @@ export function BuilderTopBar({
   onRedo?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
+  onPageSettingsClick?: () => void;
 }) {
   return (
     <div className="bg-white border-b border-gray-200 p-4">
@@ -130,6 +133,13 @@ export function BuilderTopBar({
               Design
             </Button>
           </DesignMenu>
+
+          {onPageSettingsClick && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={onPageSettingsClick}>
+              <Settings2 className="w-4 h-4" />
+              Page
+            </Button>
+          )}
 
           <div className="flex items-center gap-2">
             {onUndo && (

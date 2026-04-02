@@ -27,8 +27,9 @@ const SHADE_KEYS = ["50", "100", "200", "300", "400", "500", "600", "700", "800"
 const SPECIAL_COLORS = ["white", "black", "transparent"]
 
 export default function TokenColorPicker({ property, currentEntry, currentStyleValue, onChange }: TokenColorPickerProps) {
-  // Determine if currently in custom mode
-  const isCustom = currentEntry ? !currentEntry.value : !!currentStyleValue
+  // Show custom input only when user explicitly chose custom (entry exists with empty value)
+  // Default to token swatch view — tokens are the primary UX, custom is the escape hatch
+  const isCustom = currentEntry ? !currentEntry.value && !!currentEntry.style : false
   const [showCustom, setShowCustom] = useState(isCustom)
   
   const currentCustomValue = currentEntry?.style || currentStyleValue || "#000000"

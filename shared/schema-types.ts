@@ -102,11 +102,42 @@ export type BlockContent =
 			alt?: string;
 			caption?: string;
 			mediaType: "image" | "video" | "audio";
-	  }
+	}
 	| { kind: "html"; value: string; sanitized: boolean }
-	| { kind: "structured"; data: Record<string, unknown> } // For complex blocks like tables, columns
-	| { kind: "empty" } // Explicitly empty block
-	| undefined; // No content set
+	| { kind: "structured"; data: Record<string, unknown> }
+	| { kind: "empty" }
+	| undefined;
+
+/** Custom meta tag entry for SEO */
+export interface MetaTagEntry {
+  name: string;
+  content: string;
+}
+
+/** Per-page SEO settings stored in page.other.seo */
+export interface PageSeoSettings {
+  metaTitle?: string;
+  metaDescription?: string;
+  canonicalUrl?: string;
+  noIndex?: boolean;
+  customMeta?: MetaTagEntry[];
+}
+
+/** Per-page design settings stored in page.other.design */
+export interface PageDesignSettings {
+  fontFamily?: string;
+  containerWidth?: string;
+  padding?: string;
+  backgroundColor?: TokenEntry;
+  textColor?: TokenEntry;
+}
+
+/** Structure for page.other jsonb field */
+export interface PageOther {
+  seo?: PageSeoSettings;
+  design?: PageDesignSettings;
+  [key: string]: unknown;
+}
 
 /**
  * Core block configuration for PageBuilder runtime
@@ -199,6 +230,6 @@ export interface BlockConfig {
 		metadata?: Record<string, any>;
 		tokenMap?: Record<string, TokenEntry>;
 		units?: Record<string, string>;
-		animation?: BlockAnimation;
-	};
+		animation?: BlockAnimation | null;
+	}
 }

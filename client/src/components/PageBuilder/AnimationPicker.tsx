@@ -8,7 +8,7 @@ import type { BlockAnimation, EntryAnimation, HoverAnimation, LoopAnimation } fr
 import { entryPresets, hoverPresets, loopPresets, type AnimationPreset } from "@/lib/animation-presets"
 
 interface AnimationPickerProps {
-  animation: BlockAnimation | undefined
+  animation: BlockAnimation | null | undefined
   blockId: string
   onChange: (animation: BlockAnimation | undefined) => void
 }

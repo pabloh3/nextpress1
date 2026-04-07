@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
-import { Plus, Trash2, SquareMousePointer, Settings, Wrench } from 'lucide-react';
+import { Plus, Trash2, SquareMousePointer, Settings } from 'lucide-react';
 import { getBlockStateAccessor } from '../blockStateRegistry';
 import { useBlockState } from '../useBlockState';
 
@@ -342,20 +342,7 @@ function ButtonsSettings({ block, onUpdate }: ButtonsSettingsProps) {
         </div>
       </CollapsibleCard>
 
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="buttons-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
-            <Input
-              id="buttons-class"
-              value={buttonsData?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. is-style-outline"
-              className="mt-1 h-9 text-sm"
-            />
-          </div>
-        </div>
-      </CollapsibleCard>
+
     </div>
   );
 }

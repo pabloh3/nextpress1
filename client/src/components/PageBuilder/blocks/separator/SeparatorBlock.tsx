@@ -4,7 +4,7 @@ import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Minus as SeparatorIcon, Settings, Wrench } from "lucide-react";
+import { Minus as SeparatorIcon, Settings } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 
@@ -158,22 +158,6 @@ function SeparatorSettings({ block, onUpdate }: SeparatorSettingsProps) {
               onChange={(e) => updateStyles({ width: e.target.value })}
               placeholder="e.g. 100px, 50%, auto"
               className="mt-1 h-9"
-            />
-          </div>
-        </div>
-      </CollapsibleCard>
-
-      {/* Advanced Card */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="separator-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
-            <Input
-              id="separator-class"
-              value={content?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. is-style-wide is-style-dots"
-              className="mt-1 h-9 text-sm"
             />
           </div>
         </div>

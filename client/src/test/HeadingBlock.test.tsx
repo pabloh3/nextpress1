@@ -197,6 +197,10 @@ describe('HeadingBlock', () => {
           kind: 'text',
           value: 'Test',
           level: 3
+        },
+        styles: {
+          fontSize: '1.75rem',
+          fontWeight: '700',
         }
       })
     })
@@ -223,11 +227,8 @@ describe('HeadingBlock', () => {
       const h3Button = screen.getByLabelText('Heading level 3')
       expect(h3Button).toHaveClass('bg-gray-200') // Selected state class
       
-      // Note: Advanced section (anchor, className) is collapsed by default (defaultOpen=false)
-      // So those fields won't be visible without expanding the collapsible
-      
-      // Verify the advanced section is present but collapsed
-      expect(screen.getByText('Advanced')).toBeInTheDocument()
+      // Note: Anchor ID and CSS Classes are now handled centrally by BlockSettings Advanced tab,
+      // not by individual block settings components
     })
   })
 
@@ -252,8 +253,7 @@ describe('HeadingBlock', () => {
 
     it('should have default styles', () => {
       expect(HeadingBlock.defaultStyles).toEqual({
-        fontSize: '2rem',
-        fontWeight: 'bold',
+        fontWeight: '700',
         margin: '1rem 0',
       })
     })

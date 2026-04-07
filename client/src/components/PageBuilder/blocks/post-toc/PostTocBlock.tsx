@@ -1,6 +1,6 @@
 // blocks/post-toc/PostTocBlock.tsx
 import * as React from 'react';
-import { ListOrdered, Settings, Wrench, Type } from 'lucide-react';
+import { ListOrdered, Settings, Type } from 'lucide-react';
 import type { BlockDefinition, BlockComponentProps } from '../types.ts';
 import type { BlockConfig, BlockContent } from '@shared/schema-types';
 import { Label } from '@/components/ui/label';
@@ -333,25 +333,6 @@ function PostTocSettings({ block, onUpdate }: PostTocSettingsProps) {
               onCheckedChange={(checked) => updateContent({ ordered: checked })}
             />
           </div>
-        </div>
-      </CollapsibleCard>
-
-      {/* Advanced */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div>
-          <Label
-            htmlFor="toc-class"
-            className="text-sm font-medium text-gray-700">
-            Additional CSS Class(es)
-          </Label>
-          <Input
-            id="toc-class"
-            aria-label="CSS Classes"
-            value={content?.className ?? ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="e.g. custom-toc"
-            className="mt-1 h-9 text-sm"
-          />
         </div>
       </CollapsibleCard>
     </div>

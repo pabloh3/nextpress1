@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
-import { MessageSquare, Settings, Wrench } from 'lucide-react';
+import { MessageSquare, Settings } from 'lucide-react';
 
 // --- Types ---
 
@@ -402,19 +402,6 @@ function PostCommentsSettings({
               className="h-9 text-sm"
             />
           )}
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div>
-          <Label htmlFor="pc-class">Additional CSS Class(es)</Label>
-          <Input
-            id="pc-class"
-            className="h-9 text-sm"
-            value={content.className ?? ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="e.g. custom-comments"
-          />
         </div>
       </CollapsibleCard>
     </div>

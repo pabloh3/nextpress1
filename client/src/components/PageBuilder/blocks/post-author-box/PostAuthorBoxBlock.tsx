@@ -368,24 +368,6 @@ function PostAuthorBoxSettings({
           )}
         </div>
       </CollapsibleCard>
-
-      {/* Advanced / CSS Class */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div>
-          <Label
-            htmlFor="author-box-class"
-            className="text-sm font-medium text-gray-700">
-            Additional CSS Class(es)
-          </Label>
-          <Input
-            id="author-box-class"
-            value={content?.className || ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="e.g. custom-author-box"
-            className="mt-1 h-9 text-sm"
-          />
-        </div>
-      </CollapsibleCard>
     </div>
   );
 }

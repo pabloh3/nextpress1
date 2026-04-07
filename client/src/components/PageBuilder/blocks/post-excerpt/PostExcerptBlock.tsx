@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
-import { FileText, Settings, Wrench } from 'lucide-react';
+import { FileText, Settings } from 'lucide-react';
 import { getBlockStateAccessor } from '../blockStateRegistry';
 import { useBlockState } from '../useBlockState';
 
@@ -236,24 +236,6 @@ function PostExcerptSettings({ block, onUpdate }: PostExcerptSettingsProps) {
               />
             </div>
           )}
-        </div>
-      </CollapsibleCard>
-
-      {/* Advanced / CSS Class */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div>
-          <Label
-            htmlFor="excerpt-class"
-            className="text-sm font-medium text-gray-700">
-            Additional CSS Class(es)
-          </Label>
-          <Input
-            id="excerpt-class"
-            value={content?.className || ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="e.g. custom-excerpt"
-            className="mt-1 h-9 text-sm"
-          />
         </div>
       </CollapsibleCard>
     </div>

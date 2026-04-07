@@ -1,7 +1,7 @@
 // blocks/post-progress/PostProgressBlock.tsx
 import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
-import { BarChart3, Palette, Settings, Wrench } from 'lucide-react';
+import { BarChart3, Palette, Settings } from 'lucide-react';
 import type { BlockDefinition, BlockComponentProps } from '../types.ts';
 import type { BlockConfig, BlockContent } from '@shared/schema-types';
 import { Label } from '@/components/ui/label';
@@ -372,25 +372,6 @@ function PostProgressSettings({
               }
             />
           </div>
-        </div>
-      </CollapsibleCard>
-
-      {/* Advanced */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div>
-          <Label
-            htmlFor="progress-class"
-            className="text-sm font-medium text-gray-700">
-            Additional CSS Class(es)
-          </Label>
-          <Input
-            id="progress-class"
-            aria-label="CSS Classes"
-            value={content?.className ?? ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="e.g. custom-progress"
-            className="mt-1 h-9 text-sm"
-          />
         </div>
       </CollapsibleCard>
     </div>

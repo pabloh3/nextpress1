@@ -15,7 +15,6 @@ import {
   ChevronRight,
   Eye,
   Tag,
-  Wrench,
 } from 'lucide-react';
 
 // ============================================================================
@@ -387,24 +386,6 @@ function PostNavigationSettings({
               className="h-9 text-sm"
             />
           )}
-        </div>
-      </CollapsibleCard>
-
-      {/* Advanced / CSS Class */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div>
-          <Label
-            htmlFor="nav-class"
-            className="text-sm font-medium text-gray-700">
-            Additional CSS Class(es)
-          </Label>
-          <Input
-            id="nav-class"
-            value={content?.className || ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="e.g. custom-nav"
-            className="mt-1 h-9 text-sm"
-          />
         </div>
       </CollapsibleCard>
     </div>

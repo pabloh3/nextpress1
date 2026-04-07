@@ -79,6 +79,13 @@ export const PageTemplate = (
         }
         
         /* WordPress block styles */
+        h1 { font-size: 2.5rem; font-weight: 800; }
+        h2 { font-size: 2rem; font-weight: 700; }
+        h3 { font-size: 1.75rem; font-weight: 700; }
+        h4 { font-size: 1.5rem; font-weight: 600; }
+        h5 { font-size: 1.25rem; font-weight: 600; }
+        h6 { font-size: 1rem; font-weight: 600; }
+        
         .wp-block-heading {
           margin: 1.5em 0 1em;
         }

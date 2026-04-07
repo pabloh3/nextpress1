@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { File as FileIcon, Download, Settings, Wrench } from "lucide-react";
+import { File as FileIcon, Download, Settings } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
@@ -346,21 +346,7 @@ function FileSettings({ block, onUpdate }: FileSettingsProps) {
         </div>
       </CollapsibleCard>
 
-      {/* Advanced Card */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="file-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
-            <Input
-              id="file-class"
-              value={blockData?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. is-style-outline"
-              className="mt-1 h-9 text-sm"
-            />
-          </div>
-        </div>
-      </CollapsibleCard>
+
     </div>
   );
 }

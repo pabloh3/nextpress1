@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Quote as QuoteIcon, Settings, Wrench } from "lucide-react";
+import { Quote as QuoteIcon, Settings } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 import { sanitizeHtml } from "../../utils";
@@ -224,34 +224,6 @@ function QuoteSettings({ block, onUpdate }: QuoteSettingsProps) {
                 <SelectItem value="full">Full</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-        </div>
-      </CollapsibleCard>
-
-      {/* Advanced Card */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="quote-anchor" className="text-sm font-medium text-gray-700">Anchor</Label>
-            <Input
-              id="quote-anchor"
-              value={content?.anchor ?? ''}
-              onChange={(e) => updateContent({ anchor: e.target.value })}
-              placeholder="section-id"
-              className="h-9"
-              aria-label="Anchor ID"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="quote-class" className="text-sm font-medium text-gray-700">CSS Class</Label>
-            <Input
-              id="quote-class"
-              value={content?.className ?? ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="custom-class"
-              className="h-9"
-              aria-label="CSS Class"
-            />
           </div>
         </div>
       </CollapsibleCard>

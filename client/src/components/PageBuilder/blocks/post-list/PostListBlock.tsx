@@ -18,7 +18,6 @@ import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import {
   LayoutList,
   Settings,
-  Wrench,
   Calendar,
   User,
   Image as ImageIcon,
@@ -532,19 +531,6 @@ function PostListSettings({
               </SelectContent>
             </Select>
           </div>
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div>
-          <Label htmlFor="pl-class">Additional CSS Class(es)</Label>
-          <Input
-            id="pl-class"
-            className="h-9 text-sm"
-            value={content.className ?? ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="e.g. featured-posts"
-          />
         </div>
       </CollapsibleCard>
     </div>

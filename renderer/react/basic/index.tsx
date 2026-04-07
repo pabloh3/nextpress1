@@ -2,6 +2,24 @@ import * as React from "react";
 import type { JSX } from "react";
 import type { BlockData } from "../block-types";
 
+const HEADING_FONT_SIZES: Record<number, string> = {
+  1: "2.5rem",
+  2: "2rem",
+  3: "1.75rem",
+  4: "1.5rem",
+  5: "1.25rem",
+  6: "1rem",
+};
+
+const HEADING_FONT_WEIGHTS: Record<number, string> = {
+  1: "800",
+  2: "700",
+  3: "700",
+  4: "600",
+  5: "600",
+  6: "600",
+};
+
 /**
  * Heading Block Component
  * Renders heading elements (h1-h6) with optional styling
@@ -12,13 +30,20 @@ export function HeadingBlock(props: BlockData) {
     { blockName: "core/heading" }
   >;
 
-  const Tag = `h${level || 2}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+  const headingLevel = level || 2;
+  const Tag = `h${headingLevel}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
   const mergedClassName = ["wp-block-heading", className]
     .filter(Boolean)
     .join(" ");
 
+  const mergedStyle: React.CSSProperties = {
+    fontSize: HEADING_FONT_SIZES[headingLevel],
+    fontWeight: HEADING_FONT_WEIGHTS[headingLevel],
+    ...style,
+  };
+
   return (
-    <Tag className={mergedClassName || undefined} style={style} {...attributes}>
+    <Tag className={mergedClassName || undefined} style={mergedStyle} {...attributes}>
       {content || ""}
     </Tag>
   );

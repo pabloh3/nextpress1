@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { ContainerChildren } from "../../BlockRenderer";
-import { Package as GroupIcon, Settings, Layout, Palette, Wrench } from "lucide-react";
+import { Package as GroupIcon, Settings, Layout, Palette } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 
@@ -358,25 +358,6 @@ function GroupSettings({ block, onUpdate }: GroupSettingsProps) {
               value={styles?.padding || "1.25em 2.375em"}
               onChange={(e) => updateStyles({ padding: e.target.value })}
               placeholder="e.g. 20px, 1em 2em"
-            />
-          </div>
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        title="Advanced"
-        icon={Wrench}
-        defaultOpen={false}
-      >
-        <div className="space-y-4">
-          {/* CSS Class */}
-          <div>
-            <Label htmlFor="group-class">Additional CSS Class(es)</Label>
-            <Input
-              id="group-class"
-              value={content?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. has-background is-style-rounded"
             />
           </div>
         </div>

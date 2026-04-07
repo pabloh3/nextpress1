@@ -46,10 +46,19 @@ const HEADING_FONT_SIZES: Record<number, string> = {
   6: "1rem",
 };
 
+/** Font weights per heading level — heavier for more prominent headings */
+const HEADING_FONT_WEIGHTS: Record<number, string> = {
+  1: "800",
+  2: "700",
+  3: "700",
+  4: "600",
+  5: "600",
+  6: "600",
+};
+
 const SETTINGS_SECTIONS = {
   content: { title: "Content", icon: Type, defaultOpen: true },
   settings: { title: "Settings", icon: Settings, defaultOpen: true },
-  advanced: { title: "Advanced", icon: Settings, defaultOpen: false },
 } as const;
 
 // ============================================================================
@@ -107,9 +116,10 @@ function HeadingRenderer({ content, styles }: HeadingRendererProps) {
   const Tag = `h${level}` as keyof JSX.IntrinsicElements;
   const className = buildHeadingClassName(content);
 
-  // Apply default font size per level unless explicitly overridden by styles
+  // Apply default font size and weight per level unless explicitly overridden by styles
   const mergedStyles: React.CSSProperties = {
     fontSize: HEADING_FONT_SIZES[level],
+    fontWeight: HEADING_FONT_WEIGHTS[level],
     ...styles,
   };
 
@@ -218,56 +228,24 @@ function LegacyHeadingSettings({ block, onUpdate }: HeadingSettingsProps) {
               <button
                 key={level}
                 type="button"
-                onClick={() => updateContent({ level })}
+                onClick={() => {
+                  if (onUpdate) {
+                    onUpdate({
+                      content: { ...block.content, level } as BlockContent,
+                      styles: {
+                        ...block.styles,
+                        fontSize: HEADING_FONT_SIZES[level],
+                        fontWeight: HEADING_FONT_WEIGHTS[level],
+                      },
+                    });
+                  }
+                }}
                 className={getOptionButtonClassName(currentLevel === level)}
                 aria-label={`Heading level ${level}`}
               >
                 H{level}
               </button>
             ))}
-          </div>
-        </div>
-      </CollapsibleCard>
-
-      {/* Advanced Section */}
-      <CollapsibleCard
-        title={SETTINGS_SECTIONS.advanced.title}
-        icon={SETTINGS_SECTIONS.advanced.icon}
-        defaultOpen={SETTINGS_SECTIONS.advanced.defaultOpen}
-      >
-        <div className="space-y-4">
-          <div>
-            <Label
-              htmlFor="heading-anchor"
-              className="text-sm font-medium text-gray-700"
-            >
-              Anchor ID
-            </Label>
-            <Input
-              id="heading-anchor"
-              aria-label="Anchor ID"
-              value={content?.anchor || ""}
-              onChange={(e) => updateContent({ anchor: e.target.value })}
-              placeholder="Add an anchor (without #)"
-              className="mt-1 h-9 text-sm"
-            />
-          </div>
-
-          <div>
-            <Label
-              htmlFor="heading-class"
-              className="text-sm font-medium text-gray-700"
-            >
-              CSS Classes
-            </Label>
-            <Input
-              id="heading-class"
-              aria-label="CSS Classes"
-              value={content?.className || ""}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. my-custom-heading"
-              className="mt-1 h-9 text-sm"
-            />
           </div>
         </div>
       </CollapsibleCard>
@@ -294,8 +272,7 @@ export const HeadingBlock: BlockDefinition = {
     className: "",
   },
   defaultStyles: {
-    fontSize: "2rem",
-    fontWeight: "bold",
+    fontWeight: "700",
     margin: "1rem 0",
   },
   component: HeadingBlockComponent,

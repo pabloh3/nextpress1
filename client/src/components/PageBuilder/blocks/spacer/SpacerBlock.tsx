@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Space as SpaceIcon, Settings, Wrench } from "lucide-react";
+import { Space as SpaceIcon, Settings } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 
@@ -132,32 +132,6 @@ function SpacerSettings({ block, onUpdate }: SpacerSettingsProps) {
       {/* Settings Card (future extensibility) */}
       <CollapsibleCard title="Settings" icon={Settings} defaultOpen={true}>
         <div className="text-gray-500 text-xs">No additional settings.</div>
-      </CollapsibleCard>
-
-      {/* Advanced Card */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="spacer-anchor" className="text-sm font-medium text-gray-700">Anchor ID</Label>
-            <Input
-              id="spacer-anchor"
-              value={content?.anchor || ''}
-              onChange={(e) => updateContent({ anchor: e.target.value })}
-              placeholder="section-id"
-              className="mt-1 h-9 text-sm"
-            />
-          </div>
-          <div>
-            <Label htmlFor="spacer-class" className="text-sm font-medium text-gray-700">CSS Classes</Label>
-            <Input
-              id="spacer-class"
-              value={content?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. my-custom-spacer"
-              className="mt-1 h-9 text-sm"
-            />
-          </div>
-        </div>
       </CollapsibleCard>
     </div>
   );

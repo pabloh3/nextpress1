@@ -46,6 +46,21 @@ import AnimationPicker from "./AnimationPicker"
 import { propertyAliasMap, propertyUnitCategoryMap, unitCategories } from "@/lib/tailwind-tokens"
 import type { TokenEntry, BlockAnimation } from "@shared/schema-types"
 
+/** Font options matching PageSettings — same fonts available at block level */
+const FONT_OPTIONS = [
+  { value: '', label: 'Default (Inherit)' },
+  { value: 'system-ui', label: 'System Default' },
+  { value: 'Inter, sans-serif', label: 'Inter' },
+  { value: 'Georgia, serif', label: 'Georgia' },
+  { value: 'Roboto, sans-serif', label: 'Roboto' },
+  { value: 'Merriweather, serif', label: 'Merriweather' },
+  { value: 'Lato, sans-serif', label: 'Lato' },
+  { value: '"Open Sans", sans-serif', label: 'Open Sans' },
+  { value: '"Playfair Display", serif', label: 'Playfair Display' },
+  { value: '"Source Sans Pro", sans-serif', label: 'Source Sans Pro' },
+  { value: 'Montserrat, sans-serif', label: 'Montserrat' },
+] as const;
+
 interface BlockSettingsProps {
   block: BlockConfig;
   onUpdate: (updates: Partial<BlockConfig>) => void;
@@ -301,7 +316,24 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
         {/* Typography */}
         {["heading", "core/heading", "text", "core/paragraph", "button", "core/button"].includes(block.name) && (
           <CollapsibleCard title="Typography" icon={Type} defaultOpen={true}>
-            {/* Font Size - Full Width */}
+            {/* Font Family */}
+            <div>
+              <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <Type className="w-3 h-3" />
+                Font Family
+              </Label>
+              <select
+                value={block.styles?.fontFamily || ''}
+                onChange={(e) => updateStyles({ fontFamily: e.target.value || undefined })}
+                className="mt-2 w-full h-9 px-3 text-sm border border-gray-200 rounded-none bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+              >
+                {FONT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Font Size */}
             <div>
               <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                 <Ruler className="w-3 h-3" />
@@ -667,36 +699,73 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
         <TabsContent value="style" className="space-y-4 mt-4">
           <div className="bg-gray-50 rounded-none p-4 border border-gray-200">
             {renderStyleSettings()}
-
-            {/* Animation Section */}
-            <div className="mt-6">
-              <CollapsibleCard title="Animations" icon={Sparkles} defaultOpen={false}>
-                <AnimationPicker
-                  animation={block.other?.animation}
-                  blockId={block.id}
-                  onChange={updateAnimation}
-                />
-              </CollapsibleCard>
-            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="advanced" className="space-y-4 mt-4">
           <div className="bg-gray-50 rounded-none p-4 border border-gray-200">
-            <CollapsibleCard title="Custom CSS" icon={Code} defaultOpen={false}>
-                <div className="space-y-3">
-                  <Textarea
-                    value={customCss}
-                    onChange={(e) => handleCustomCssChange(e.target.value)}
-                    placeholder="/* Add your custom CSS here */&#10;.my-block {&#10;  /* styles */&#10;}"
-                    rows={8}
-                    className="font-mono text-sm resize-none"
-                  />
-                  <p className="text-xs text-gray-500">
-                    CSS will be applied to this block only. Use standard CSS syntax.
-                  </p>
-                </div>
+            {/* Animation Section */}
+            <CollapsibleCard title="Animations" icon={Sparkles} defaultOpen={false}>
+              <AnimationPicker
+                animation={block.other?.animation}
+                blockId={block.id}
+                onChange={updateAnimation}
+              />
             </CollapsibleCard>
+
+            <div className="mt-4">
+              <CollapsibleCard title="Custom CSS" icon={Code} defaultOpen={false}>
+                  <div className="space-y-3">
+                    <Textarea
+                      value={customCss}
+                      onChange={(e) => handleCustomCssChange(e.target.value)}
+                      placeholder="/* Add your custom CSS here */&#10;.my-block {&#10;  /* styles */&#10;}"
+                      rows={8}
+                      className="font-mono text-sm resize-none"
+                    />
+                    <p className="text-xs text-gray-500">
+                      CSS will be applied to this block only. Use standard CSS syntax.
+                    </p>
+                  </div>
+              </CollapsibleCard>
+            </div>
+
+            {/* Anchor ID & CSS Classes — available for all blocks */}
+            <div className="mt-4">
+              <CollapsibleCard title="HTML Anchor & Classes" icon={Hash} defaultOpen={false}>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="block-anchor" className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                      <Target className="w-3 h-3" />
+                      Anchor ID
+                    </Label>
+                    <Input
+                      id="block-anchor"
+                      value={(block.content as Record<string, unknown>)?.anchor as string || ''}
+                      onChange={(e) => updateContent({ anchor: e.target.value })}
+                      placeholder="Add an anchor (without #)"
+                      className="mt-2 h-9 text-sm border-gray-200 rounded-none focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Used for linking directly to this block via #anchor
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="block-classes" className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                      <Code className="w-3 h-3" />
+                      CSS Classes
+                    </Label>
+                    <Input
+                      id="block-classes"
+                      value={(block.content as Record<string, unknown>)?.className as string || ''}
+                      onChange={(e) => updateContent({ className: e.target.value })}
+                      placeholder="e.g. my-custom-class"
+                      className="mt-2 h-9 text-sm border-gray-200 rounded-none focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    />
+                  </div>
+                </div>
+              </CollapsibleCard>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

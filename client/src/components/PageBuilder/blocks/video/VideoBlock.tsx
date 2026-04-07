@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Video as VideoIcon, AlignCenter, Maximize, Settings, Wrench } from "lucide-react";
+import { Video as VideoIcon, AlignCenter, Maximize, Settings } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 
@@ -490,36 +490,6 @@ function VideoSettings({ block, onUpdate }: VideoSettingsProps) {
                 />
               </div>
             </div>
-          </div>
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        title="Advanced"
-        icon={Wrench}
-        defaultOpen={false}
-      >
-        <div className="space-y-4">
-          {/* Anchor */}
-          <div>
-            <Label htmlFor="video-anchor">Anchor</Label>
-            <Input
-              id="video-anchor"
-              value={content?.anchor || ''}
-              onChange={(e) => updateContent({ anchor: e.target.value })}
-              placeholder="section-id"
-            />
-          </div>
-
-          {/* Additional CSS Class */}
-          <div>
-            <Label htmlFor="video-class">Additional CSS Class(es)</Label>
-            <Input
-              id="video-class"
-              value={content?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="custom-class"
-            />
           </div>
         </div>
       </CollapsibleCard>

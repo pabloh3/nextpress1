@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { AudioLines as AudioIcon, Settings, Wrench } from "lucide-react";
+import { AudioLines as AudioIcon, Settings } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 
@@ -263,31 +263,7 @@ function AudioSettings({ block, onUpdate }: AudioSettingsProps) {
         </div>
       </CollapsibleCard>
 
-      {/* Advanced Card */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="audio-anchor" className="text-sm font-medium text-gray-700">Anchor ID</Label>
-            <Input
-              id="audio-anchor"
-              value={content?.anchor || ''}
-              onChange={(e) => updateContent({ anchor: e.target.value })}
-              placeholder="section-id"
-              className="mt-1 h-9 text-sm"
-            />
-          </div>
-          <div>
-            <Label htmlFor="audio-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
-            <Input
-              id="audio-class"
-              value={content?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="custom-class"
-              className="mt-1 h-9 text-sm"
-            />
-          </div>
-        </div>
-      </CollapsibleCard>
+
     </div>
   );
 }

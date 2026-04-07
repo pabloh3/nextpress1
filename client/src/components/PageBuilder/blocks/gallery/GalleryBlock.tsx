@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Image as ImageIcon } from "lucide-react";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Settings, Wrench } from "lucide-react";
+import { Settings } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 
@@ -378,20 +378,7 @@ function GallerySettings({ block, onUpdate }: GallerySettingsProps) {
         </div>
       </CollapsibleCard>
 
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="gallery-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
-            <Input
-              id="gallery-class"
-              value={galleryData?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. is-style-rounded"
-              className="h-9 text-sm"
-            />
-          </div>
-        </div>
-      </CollapsibleCard>
+
     </div>
   );
 }

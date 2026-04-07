@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, Settings, Wrench } from "lucide-react";
+import { Type } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 
@@ -121,31 +121,6 @@ function TextSettings({ block, onUpdate }: TextSettingsProps) {
     }
   };
 
-  const alignmentOptions = [
-    { 
-      value: 'left', 
-      label: 'Left', 
-      icon: AlignLeft 
-    },
-    { 
-      value: 'center', 
-      label: 'Center', 
-      icon: AlignCenter 
-    },
-    { 
-      value: 'right', 
-      label: 'Right', 
-      icon: AlignRight 
-    },
-    { 
-      value: 'justify', 
-      label: 'Justify', 
-      icon: AlignJustify 
-    }
-  ];
-
-  const currentAlign = content?.textAlign || content?.align || 'left';
-
   return (
     <div className="space-y-4">
       <CollapsibleCard
@@ -166,37 +141,6 @@ function TextSettings({ block, onUpdate }: TextSettingsProps) {
               rows={4}
             />
           </div>
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        title="Settings"
-        icon={Settings}
-        defaultOpen={true}
-      >
-        <div className="space-y-4">
-          <div>
-            <Label>Text Alignment</Label>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {alignmentOptions.map((option) => {
-                const Icon = option.icon;
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => updateContent({ textAlign: option.value as any })}
-                    className={`flex items-center gap-2 p-3 text-sm font-medium rounded-lg border transition-colors ${
-                      currentAlign === option.value
-                        ? 'bg-gray-200 text-gray-800 border-gray-200 hover:bg-gray-300'
-                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
           
           <div className="flex items-center justify-between">
             <Label htmlFor="paragraph-dropcap">Drop cap</Label>
@@ -204,36 +148,6 @@ function TextSettings({ block, onUpdate }: TextSettingsProps) {
               id="paragraph-dropcap"
               checked={Boolean(content?.dropCap)}
               onCheckedChange={(checked) => updateContent({ dropCap: checked })}
-            />
-          </div>
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        title="Advanced"
-        icon={Wrench}
-        defaultOpen={false}
-      >
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="paragraph-anchor">Anchor</Label>
-            <Textarea
-              id="paragraph-anchor"
-              value={content?.anchor || ''}
-              onChange={(e) => updateContent({ anchor: e.target.value })}
-              placeholder="Add an anchor (without #)"
-              rows={1}
-            />
-          </div>
-          <div>
-            <Label htmlFor="paragraph-class">Additional CSS Class(es)</Label>
-            <Textarea
-              id="paragraph-class"
-              aria-label="Additional CSS classes"
-              value={content?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. custom-class is-style-outline"
-              rows={1}
             />
           </div>
         </div>

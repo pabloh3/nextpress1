@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Loader2, AlertCircle } from "lucide-react";
 import type { Post, Template } from "@shared/schema-types";
-import type { BlockConfig } from "@shared/schema-types";
+import type { BlockConfig, PageOther } from "@shared/schema-types";
 import BlockRenderer from "@/components/PageBuilder/BlockRenderer";
+import { getGoogleFontUrl } from "@shared/google-fonts";
 
 interface PreviewPageProps {
   postId?: string;
@@ -84,14 +85,35 @@ export default function PreviewPage({ postId, templateId, type }: PreviewPagePro
     }
   }
 
+  // Extract page design settings (fontFamily, padding, containerWidth, colors)
+  const pageOther = (data as { other?: PageOther })?.other;
+  const design = pageOther?.design;
+  const googleFontUrl = getGoogleFontUrl(design?.fontFamily);
+
   // Render page builder content
   return (
-    <div className="min-h-screen bg-white">
-      {/* SEO meta tags would go here */}
+    <div
+      className="min-h-screen"
+      style={{
+        backgroundColor: design?.backgroundColor?.style || '#ffffff',
+        color: design?.textColor?.style || undefined,
+        fontFamily: design?.fontFamily || undefined,
+      }}
+    >
       <title>{title}</title>
+      {/* Load Google Font if needed */}
+      {googleFontUrl && (
+        <link rel="stylesheet" href={googleFontUrl} />
+      )}
       
       {/* Page content */}
-      <div className="w-full">
+      <div
+        className="w-full mx-auto"
+        style={{
+          maxWidth: design?.containerWidth || undefined,
+          padding: design?.padding || undefined,
+        }}
+      >
         {blocks.length === 0 ? (
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">

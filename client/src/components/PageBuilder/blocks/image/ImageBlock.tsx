@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, Maximize, Settings, Link, Wrench } from "lucide-react";
+import { Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, Maximize, Settings, Link } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 import { useImageResize } from "./use-image-resize";
@@ -541,50 +541,7 @@ function ImageSettings({ block, onUpdate }: ImageSettingsProps) {
         </div>
       </CollapsibleCard>
 
-      <CollapsibleCard
-        title="Advanced"
-        icon={Wrench}
-        defaultOpen={false}
-      >
-        <div className="space-y-4">
-          {/* Rel */}
-          <div>
-            <Label htmlFor="image-rel">Rel</Label>
-            <Input
-              id="image-rel"
-              value={content?.rel || ''}
-              onChange={(e) => updateContent({ rel: e.target.value })}
-              placeholder="noopener noreferrer"
-            />
-          </div>
 
-          {/* Title */}
-          <div>
-            <Label htmlFor="image-title">Title</Label>
-            <Input
-              id="image-title"
-              aria-label="Title"
-              className="h-9"
-              value={content?.title || ''}
-              onChange={(e) => updateContent({ title: e.target.value })}
-              placeholder="Image title"
-            />
-          </div>
-
-          {/* Additional CSS Class */}
-          <div>
-            <Label htmlFor="image-class">Additional CSS Class(es)</Label>
-            <Input
-              id="image-class"
-              aria-label="Additional CSS classes"
-              className="h-9"
-              value={content?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. custom-class"
-            />
-          </div>
-        </div>
-      </CollapsibleCard>
     </div>
   );
 }

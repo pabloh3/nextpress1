@@ -4,7 +4,7 @@ import type { BlockConfig, BlockContent } from '@shared/schema-types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
-import { Type, Settings, Wrench } from 'lucide-react';
+import { Type, Settings } from 'lucide-react';
 import { getBlockStateAccessor } from '../blockStateRegistry';
 import { useBlockState } from '../useBlockState';
 
@@ -160,24 +160,6 @@ function PostTitleSettings({ block, onUpdate }: PostTitleSettingsProps) {
               </button>
             ))}
           </div>
-        </div>
-      </CollapsibleCard>
-
-      {/* Advanced / CSS Class */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div>
-          <Label
-            htmlFor="post-title-class"
-            className="text-sm font-medium text-gray-700">
-            Additional CSS Class(es)
-          </Label>
-          <Input
-            id="post-title-class"
-            value={content?.className || ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="e.g. custom-title"
-            className="mt-1 h-9 text-sm"
-          />
         </div>
       </CollapsibleCard>
     </div>

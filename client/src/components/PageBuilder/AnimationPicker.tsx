@@ -20,12 +20,16 @@ interface AnimationPickerProps {
 export default function AnimationPicker({ animation, blockId, onChange }: AnimationPickerProps) {
 
   const updateAnimation = useCallback((updates: Partial<BlockAnimation>) => {
-    const next = { ...animation, ...updates }
+    // Use null instead of undefined for cleared categories so deepMerge properly removes them
+    const sanitized = Object.fromEntries(
+      Object.entries(updates).map(([k, v]) => [k, v === undefined ? null : v])
+    )
+    const next = { ...animation, ...sanitized }
     // If all categories are cleared, remove animation entirely
     if (!next.entry && !next.hover && !next.loop) {
       onChange(undefined)
     } else {
-      onChange(next)
+      onChange(next as BlockAnimation)
     }
   }, [animation, onChange])
 

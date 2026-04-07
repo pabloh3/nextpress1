@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Settings, Wrench, List as ListIcon } from "lucide-react";
+import { Settings, List as ListIcon } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 import { sanitizeHtml } from "../../utils";
@@ -259,32 +259,6 @@ function ListSettings({ block, onUpdate }: ListSettingsProps) {
               </Select>
             </div>
           )}
-        </div>
-      </CollapsibleCard>
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="list-anchor">Anchor</Label>
-            <Input
-              id="list-anchor"
-              className="h-9"
-              value={content?.anchor ?? ''}
-              onChange={(e) => updateContent({ anchor: e.target.value })}
-              placeholder="section-id"
-              aria-label="Anchor (id attribute)"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="list-class">CSS Class</Label>
-            <Input
-              id="list-class"
-              className="h-9"
-              value={content?.className ?? ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="custom-class"
-              aria-label="CSS class"
-            />
-          </div>
         </div>
       </CollapsibleCard>
     </div>

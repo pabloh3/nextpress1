@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import MediaPickerDialog from "@/components/media/MediaPickerDialog";
-import { Image as ImageIcon, Settings, Link, Wrench } from "lucide-react";
+import { Image as ImageIcon, Settings, Link } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 import { sanitizeHtml } from "../../utils";
@@ -383,31 +383,6 @@ function MediaTextSettings({ block, onUpdate }: MediaTextSettingsProps) {
               onChange={(e) => updateContent({ title: e.target.value })}
               placeholder="Media title"
               className="mt-1 h-9"
-            />
-          </div>
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="anchor" className="text-sm font-medium text-gray-700">Anchor ID</Label>
-            <Input
-              id="anchor"
-              value={blockData?.anchor || ''}
-              onChange={(e) => updateContent({ anchor: e.target.value })}
-              placeholder="section-id"
-              className="mt-1 h-9 text-sm"
-            />
-          </div>
-          <div>
-            <Label htmlFor="extra-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
-            <Input
-              id="extra-class"
-              value={blockData?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="custom-class is-style-something"
-              className="mt-1 h-9 text-sm"
             />
           </div>
         </div>

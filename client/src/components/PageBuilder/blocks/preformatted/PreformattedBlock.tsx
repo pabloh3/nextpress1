@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { FileText as PreformattedIcon, Settings, Wrench } from "lucide-react";
+import { FileText as PreformattedIcon, Settings } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 
@@ -206,22 +206,6 @@ function PreformattedSettings({ block, onUpdate }: PreformattedSettingsProps) {
               onChange={(e) => updateStyles({ fontSize: e.target.value })}
               placeholder="14px"
               className="mt-1 h-9"
-            />
-          </div>
-        </div>
-      </CollapsibleCard>
-
-      {/* Advanced Card */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="preformatted-class" className="text-sm font-medium text-gray-700">Additional CSS Class(es)</Label>
-            <Input
-              id="preformatted-class"
-              value={content?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. custom-preformatted"
-              className="mt-1 h-9 text-sm"
             />
           </div>
         </div>

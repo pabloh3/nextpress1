@@ -65,6 +65,10 @@ describe('Block Editing', () => {
           value: 'Test',
           level: 4,
         },
+        styles: {
+          fontSize: '1.5rem',
+          fontWeight: '600',
+        },
       });
     });
 
@@ -99,32 +103,8 @@ describe('Block Editing', () => {
       });
     });
 
-    it('should update text alignment', () => {
-      const block: BlockConfig = {
-        id: 'text-1',
-        name: 'core/paragraph',
-        type: 'block',
-        parentId: null,
-        content: { kind: 'text', value: 'Test text' } as any,
-        styles: {},
-        children: [],
-        settings: {},
-      };
-
-      const Settings = TextBlock.settings!;
-      render(<Settings block={block} onUpdate={mockOnUpdate} />);
-
-      const rightButton = screen.getByRole('button', { name: /right/i });
-      fireEvent.click(rightButton);
-
-      expect(mockOnUpdate).toHaveBeenCalledWith({
-        content: {
-          kind: 'text',
-          value: 'Test text',
-          textAlign: 'right',
-        },
-      });
-    });
+    // Text alignment is now handled centrally by BlockSettings Style tab (styles.textAlign),
+    // not by individual block settings components. See tab reorganization.
   });
 
   describe('ButtonBlock Editing', () => {
@@ -280,6 +260,10 @@ describe('Block Editing', () => {
           value: 'Test',
           level: 5,
           textAlign: 'left',
+        },
+        styles: {
+          fontSize: '1.25rem',
+          fontWeight: '600',
         },
       });
     });

@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
-import { Image as ImageIcon, Settings, Wrench } from 'lucide-react';
+import { Image as ImageIcon, Settings } from 'lucide-react';
 import { getBlockStateAccessor } from '../blockStateRegistry';
 import { useBlockState } from '../useBlockState';
 
@@ -378,21 +378,6 @@ function PostFeaturedImageSettings({
                 <SelectItem value="auto">Auto</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="fi-class">Additional CSS Class(es)</Label>
-            <Input
-              id="fi-class"
-              value={content?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. custom-featured"
-              className="h-9"
-            />
           </div>
         </div>
       </CollapsibleCard>

@@ -4,7 +4,7 @@ import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { MousePointer, ExternalLink, Type, Settings, Link } from "lucide-react";
+import { MousePointer, ExternalLink, Type, Link } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 
@@ -175,42 +175,7 @@ function ButtonSettings({ block, onUpdate }: ButtonSettingsProps) {
         </div>
       </CollapsibleCard>
       
-      <CollapsibleCard title="Advanced" icon={Settings} defaultOpen={false}>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="button-rel" className="text-sm font-medium text-gray-700">Rel Attribute</Label>
-            <Input
-              id="button-rel"
-              value={content?.rel || ''}
-              onChange={(e) => updateContent({ rel: e.target.value })}
-              placeholder="noopener noreferrer"
-              className="mt-1 h-9 text-sm"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="button-title" className="text-sm font-medium text-gray-700">Title Attribute</Label>
-            <Input
-              id="button-title"
-              value={content?.title || ''}
-              onChange={(e) => updateContent({ title: e.target.value })}
-              placeholder="Link title"
-              className="mt-1 h-9 text-sm"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="button-class" className="text-sm font-medium text-gray-700">CSS Classes</Label>
-            <Input
-              id="button-class"
-              value={content?.className || ''}
-              onChange={(e) => updateContent({ className: e.target.value })}
-              placeholder="e.g. is-style-outline"
-              className="mt-1 h-9 text-sm"
-            />
-          </div>
-        </div>
-      </CollapsibleCard>
+
     </div>
   );
 }

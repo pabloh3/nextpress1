@@ -13,7 +13,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-import { PlusSquare, PenLine, Settings, Wrench } from 'lucide-react';
+import { PlusSquare, PenLine, Settings } from 'lucide-react';
 import { getBlockStateAccessor } from '../blockStateRegistry';
 import { useBlockState } from '../useBlockState';
 
@@ -231,24 +231,6 @@ function PostNewSettings({ block, onUpdate }: PostNewSettingsProps) {
               className="mt-1 resize-y text-sm"
             />
           </div>
-        </div>
-      </CollapsibleCard>
-
-      {/* Advanced / CSS Class */}
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div>
-          <Label
-            htmlFor="post-new-class"
-            className="text-sm font-medium text-gray-700">
-            Additional CSS Class(es)
-          </Label>
-          <Input
-            id="post-new-class"
-            value={content?.className || ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="e.g. custom-new-post"
-            className="mt-1 h-9 text-sm"
-          />
         </div>
       </CollapsibleCard>
     </div>

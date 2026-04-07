@@ -22,7 +22,6 @@ import {
   Tag,
   Clock,
   Settings,
-  Wrench,
 } from 'lucide-react';
 import { getBlockStateAccessor } from '../blockStateRegistry';
 import { useBlockState } from '../useBlockState';
@@ -453,23 +452,6 @@ function PostInfoSettings({ block, onUpdate }: PostInfoSettingsProps) {
               className="h-9 text-sm"
             />
           )}
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard title="Advanced" icon={Wrench} defaultOpen={false}>
-        <div>
-          <Label
-            htmlFor="post-info-class"
-            className="text-sm font-medium text-gray-700">
-            Additional CSS Class(es)
-          </Label>
-          <Input
-            id="post-info-class"
-            value={content?.className || ''}
-            onChange={(e) => updateContent({ className: e.target.value })}
-            placeholder="e.g. custom-post-info"
-            className="mt-1 h-9 text-sm"
-          />
         </div>
       </CollapsibleCard>
     </div>

@@ -194,19 +194,23 @@ function deepMerge<T extends Record<string, any>>(target: T, source: Partial<T>)
   const result = { ...target };
   
   for (const key in source) {
-    if (source[key] !== undefined) {
-      // Handle nested objects (styles, content, settings)
+    const val = source[key];
+    // Explicit null = clear/replace this key entirely
+    if (val === null) {
+      result[key] = null as any;
+      continue;
+    }
+    if (val !== undefined) {
       if (
-        typeof source[key] === 'object' &&
-        source[key] !== null &&
-        !Array.isArray(source[key]) &&
+        typeof val === 'object' &&
+        !Array.isArray(val) &&
         typeof target[key] === 'object' &&
         target[key] !== null &&
         !Array.isArray(target[key])
       ) {
-        result[key] = deepMerge(target[key] as Record<string, any>, source[key] as Record<string, any>) as T[Extract<keyof T, string>];
+        result[key] = deepMerge(target[key], val) as any;
       } else {
-        result[key] = source[key] as T[Extract<keyof T, string>];
+        result[key] = val as any;
       }
     }
   }

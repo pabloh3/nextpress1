@@ -264,6 +264,7 @@ function buildColumnStyle(
   layoutMode: NonNullable<ColumnsData["layoutMode"]>,
   direction: NonNullable<ColumnsData["direction"]>,
   column: ColumnLayout,
+  layout: ColumnLayout[],
 ): React.CSSProperties {
   if (layoutMode === "grid") {
     return {
@@ -279,7 +280,13 @@ function buildColumnStyle(
     };
   }
 
-  return buildFlexRowColumnStyle(column.width, data.minColumnWidth);
+  const gap = data.gap?.trim() || "20px";
+  const columnCount = Math.max(1, layout.length);
+
+  return buildFlexRowColumnStyle(column.width, data.minColumnWidth, {
+    gap,
+    columnCount,
+  });
 }
 
 // ============================================================================
@@ -339,7 +346,7 @@ function ColumnsRenderer({
         const columnChildren = childBlocks.filter((child) =>
           column.blockIds.includes(child.id)
         );
-        const columnStyle = buildColumnStyle(data, layoutMode, direction, column);
+        const columnStyle = buildColumnStyle(data, layoutMode, direction, column, layout);
 
         return (
           <div

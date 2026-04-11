@@ -51,6 +51,9 @@ export function ColumnsBlock(props: BlockData) {
 
   // If columnLayout is provided, use it to structure columns
   if (columnLayout && columnLayout.length > 0) {
+    const gapCss = (gap && String(gap).trim()) || "20px";
+    const columnCount = columnLayout.length;
+
     return (
       <div
         className={mergedClassName || undefined}
@@ -73,7 +76,10 @@ export function ColumnsBlock(props: BlockData) {
               className="wp-block-column"
               style={
                 (direction || "row") === "row"
-                  ? (buildFlexRowColumnStyle(column.width, minColumnWidth) as React.CSSProperties)
+                  ? (buildFlexRowColumnStyle(column.width, minColumnWidth, {
+                      gap: gapCss,
+                      columnCount,
+                    }) as React.CSSProperties)
                   : { minWidth: 0, width: "100%" }
               }
             >

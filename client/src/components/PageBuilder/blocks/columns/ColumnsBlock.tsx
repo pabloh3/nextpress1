@@ -25,6 +25,7 @@ import BlockRenderer from "../../BlockRenderer";
 import { generateBlockId } from "../../utils";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
+import { buildFlexRowColumnStyle } from "@shared/columns-flex-style";
 
 // ============================================================================
 // TYPES
@@ -278,28 +279,7 @@ function buildColumnStyle(
     };
   }
 
-  const minColumnWidth = data.minColumnWidth || "220px";
-  const width = column.width || "auto";
-  if (width === "auto") {
-    return {
-      flex: "1 1 0%",
-      minWidth: minColumnWidth,
-    };
-  }
-
-  if (width.endsWith("fr")) {
-    const flexGrow = Number.parseFloat(width) || 1;
-    return {
-      flex: `${flexGrow} 1 0%`,
-      minWidth: minColumnWidth,
-    };
-  }
-
-  return {
-    flex: "1 1 auto",
-    width,
-    minWidth: minColumnWidth,
-  };
+  return buildFlexRowColumnStyle(column.width, data.minColumnWidth);
 }
 
 // ============================================================================
@@ -644,28 +624,28 @@ function ColumnsSettings({ block, onUpdate }: ColumnsSettingsProps) {
                 </Button>
               </div>
               {layoutMode === "flex" ? (
-                <div>
+                <div className="space-y-1">
                   <Label htmlFor={`col-width-${index}`} className="text-xs">
                     Width
                   </Label>
-                  <Select value={column.width || "auto"} onValueChange={(value) => updateColumn(index, { width: value })}>
-                    <SelectTrigger className="h-9" id={`col-width-${index}`} aria-label={`Column ${index + 1} width`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="auto">Auto</SelectItem>
-                      <SelectItem value="25%">25%</SelectItem>
-                      <SelectItem value="33.33%">33.33%</SelectItem>
-                      <SelectItem value="50%">50%</SelectItem>
-                      <SelectItem value="66.67%">66.67%</SelectItem>
-                      <SelectItem value="75%">75%</SelectItem>
-                      <SelectItem value="100%">100%</SelectItem>
-                      <SelectItem value="200px">200px</SelectItem>
-                      <SelectItem value="300px">300px</SelectItem>
-                      <SelectItem value="1fr">1fr (flex)</SelectItem>
-                      <SelectItem value="2fr">2fr (flex)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    id={`col-width-${index}`}
+                    className="h-9 font-mono text-xs"
+                    value={column.width ?? "auto"}
+                    onChange={(e) => updateColumn(index, { width: e.target.value })}
+                    onBlur={(e) => {
+                      const t = e.target.value.trim();
+                      const next = t.length === 0 ? "auto" : t;
+                      if (next !== column.width) {
+                        updateColumn(index, { width: next });
+                      }
+                    }}
+                    placeholder="e.g. 50%, 240px, 1fr, auto"
+                    aria-label={`Column ${index + 1} width`}
+                  />
+                  <p className="text-[11px] text-muted-foreground leading-snug">
+                    Any CSS width (%, px, rem, calc), flex share (1fr, 2fr), or auto.
+                  </p>
                 </div>
               ) : (
                 <p className="text-xs text-gray-500">Equal width in grid mode</p>

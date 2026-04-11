@@ -136,6 +136,7 @@ interface MediaTextConfig extends BaseBlockData {
 interface ColumnsConfig extends BaseBlockData {
 	blockName: "core/columns";
 	gap?: string;
+	minColumnWidth?: string;
 	verticalAlignment?: "top" | "center" | "bottom" | "stretch";
 	horizontalAlignment?: "left" | "center" | "right" | "space-between" | "space-around";
 	direction?: "row" | "column";

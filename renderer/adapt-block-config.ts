@@ -319,6 +319,7 @@ function extractContentProps(
 			if (blockName === "core/columns") {
 				return {
 					gap: data.gap,
+					minColumnWidth: data.minColumnWidth,
 					verticalAlignment: data.verticalAlignment,
 					horizontalAlignment: data.horizontalAlignment,
 					direction: data.direction,

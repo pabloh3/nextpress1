@@ -2,6 +2,7 @@ import * as React from "react";
 import type { JSX } from "react";
 import type { BlockData } from "../block-types";
 import { BLOCK_COMPONENTS } from "../block-components";
+import { buildFlexRowColumnStyle } from "@shared/columns-flex-style";
 
 /**
  * Columns Block Component
@@ -10,6 +11,7 @@ import { BLOCK_COMPONENTS } from "../block-components";
 export function ColumnsBlock(props: BlockData) {
   const {
     gap,
+    minColumnWidth,
     verticalAlignment,
     horizontalAlignment,
     direction,
@@ -69,10 +71,11 @@ export function ColumnsBlock(props: BlockData) {
             <div
               key={columnKey}
               className="wp-block-column"
-              style={{
-                width: column.width || "auto",
-                flex: column.width ? "none" : "1",
-              }}
+              style={
+                (direction || "row") === "row"
+                  ? (buildFlexRowColumnStyle(column.width, minColumnWidth) as React.CSSProperties)
+                  : { minWidth: 0, width: "100%" }
+              }
             >
               {columnChildren.map((child, childIndex) => {
                 // Use blockName + childIndex as key for stability

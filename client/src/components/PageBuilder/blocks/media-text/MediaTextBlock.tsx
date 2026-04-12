@@ -13,6 +13,10 @@ import { Image as ImageIcon, Settings, Link } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 import { sanitizeHtml } from "../../utils";
+import {
+  PLACEHOLDER_IMAGE_ALT,
+  PLACEHOLDER_IMAGE_URL,
+} from "@shared/placeholder-image";
 
 // ============================================================================
 // TYPES
@@ -43,9 +47,9 @@ type MediaTextContent = BlockContent & {
 
 const DEFAULT_DATA: MediaTextData = {
   mediaId: undefined,
-  mediaUrl: 'https://via.placeholder.com/800x600?text=Media',
+  mediaUrl: PLACEHOLDER_IMAGE_URL,
   mediaType: 'image',
-  mediaAlt: '',
+  mediaAlt: PLACEHOLDER_IMAGE_ALT,
   mediaPosition: 'left',
   mediaWidth: 50,
   isStackedOnMobile: false,
@@ -409,9 +413,9 @@ const MediaTextBlock: BlockDefinition = {
     kind: 'structured',
     data: {
       mediaId: undefined,
-      mediaUrl: 'https://via.placeholder.com/800x600?text=Media',
+      mediaUrl: PLACEHOLDER_IMAGE_URL,
       mediaType: 'image',
-      mediaAlt: '',
+      mediaAlt: PLACEHOLDER_IMAGE_ALT,
       mediaPosition: 'left',
       mediaWidth: 50,
       isStackedOnMobile: false,

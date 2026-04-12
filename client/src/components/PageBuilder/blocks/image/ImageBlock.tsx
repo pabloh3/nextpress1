@@ -12,6 +12,10 @@ import { Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, Maximize, Setti
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
 import { useImageResize } from "./use-image-resize";
+import {
+  PLACEHOLDER_IMAGE_ALT,
+  PLACEHOLDER_IMAGE_URL,
+} from "@shared/placeholder-image";
 
 // ============================================================================
 // TYPES
@@ -41,9 +45,9 @@ type ImageContent = {
 
 const DEFAULT_CONTENT: ImageContent = {
   kind: 'media',
-  url: 'https://via.placeholder.com/600x300?text=Add+Your+Image',
+  url: PLACEHOLDER_IMAGE_URL,
   mediaType: 'image',
-  alt: 'Placeholder image',
+  alt: PLACEHOLDER_IMAGE_ALT,
   caption: '',
   id: undefined,
   sizeSlug: 'full',
@@ -562,9 +566,9 @@ const ImageBlock: BlockDefinition = {
   category: 'media',
   defaultContent: {
     kind: 'media',
-    url: 'https://via.placeholder.com/600x300?text=Add+Your+Image',
+    url: PLACEHOLDER_IMAGE_URL,
     mediaType: 'image',
-    alt: 'Placeholder image',
+    alt: PLACEHOLDER_IMAGE_ALT,
     caption: '',
     id: undefined,
     sizeSlug: 'full',
@@ -577,7 +581,7 @@ const ImageBlock: BlockDefinition = {
     className: '',
   },
   defaultStyles: {
-    width: '100%',
+    width: '500px',
     height: 'auto',
   },
   component: ImageBlockComponent,

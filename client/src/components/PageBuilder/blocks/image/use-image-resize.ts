@@ -65,11 +65,12 @@ export function useImageResize({ onResizeEnd }: UseImageResizeOptions): UseImage
 
     let newWidth = Math.max(50, state.startWidth + deltaX);
 
-    // Clamp to parent container width
-    const parent = imgRef.current?.closest(".wp-block-image")?.parentElement;
-    if (parent) {
-      const parentWidth = parent.getBoundingClientRect().width;
-      newWidth = Math.min(newWidth, parentWidth);
+    // Clamp to the builder canvas width — not the immediate block wrapper, which uses
+    // the same width as the image (BlockRenderer) and would cap growth at the current size.
+    const canvas = imgRef.current?.closest('[aria-label="Canvas"]');
+    if (canvas) {
+      const canvasWidth = canvas.getBoundingClientRect().width;
+      newWidth = Math.min(newWidth, Math.max(50, canvasWidth));
     }
 
     return Math.round(newWidth);

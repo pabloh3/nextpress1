@@ -96,7 +96,7 @@ function parseStartSeconds(url: string): number | undefined {
     }
     if (u.searchParams.has('t')) {
       const t = u.searchParams.get('t') || '';
-      const re = /(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?|(\d+)/i;
+      const re = /(?:(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?)|(\d+)/i;
       const m = t.match(re);
       if (m) {
         if (m[4]) return Number(m[4]);
@@ -156,7 +156,7 @@ function VideoRenderer({ content, styles }: VideoRendererProps) {
       params.set('loop', '1');
       params.set('playlist', youTubeId);
     }
-    if (muted) params.set('mute', '1');
+    if (muted || autoplay) params.set('mute', '1');
     const start = parseStartSeconds(url);
     if (start && start > 0) params.set('start', String(start));
     params.set('rel', '0');
@@ -528,7 +528,7 @@ const VideoBlock: BlockDefinition = {
     anchor: '',
     className: '',
   },
-  defaultStyles: {},
+  defaultStyles: { width: '100%' },
   component: VideoBlockComponent,
   settings: VideoSettings,
   hasSettings: true,

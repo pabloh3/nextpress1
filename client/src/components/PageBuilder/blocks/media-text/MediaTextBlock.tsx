@@ -430,7 +430,7 @@ const MediaTextBlock: BlockDefinition = {
       className: '',
     },
   },
-  defaultStyles: {},
+  defaultStyles: { margin: '1em 0' },
   component: MediaTextBlockComponent,
   settings: MediaTextSettings,
   hasSettings: true,

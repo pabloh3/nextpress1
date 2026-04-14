@@ -323,9 +323,10 @@ function PostProgressSettings({
               min={2}
               max={12}
               value={content?.height ?? DEFAULT_CONTENT.height}
-              onChange={(e) =>
-                updateContent({ height: Number(e.target.value) })
-              }
+              onChange={(e) => {
+                const val = Math.max(2, Math.min(12, Number(e.target.value)));
+                updateContent({ height: val });
+              }}
               className="mt-1 h-9 text-sm"
             />
           </div>

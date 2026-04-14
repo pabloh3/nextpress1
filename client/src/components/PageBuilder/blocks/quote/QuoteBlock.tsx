@@ -166,7 +166,7 @@ function QuoteSettings({ block, onUpdate }: QuoteSettingsProps) {
               })()}
               onChange={(e) => {
                 const lines = e.target.value.split('\n');
-                const html = lines.map((l) => `<p>${l}</p>`).join('');
+                const html = lines.map((l) => `<p>${sanitizeHtml(l)}</p>`).join('');
                 updateContent({ value: html });
               }}
               placeholder={`Add your quote...`}
@@ -253,7 +253,7 @@ const QuoteBlock: BlockDefinition = {
     anchor: '',
     className: '',
   },
-  defaultStyles: {},
+  defaultStyles: { margin: '1em 0' },
   component: QuoteBlockComponent,
   settings: QuoteSettings,
   hasSettings: true,

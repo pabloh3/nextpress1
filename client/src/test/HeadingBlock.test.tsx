@@ -193,11 +193,6 @@ describe('HeadingBlock', () => {
       fireEvent.click(h3Button)
       
       expect(mockOnUpdate).toHaveBeenCalledWith({
-        content: {
-          kind: 'text',
-          value: 'Test',
-          level: 3
-        },
         styles: {
           fontSize: '1.75rem',
           fontWeight: '700',

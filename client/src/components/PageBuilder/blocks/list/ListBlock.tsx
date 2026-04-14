@@ -168,7 +168,7 @@ function ListSettings({ block, onUpdate }: ListSettingsProps) {
             value={itemsText}
             onChange={(e) => {
               const lines = e.target.value.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
-              const html = lines.map((l) => `<li>${l}</li>`).join('');
+              const html = lines.map((l) => `<li>${sanitizeHtml(l)}</li>`).join('');
               updateContent({ values: html });
             }}
             placeholder={`List item 1\nList item 2\nList item 3`}
@@ -288,7 +288,7 @@ const ListBlock: BlockDefinition = {
     anchor: '',
     className: '',
   },
-  defaultStyles: {},
+  defaultStyles: { margin: '1em 0' },
   component: ListBlockComponent,
   settings: ListSettings,
   hasSettings: true,

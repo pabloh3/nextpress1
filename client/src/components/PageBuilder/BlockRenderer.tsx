@@ -8,6 +8,26 @@ import { useBlockActions } from './BlockActionsContext';
 import { resolveTokenMap, generateBlockModifierCSS } from '@/lib/tailwind-tokens';
 import { generateBlockAnimationCSS } from '@/lib/animation-presets';
 
+/**
+ * Detects the parent container's display mode from content
+ */
+function getParentDisplayMode(block: BlockConfig): 'flex' | 'grid' | 'block' {
+  const content = block.content as Record<string, unknown> | undefined;
+  const display = content?.display as string | undefined;
+  if (display === 'flex' || display === 'inline-flex') return 'flex';
+  if (display === 'grid') return 'grid';
+  return 'block';
+}
+
+/**
+ * Detects flex direction from parent content
+ */
+function getParentFlexDirection(block: BlockConfig): 'row' | 'column' {
+  const content = block.content as Record<string, unknown> | undefined;
+  const dir = content?.flexDirection as string | undefined;
+  return dir === 'row' || dir === 'row-reverse' ? 'row' : 'column';
+}
+
 export function ContainerChildren({
   block,
   isPreview,
@@ -21,40 +41,65 @@ export function ContainerChildren({
   const isContainer = !!blockRegistry[block.name]?.isContainer;
   const actions = useBlockActions();
   if (!isContainer) return null;
+
+  const parentDisplay = getParentDisplayMode(block);
+  const parentDirection = getParentFlexDirection(block);
+  const isHorizontal = parentDisplay === 'flex' && parentDirection === 'row';
+  const dropDirection = isHorizontal ? 'horizontal' : 'vertical';
+
   if (import.meta.env.DEBUG_BUILDER) {
     console.debug(
       'Rendering children for container block in preview mode:',
       block.id,
       'Children:',
       children,
+      'Display:',
+      parentDisplay,
     );
   }
   if (isPreview) {
     return (
-      <div data-container-children="true">
+      <div
+        data-container-children="true"
+        style={{
+          display: parentDisplay === 'flex' ? 'flex' : parentDisplay === 'grid' ? 'grid' : undefined,
+          flexDirection: parentDisplay === 'flex' ? parentDirection : undefined,
+          flexWrap: parentDisplay === 'flex' ? ((block.content as any)?.flexWrap || 'wrap') : undefined,
+          gap: parentDisplay !== 'block' ? ((block.content as any)?.gap || '16px') : undefined,
+          width: '100%',
+          minWidth: 0,
+        }}
+      >
         {children.map((child) => (
-          <BlockRenderer
-            key={child.id}
-            block={child}
-            isSelected={actions?.selectedBlockId === child.id}
-            isPreview={true}
-            onDuplicate={() => actions?.onDuplicate(child.id)}
-            onDelete={() => actions?.onDelete(child.id)}
-            onBlockChange={onBlockChange}
-          />
+          <div key={child.id} style={{ minWidth: 0, flex: parentDisplay === 'flex' && parentDirection === 'row' ? '1 1 auto' : undefined }}>
+            <BlockRenderer
+              block={child}
+              isSelected={actions?.selectedBlockId === child.id}
+              isPreview={true}
+              onDuplicate={() => actions?.onDuplicate(child.id)}
+              onDelete={() => actions?.onDelete(child.id)}
+              onBlockChange={onBlockChange}
+            />
+          </div>
         ))}
       </div>
     );
   }
   return (
-    <Droppable droppableId={block.id} direction="vertical">
+    <Droppable droppableId={block.id} direction={dropDirection as any}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
           {...provided.droppableProps}
           data-container-children="true"
           style={{
-            minHeight: '60px', // Always maintain minimum drop zone height
+            display: parentDisplay === 'flex' ? 'flex' : parentDisplay === 'grid' ? 'grid' : undefined,
+            flexDirection: parentDisplay === 'flex' ? parentDirection : undefined,
+            flexWrap: parentDisplay === 'flex' ? ((block.content as any)?.flexWrap || 'wrap') : undefined,
+            gap: parentDisplay !== 'block' ? ((block.content as any)?.gap || '16px') : undefined,
+            minHeight: '60px',
+            minWidth: 0,
+            width: '100%',
             border: snapshot.isDraggingOver
               ? '2px solid #3b82f6'
               : '2px dashed #e2e8f0',
@@ -62,7 +107,7 @@ export function ContainerChildren({
             background: snapshot.isDraggingOver
               ? 'rgba(59,130,246,0.06)'
               : undefined,
-            paddingBottom: children.length > 0 ? '20px' : '0px', // Add padding for drop zone when there are children
+            paddingBottom: children.length > 0 ? '20px' : '0px',
           }}>
           {children.length > 0 ? (
             children.map((child: BlockConfig, childIndex: number) => (
@@ -74,8 +119,12 @@ export function ContainerChildren({
                   <div
                     ref={dragProvided.innerRef}
                     {...dragProvided.draggableProps}
-                    className={`relative group ${dragSnapshot.isDragging ? 'opacity-50' : ''}`}>
-                    {/* Only use drag handle props on the visible drag handle, not here */}
+                    className={`relative group ${dragSnapshot.isDragging ? 'opacity-50' : ''}`}
+                    style={{
+                      minWidth: 0,
+                      flex: isHorizontal ? '1 1 auto' : undefined,
+                    }}
+                  >
                     <BlockRenderer
                       block={child}
                       isSelected={actions?.selectedBlockId === child.id}
@@ -319,16 +368,15 @@ export default function BlockRenderer({
         </>
       )}
 
-      <div
-        className={`${!isPreview ? 'cursor-pointer' : ''} transition-all duration-200`}>
         <div
-          className={`block-${block.id} ${!isPreview && effectiveSelected ? 'block-ring-fade' : ''} ${!isPreview && isHovered && !effectiveSelected ? 'ring-1 ring-gray-300' : ''} relative`}
-          style={{
-            display: 'flex',
-            justifyContent,
-            alignItems,
-            width: '100%',
-          }}>
+          className={`${!isPreview ? 'cursor-pointer' : ''} transition-all duration-200`}>
+          <div
+            className={`block-${block.id} ${!isPreview && effectiveSelected ? 'block-ring-fade' : ''} ${!isPreview && isHovered && !effectiveSelected ? 'ring-1 ring-gray-300' : ''} relative`}
+            style={{
+              width: '100%',
+              minWidth: 0,
+              boxSizing: 'border-box',
+            }}>
           {!isPreview && effectiveHoverHighlight === 'padding' && (
             <>
               <div

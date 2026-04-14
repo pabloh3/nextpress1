@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+import React from "react";
 import type { BlockConfig, BlockContent } from "@shared/schema-types";
 import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
@@ -87,19 +87,18 @@ export function MarkdownBlockComponent({
   });
 
   const handleEditorChange = (newVal: string) => {
-    // We update local state AND propagate upward
     const accessor = getBlockStateAccessor(value.id);
     if (accessor) {
       accessor.setContent({ ...(content as MarkdownContent), content: newVal });
+    } else {
+      onChange({
+        ...value,
+        content: {
+          ...(value.content as Record<string, unknown>),
+          content: newVal,
+        } as unknown as BlockContent,
+      });
     }
-    // Also notify parent directly to ensure PageBuilder captures the edit
-    onChange({
-      ...value,
-      content: {
-        ...(value.content as Record<string, unknown>),
-        content: newVal,
-      } as unknown as BlockContent,
-    });
   };
 
   return (

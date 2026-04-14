@@ -13,7 +13,7 @@ export default function DevicePreview({ device, children }: DevicePreviewProps) 
         };
       case 'tablet':
         return {
-          width: '768px',
+          maxWidth: '768px',
           minHeight: '1024px',
         };
       case 'desktop':
@@ -28,10 +28,23 @@ export default function DevicePreview({ device, children }: DevicePreviewProps) 
   return (
     <div className="flex justify-center">
       <div 
-        style={getDeviceStyles()}
+        style={{
+          ...getDeviceStyles(),
+          width: device === 'desktop' ? '100%' : undefined,
+          overflow: 'hidden',
+          transition: 'all 300ms ease-in-out',
+        }}
         className="transition-all duration-300 ease-in-out"
       >
-        {children}
+        <div
+          style={{
+            width: '100%',
+            minWidth: 0,
+            overflow: 'hidden',
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

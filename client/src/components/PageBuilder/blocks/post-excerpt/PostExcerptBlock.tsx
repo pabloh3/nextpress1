@@ -98,7 +98,7 @@ function PostExcerptRenderer({ content, styles }: PostExcerptRendererProps) {
       <p className="wp-block-post-excerpt__excerpt">
         {truncated || 'Write your post excerpt...'}
       </p>
-      {showReadMore && wasTruncated && (
+      {showReadMore && (
         <p className="wp-block-post-excerpt__more-link">
           <button type="button" onClick={(e) => e.preventDefault()} className="text-blue-600 hover:text-blue-800 underline">
             {readMoreText}

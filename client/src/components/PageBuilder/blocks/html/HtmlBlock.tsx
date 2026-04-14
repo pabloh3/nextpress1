@@ -171,7 +171,7 @@ const HtmlBlock: BlockDefinition = {
   description: 'Add custom HTML code',
   category: 'advanced',
   defaultContent: {
-    content: '',
+    content: '<div class="custom-element">\n  <!-- Your HTML here -->\n</div>',
     className: '',
   },
   defaultStyles: {

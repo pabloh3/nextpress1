@@ -296,7 +296,7 @@ const AudioBlock: BlockDefinition = {
     anchor: '',
     className: '',
   },
-  defaultStyles: {},
+  defaultStyles: { width: '100%' },
   component: AudioBlockComponent,
   settings: AudioSettings,
   hasSettings: true,

@@ -861,7 +861,7 @@ const ColumnsBlock: BlockDefinition = {
   isContainer: true,
   handlesOwnChildren: true,
   defaultContent: { kind: "structured", data: { gap: "20px", verticalAlignment: "top", horizontalAlignment: "left", direction: "row" } },
-  defaultStyles: {},
+  defaultStyles: { margin: '1em 0' },
   component: ColumnsBlockComponent,
   settings: ColumnsSettings,
   hasSettings: true,

@@ -259,7 +259,7 @@ describe('BlockRenderer', () => {
       )
 
       const highlight = document.querySelector('.block-test-block')
-      expect(highlight).toHaveClass('ring-2', 'ring-blue-500')
+      expect(highlight).toHaveClass('block-ring-fade')
     })
 
     it('should not show controls in preview mode', () => {

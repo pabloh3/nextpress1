@@ -121,7 +121,7 @@ function GalleryRenderer({ content, styles }: GalleryRendererProps) {
             />
           );
 
-          const content = linkTo === 'media' ? (
+          const linkContent = linkTo === 'media' ? (
             <a href={image.url} target="_blank" rel="noopener noreferrer">
               {imgElement}
             </a>
@@ -129,11 +129,11 @@ function GalleryRenderer({ content, styles }: GalleryRendererProps) {
 
           return (
             <div key={image.id || index} className="wp-block-image">
-              {content}
+              {linkContent}
               {image.caption && (
-                <figcaption className="blocks-gallery-item__caption">
+                <div className="blocks-gallery-item__caption text-sm text-gray-500 mt-1">
                   {image.caption}
-                </figcaption>
+                </div>
               )}
             </div>
           );
@@ -409,7 +409,7 @@ const GalleryBlock: BlockDefinition = {
       className: '',
     },
   },
-  defaultStyles: {},
+  defaultStyles: { width: '100%', margin: '1em 0' },
   component: GalleryBlockComponent,
   settings: GallerySettings,
   hasSettings: true,

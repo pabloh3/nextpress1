@@ -18,11 +18,113 @@ import { useBlockState } from "../useBlockState";
 type GroupContent = {
   tagName?: string;
   className?: string;
-  display?: 'block' | 'flex';
-  flexDirection?: 'row' | 'column';
-  alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
-  justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
+  display?: 'block' | 'flex' | 'grid' | 'inline' | 'inline-flex' | 'inline-block';
+  flexDirection?: 'row' | 'column' | 'row-reverse' | 'column-reverse';
+  flexWrap?: 'nowrap' | 'wrap' | 'wrap-reverse';
+  alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch' | 'baseline';
+  justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around' | 'space-evenly';
   gap?: string;
+  rowGap?: string;
+  columnGap?: string;
+  gridTemplateColumns?: string;
+  gridTemplateRows?: string;
+  overflow?: 'visible' | 'hidden' | 'auto' | 'scroll';
+  minWidth?: string;
+  maxWidth?: string;
+  minHeight?: string;
+  maxHeight?: string;
+  width?: string;
+  height?: string;
+  layoutPreset?: string;
+};
+
+/** Named layout presets for quick container configuration */
+export const LAYOUT_PRESETS: Record<string, Partial<GroupContent> & { label: string; description: string }> = {
+  'default': {
+    label: 'Default',
+    description: 'Standard block layout',
+    display: 'block',
+  },
+  'flex-column': {
+    label: 'Vertical Stack',
+    description: 'Items stacked vertically with flex',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  'flex-row': {
+    label: 'Horizontal Row',
+    description: 'Items side by side, wraps on small screens',
+    display: 'flex',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: '16px',
+  },
+  'flex-center': {
+    label: 'Centered',
+    description: 'Content centered both ways',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '16px',
+  },
+  'flex-between': {
+    label: 'Space Between',
+    description: 'Items spread evenly across container',
+    display: 'flex',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  'grid-2col': {
+    label: '2-Column Grid',
+    description: 'Equal two-column grid layout',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '16px',
+  },
+  'grid-3col': {
+    label: '3-Column Grid',
+    description: 'Equal three-column grid layout',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '16px',
+  },
+  'grid-auto': {
+    label: 'Auto Grid',
+    description: 'Responsive auto-fill grid',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+    gap: '16px',
+  },
+  'sidebar-left': {
+    label: 'Sidebar Left',
+    description: 'Fixed sidebar with flexible main area',
+    display: 'grid',
+    gridTemplateColumns: '250px 1fr',
+    gap: '24px',
+  },
+  'sidebar-right': {
+    label: 'Sidebar Right',
+    description: 'Flexible main area with fixed sidebar',
+    display: 'grid',
+    gridTemplateColumns: '1fr 250px',
+    gap: '24px',
+  },
+  'hero-centered': {
+    label: 'Hero Centered',
+    description: 'Full-width centered hero section',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '24px',
+    minHeight: '400px',
+    className: 'text-center',
+  },
 };
 
 const DEFAULT_CONTENT: GroupContent = {
@@ -30,9 +132,11 @@ const DEFAULT_CONTENT: GroupContent = {
   className: '',
   display: 'block',
   flexDirection: 'column',
+  flexWrap: 'nowrap',
   alignItems: 'flex-start',
   justifyContent: 'flex-start',
   gap: '0px',
+  overflow: 'visible',
 };
 
 // ============================================================================
@@ -56,20 +160,42 @@ function GroupRenderer({ content, styles, children, isPreview }: GroupRendererPr
 
   const display = content?.display || 'block';
   const flexDirection = content?.flexDirection || 'column';
+  const flexWrap = content?.flexWrap || 'nowrap';
   const alignItems = content?.alignItems || 'flex-start';
   const justifyContent = content?.justifyContent || 'flex-start';
   const gap = content?.gap || '0px';
+  const overflow = content?.overflow || 'visible';
 
-  const containerStyle = {
+  const containerStyle: React.CSSProperties = {
     ...styles,
     padding: styles?.padding || '1.25em 2.375em',
-    ...(display === 'flex' && {
-      display: 'flex',
+    ...(display === 'flex' || display === 'inline-flex' ? {
+      display,
       flexDirection,
+      flexWrap,
       alignItems,
       justifyContent,
       gap,
-    })
+    } : {}),
+    ...(display === 'grid' ? {
+      display: 'grid',
+      gridTemplateColumns: content?.gridTemplateColumns || 'repeat(auto-fill, minmax(200px, 1fr))',
+      gridTemplateRows: content?.gridTemplateRows,
+      gap,
+      alignItems,
+      justifyContent,
+    } : {}),
+    ...(display === 'block' || display === 'inline-block' || display === 'inline' ? {
+      display,
+    } : {}),
+    overflow,
+    minWidth: content?.minWidth,
+    maxWidth: content?.maxWidth,
+    minHeight: content?.minHeight,
+    maxHeight: content?.maxHeight,
+    width: content?.width || styles?.width,
+    height: content?.height || styles?.height,
+    boxSizing: 'border-box',
   };
 
   // Create a block config for ContainerChildren
@@ -174,7 +300,11 @@ function GroupSettings({ block, onUpdate }: GroupSettingsProps) {
 
   const displayOptions = [
     { value: 'block', label: 'Block' },
-    { value: 'flex', label: 'Flex' }
+    { value: 'flex', label: 'Flex' },
+    { value: 'grid', label: 'Grid' },
+    { value: 'inline', label: 'Inline' },
+    { value: 'inline-flex', label: 'Inline Flex' },
+    { value: 'inline-block', label: 'Inline Block' },
   ];
 
   const htmlTagOptions = [
@@ -193,6 +323,38 @@ function GroupSettings({ block, onUpdate }: GroupSettingsProps) {
 
   return (
     <div className="space-y-4">
+      <CollapsibleCard
+        title="Layout Presets"
+        icon={Layout}
+        defaultOpen={true}
+      >
+        <div className="space-y-3">
+          <Label className="text-sm text-gray-600">Quick layout configurations</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(LAYOUT_PRESETS).map(([key, preset]) => (
+              <button
+                key={key}
+                onClick={() => {
+                  const { label, description, ...presetStyles } = preset;
+                  updateContent({
+                    layoutPreset: key,
+                    ...presetStyles,
+                  } as Partial<GroupContent>);
+                }}
+                className={`p-2 text-left text-xs rounded border transition-colors ${
+                  content?.layoutPreset === key
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : 'bg-white border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <div className="font-medium">{preset.label}</div>
+                <div className="text-gray-500 mt-0.5">{preset.description}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </CollapsibleCard>
+
       <CollapsibleCard
         title="Settings"
         icon={Settings}
@@ -276,6 +438,26 @@ function GroupSettings({ block, onUpdate }: GroupSettingsProps) {
                 <SelectContent>
                   <SelectItem value="row">Horizontal (Row)</SelectItem>
                   <SelectItem value="column">Vertical (Column)</SelectItem>
+                  <SelectItem value="row-reverse">Row Reverse</SelectItem>
+                  <SelectItem value="column-reverse">Column Reverse</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Flex Wrap */}
+            <div>
+              <Label htmlFor="flex-wrap">Wrap</Label>
+              <Select
+                value={content?.flexWrap || 'nowrap'}
+                onValueChange={(value) => updateContent({ flexWrap: value as any })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nowrap">No Wrap</SelectItem>
+                  <SelectItem value="wrap">Wrap</SelectItem>
+                  <SelectItem value="wrap-reverse">Wrap Reverse</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -295,6 +477,7 @@ function GroupSettings({ block, onUpdate }: GroupSettingsProps) {
                   <SelectItem value="center">Center</SelectItem>
                   <SelectItem value="flex-end">End</SelectItem>
                   <SelectItem value="stretch">Stretch</SelectItem>
+                  <SelectItem value="baseline">Baseline</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -315,6 +498,7 @@ function GroupSettings({ block, onUpdate }: GroupSettingsProps) {
                   <SelectItem value="flex-end">End</SelectItem>
                   <SelectItem value="space-between">Space Between</SelectItem>
                   <SelectItem value="space-around">Space Around</SelectItem>
+                  <SelectItem value="space-evenly">Space Evenly</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -333,8 +517,155 @@ function GroupSettings({ block, onUpdate }: GroupSettingsProps) {
         </CollapsibleCard>
       )}
 
+      {currentDisplay === 'grid' && (
+        <CollapsibleCard
+          title="Grid Layout"
+          icon={Layout}
+          defaultOpen={true}
+        >
+          <div className="space-y-4">
+            {/* Grid Template Columns */}
+            <div>
+              <Label htmlFor="grid-columns">Grid Template Columns</Label>
+              <Input
+                id="grid-columns"
+                value={content?.gridTemplateColumns || 'repeat(auto-fill, minmax(200px, 1fr))'}
+                onChange={(e) => updateContent({ gridTemplateColumns: e.target.value })}
+                placeholder="e.g. repeat(3, 1fr), 1fr 2fr"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Examples: repeat(2, 1fr) | repeat(auto-fill, minmax(200px, 1fr)) | 1fr 2fr
+              </p>
+            </div>
+
+            {/* Grid Template Rows */}
+            <div>
+              <Label htmlFor="grid-rows">Grid Template Rows</Label>
+              <Input
+                id="grid-rows"
+                value={content?.gridTemplateRows || ''}
+                onChange={(e) => updateContent({ gridTemplateRows: e.target.value })}
+                placeholder="auto (default)"
+              />
+            </div>
+
+            {/* Align Items */}
+            <div>
+              <Label htmlFor="grid-align">Align Items</Label>
+              <Select
+                value={content?.alignItems || 'stretch'}
+                onValueChange={(value) => updateContent({ alignItems: value as any })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="start">Start</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="end">End</SelectItem>
+                  <SelectItem value="stretch">Stretch</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Gap */}
+            <div>
+              <Label htmlFor="grid-gap">Gap</Label>
+              <Input
+                id="grid-gap"
+                value={content?.gap || '16px'}
+                onChange={(e) => updateContent({ gap: e.target.value })}
+                placeholder="e.g. 16px, 1rem"
+              />
+            </div>
+          </div>
+        </CollapsibleCard>
+      )}
+
       <CollapsibleCard
-        title="Styling"
+        title="Sizing & Overflow"
+        icon={Settings}
+        defaultOpen={false}
+      >
+        <div className="space-y-4">
+          {/* Width */}
+          <div>
+            <Label htmlFor="group-width">Width</Label>
+            <Input
+              id="group-width"
+              value={content?.width || ''}
+              onChange={(e) => updateContent({ width: e.target.value })}
+              placeholder="auto (e.g. 100%, 500px)"
+            />
+          </div>
+
+          {/* Min Width */}
+          <div>
+            <Label htmlFor="group-min-width">Min Width</Label>
+            <Input
+              id="group-min-width"
+              value={content?.minWidth || ''}
+              onChange={(e) => updateContent({ minWidth: e.target.value })}
+              placeholder="0 (e.g. 200px, 50%)"
+            />
+          </div>
+
+          {/* Max Width */}
+          <div>
+            <Label htmlFor="group-max-width">Max Width</Label>
+            <Input
+              id="group-max-width"
+              value={content?.maxWidth || ''}
+              onChange={(e) => updateContent({ maxWidth: e.target.value })}
+              placeholder="none (e.g. 1200px, 100%)"
+            />
+          </div>
+
+          {/* Height */}
+          <div>
+            <Label htmlFor="group-height">Height</Label>
+            <Input
+              id="group-height"
+              value={content?.height || ''}
+              onChange={(e) => updateContent({ height: e.target.value })}
+              placeholder="auto (e.g. 100vh, 400px)"
+            />
+          </div>
+
+          {/* Min Height */}
+          <div>
+            <Label htmlFor="group-min-height">Min Height</Label>
+            <Input
+              id="group-min-height"
+              value={content?.minHeight || ''}
+              onChange={(e) => updateContent({ minHeight: e.target.value })}
+              placeholder="0 (e.g. 200px, 50vh)"
+            />
+          </div>
+
+          {/* Overflow */}
+          <div>
+            <Label htmlFor="group-overflow">Overflow</Label>
+            <Select
+              value={content?.overflow || 'visible'}
+              onValueChange={(value) => updateContent({ overflow: value as any })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="visible">Visible</SelectItem>
+                <SelectItem value="hidden">Hidden</SelectItem>
+                <SelectItem value="auto">Auto</SelectItem>
+                <SelectItem value="scroll">Scroll</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CollapsibleCard>
+
+      <CollapsibleCard
+        title="Style"
         icon={Palette}
         defaultOpen={false}
       >

@@ -381,7 +381,7 @@ const ButtonsBlock: BlockDefinition = {
       className: '',
     },
   },
-  defaultStyles: {},
+  defaultStyles: { margin: '1em 0' },
   component: ButtonsBlockComponent,
   settings: ButtonsSettings,
   hasSettings: true,

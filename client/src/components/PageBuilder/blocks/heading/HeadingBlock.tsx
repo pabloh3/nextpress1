@@ -229,9 +229,9 @@ function LegacyHeadingSettings({ block, onUpdate }: HeadingSettingsProps) {
                 key={level}
                 type="button"
                 onClick={() => {
-                  if (onUpdate) {
+                  updateContent({ level });
+                  if (!accessor) {
                     onUpdate({
-                      content: { ...block.content, level } as BlockContent,
                       styles: {
                         ...block.styles,
                         fontSize: HEADING_FONT_SIZES[level],

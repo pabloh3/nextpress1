@@ -479,8 +479,13 @@ const TableBlock: BlockDefinition = {
   defaultContent: {
     kind: 'structured',
     data: {
-      body: [],
-      head: [],
+      head: [
+        { cells: [{ content: 'Header 1', tag: 'th' }, { content: 'Header 2', tag: 'th' }, { content: 'Header 3', tag: 'th' }] },
+      ],
+      body: [
+        { cells: [{ content: 'Cell 1', tag: 'td' }, { content: 'Cell 2', tag: 'td' }, { content: 'Cell 3', tag: 'td' }] },
+        { cells: [{ content: 'Cell 4', tag: 'td' }, { content: 'Cell 5', tag: 'td' }, { content: 'Cell 6', tag: 'td' }] },
+      ],
       foot: [],
       hasFixedLayout: false,
       caption: '',

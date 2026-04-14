@@ -552,7 +552,7 @@ const PostListBlock: BlockDefinition = {
   description: 'Display a list of posts in grid, list, or card layout',
   category: 'post',
   defaultContent: DEFAULT_CONTENT,
-  defaultStyles: {},
+  defaultStyles: { margin: '1em 0' },
   component: PostListBlockComponent,
   settings: PostListSettings,
   hasSettings: true,

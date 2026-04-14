@@ -57,7 +57,7 @@ function CodeRenderer({ content, styles }: CodeRendererProps) {
         lineHeight: '1.4',
         margin: 0,
       }}>
-        <code>{codeContent}</code>
+        <code style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{codeContent}</code>
       </pre>
     </div>
   );

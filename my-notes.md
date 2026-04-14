@@ -8,3 +8,9 @@
 - Then cross check things along Notion error tracking board and tick off solved bugs
 - Then try driving nextpress site and docs using nextpress
 - Initiall release achieved... ?
+
+## New
+
+- Add Icon block Support to Page Builder
+- More layout options for blocks
+- Make block width and height more flexible

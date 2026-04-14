@@ -424,7 +424,7 @@ const PostCommentsBlock: BlockDefinition = {
   description: 'Display post comments and a comment submission form',
   category: 'post',
   defaultContent: DEFAULT_CONTENT,
-  defaultStyles: {},
+  defaultStyles: { margin: '1em 0' },
   component: PostCommentsBlockComponent,
   settings: PostCommentsSettings,
   hasSettings: true,

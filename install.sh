@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 COMPOSE_URL="https://raw.githubusercontent.com/pabloh3/nextpress1/main/docker-compose.prod.yml"
 INSTALL_DIR="/opt/nextpress"
 DEFAULT_DOMAIN="nextpress.localhost"
-DEFAULT_VERSION="latest"
+DEFAULT_VERSION="beta-v1.0.2"
 # ============================================
 
 # Spinner for long-running commands (ASCII compatible)

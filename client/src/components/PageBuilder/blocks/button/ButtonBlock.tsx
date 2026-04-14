@@ -4,9 +4,12 @@ import type { BlockDefinition, BlockComponentProps } from "../types.ts";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { MousePointer, ExternalLink, Type, Link } from "lucide-react";
+import { MousePointer, ExternalLink, Type, Link, Smile, X } from "lucide-react";
 import { getBlockStateAccessor } from "../blockStateRegistry";
 import { useBlockState } from "../useBlockState";
+import { IconRenderer } from "../shared/IconRenderer";
+import { IconPickerButton } from "../../IconPicker/IconPickerButton";
+import type { IconReference } from "@/lib/icon-indexes";
 
 // ============================================================================
 // TYPES
@@ -19,6 +22,10 @@ type ButtonContent = BlockContent & {
   rel?: string;
   title?: string;
   className?: string;
+  // Icon support
+  icon?: IconReference;
+  iconPosition?: 'left' | 'right';
+  iconOnly?: boolean;
 };
 
 const DEFAULT_CONTENT: ButtonContent = {
@@ -49,8 +56,25 @@ function ButtonRenderer({ content, styles, isPreview }: ButtonRendererProps) {
   const title = content?.title as string | undefined;
   const extraClass = (content?.className as string | undefined) || "";
 
+  // Icon props
+  const icon = content?.icon as IconReference | undefined;
+  const iconPosition = content?.iconPosition || 'left';
+  const iconOnly = content?.iconOnly || false;
+
   const wrapperClass = ["wp-block-button", extraClass].filter(Boolean).join(" ");
   const anchorClass = "wp-block-button__link wp-element-button";
+
+  const iconElement = icon ? (
+    <IconRenderer
+      icon={icon}
+      size={icon.size || 16}
+      color="currentColor"
+      strokeWidth={icon.strokeWidth || 2}
+      style={{ flexShrink: 0 }}
+    />
+  ) : null;
+
+  const label = iconOnly && icon ? (title || textContent || undefined) : undefined;
 
   return (
     <div className={wrapperClass} role="presentation" onClick={(e) => (isPreview ? undefined : e.preventDefault())}>
@@ -58,11 +82,13 @@ function ButtonRenderer({ content, styles, isPreview }: ButtonRendererProps) {
         href={url}
         target={linkTarget}
         rel={rel}
-        title={title}
-        style={styles}
+        title={label}
+        style={{ ...styles, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: iconElement && !iconOnly ? '6px' : undefined }}
         className={anchorClass}
       >
-        {textContent}
+        {iconElement && iconPosition === 'left' && iconElement}
+        {!iconOnly && textContent}
+        {iconElement && iconPosition === 'right' && iconElement}
       </a>
     </div>
   );
@@ -106,6 +132,8 @@ function ButtonSettings({ block, onUpdate }: ButtonSettingsProps) {
     ? (accessor.getContent() as ButtonContent)
     : (block.content as ButtonContent) || DEFAULT_CONTENT;
 
+  const currentIcon = content?.icon as IconReference | undefined;
+
   // Update handlers
   const updateContent = (updates: Partial<ButtonContent>) => {
     if (accessor) {
@@ -120,6 +148,14 @@ function ButtonSettings({ block, onUpdate }: ButtonSettingsProps) {
         } as BlockContent,
       });
     }
+  };
+
+  const handleIconSelect = (icon: IconReference) => {
+    updateContent({ icon });
+  };
+
+  const handleRemoveIcon = () => {
+    updateContent({ icon: undefined, iconOnly: false, iconPosition: undefined });
   };
 
   return (
@@ -149,6 +185,95 @@ function ButtonSettings({ block, onUpdate }: ButtonSettingsProps) {
           </div>
         </div>
       </CollapsibleCard>
+
+      <CollapsibleCard title="Icon" icon={Smile} defaultOpen={!!currentIcon}>
+        <div className="space-y-4">
+          <div>
+            <Label className="text-sm font-medium text-gray-700">Button Icon</Label>
+            <div className="flex items-center gap-2 mt-1">
+              {currentIcon ? (
+                <>
+                  <div className="flex items-center justify-center w-8 h-8 rounded-md border border-gray-200 bg-gray-50">
+                    <IconRenderer icon={currentIcon} size={16} />
+                  </div>
+                  <span className="text-xs text-gray-500 flex-1 truncate">
+                    {currentIcon.iconName}
+                  </span>
+                  <button
+                    onClick={handleRemoveIcon}
+                    className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                    title="Remove icon"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </>
+              ) : (
+                <IconPickerButton
+                  onSelect={handleIconSelect}
+                  variant="outline"
+                  size="sm"
+                />
+              )}
+              {currentIcon && (
+                <IconPickerButton
+                  currentIcon={currentIcon}
+                  onSelect={handleIconSelect}
+                  variant="ghost"
+                  size="sm"
+                />
+              )}
+            </div>
+          </div>
+
+          {currentIcon && (
+            <>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Position</Label>
+                <div className="flex gap-2 mt-1">
+                  {[
+                    { value: 'left' as const, label: 'Left' },
+                    { value: 'right' as const, label: 'Right' },
+                  ].map((pos) => (
+                    <button
+                      key={pos.value}
+                      onClick={() => updateContent({ iconPosition: pos.value })}
+                      className={`h-8 px-3 text-xs font-medium rounded-md transition-all ${
+                        (content?.iconPosition || 'left') === pos.value
+                          ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                          : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                      }`}
+                    >
+                      {pos.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Mode</Label>
+                <div className="flex gap-2 mt-1">
+                  {[
+                    { value: false, label: 'With Text' },
+                    { value: true, label: 'Icon Only' },
+                  ].map((mode) => (
+                    <button
+                      key={String(mode.value)}
+                      onClick={() => updateContent({ iconOnly: mode.value })}
+                      className={`h-8 px-3 text-xs font-medium rounded-md transition-all ${
+                        (content?.iconOnly || false) === mode.value
+                          ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                          : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </CollapsibleCard>
       
       <CollapsibleCard title="Link Settings" icon={Link} defaultOpen={true}>
         <div className="space-y-3">
@@ -174,15 +299,9 @@ function ButtonSettings({ block, onUpdate }: ButtonSettingsProps) {
           </div>
         </div>
       </CollapsibleCard>
-      
-
     </div>
   );
 }
-
-// ============================================================================
-// LEGACY RENDERER (Backward Compatibility)
-// ============================================================================
 
 // ============================================================================
 // BLOCK DEFINITION

@@ -12,6 +12,7 @@ import { BuilderCanvas } from './BuilderCanvas';
 import PageSettingsModal from './PageSettings';
 import { blockRegistry } from './blocks';
 import { BlockActionsProvider } from './BlockActionsContext';
+import { PageProvider } from './PageContext';
 import { savePageDraftWithHistory } from '@/lib/pageDraftStorage';
 import {
   findBlock,
@@ -341,9 +342,30 @@ export default function PageBuilder({
     setSidebarVisible(!sidebarVisible);
   };
 
+  /**
+   * Insert template blocks at the end of the current canvas.
+   * Generates new IDs for all blocks to avoid conflicts.
+   */
+  const handleInsertTemplate = useCallback(
+    (templateBlocks: BlockConfig[]) => {
+      // Generate new IDs for all blocks to avoid conflicts
+      const reIdBlocks = (blocks: BlockConfig[]): BlockConfig[] =>
+        blocks.map((block) => ({
+          ...block,
+          id: generateBlockId(),
+          children: block.children ? reIdBlocks(block.children) : undefined,
+        }));
+
+      const newBlocks = reIdBlocks(templateBlocks);
+      commitBlocks((prev) => [...prev, ...newBlocks]);
+    },
+    [commitBlocks],
+  );
+
   return (
     <div className="flex h-full bg-gray-50">
-      <BlockActionsProvider
+      <PageProvider pageOther={data?.other as any}>
+        <BlockActionsProvider
         value={{
           selectedBlockId,
           onSelect: (id) => {
@@ -395,6 +417,7 @@ export default function PageBuilder({
               setHoverHighlight={setHoverHighlight}
               sidebarVisible={sidebarVisible}
               onToggleSidebar={toggleSidebar}
+              onInsertTemplate={handleInsertTemplate}
             />
           )}
           <div className="flex-1 flex flex-col">
@@ -436,6 +459,7 @@ export default function PageBuilder({
           contentType={resolvedContentType}
         />
       </BlockActionsProvider>
+      </PageProvider>
     </div>
   );
 }

@@ -37,8 +37,10 @@ import {
   Settings,
   Sparkles
 } from "lucide-react";
-import type { BlockConfig } from "@shared/schema-types";
+import type { BlockConfig, DisplayCondition } from "@shared/schema-types";
 import { blockRegistry } from "./blocks";
+import { ConditionBuilder } from "@/components/Templates/ConditionBuilder";
+import { VariablePicker } from "@/components/Templates/VariablePicker";
 import { getBlockStateAccessor } from "./blocks/blockStateRegistry";
 import TokenColorPicker from "./TokenColorPicker"
 import TokenSpacingPicker from "./TokenSpacingPicker"
@@ -70,6 +72,14 @@ interface BlockSettingsProps {
 export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSettingsProps) {
   const [customCss, setCustomCss] = useState(block.customCss || '');
   const accessor = getBlockStateAccessor(block.id);
+
+  // Display conditions from block settings
+  const displayConditions: DisplayCondition[] =
+    (block.settings?.displayConditions as DisplayCondition[]) ?? [];
+
+  const updateDisplayConditions = (conditions: DisplayCondition[]) => {
+    updateSettings({ displayConditions: conditions.length > 0 ? conditions : undefined });
+  };
 
   const updateContent = (contentUpdates: any) => {
     if (accessor) {
@@ -505,7 +515,16 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                   <Columns className="w-3 h-3" />
                   Width
                 </Label>
-                <select className="h-7 px-2 text-xs border border-gray-200 rounded-none bg-white focus:outline-none focus:ring-1 focus:ring-gray-400">
+                <select
+                  className="h-7 px-2 text-xs border border-gray-200 rounded-none bg-white focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  value={block.styles?.width ? (block.styles.width === '100%' ? 'Fill' : block.styles.width === 'fit-content' ? 'Fit' : block.styles.width === 'auto' ? 'Auto' : 'Custom') : 'Auto'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'Auto') updateStyles({ width: 'auto' });
+                    else if (val === 'Fill') updateStyles({ width: '100%' });
+                    else if (val === 'Fit') updateStyles({ width: 'fit-content' });
+                  }}
+                >
                   <option>Auto</option>
                   <option>Fill</option>
                   <option>Fit</option>
@@ -513,9 +532,25 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                 </select>
               </div>
               <Input
-                value={block.styles?.width || '100%'}
+                value={block.styles?.width || 'auto'}
                 onChange={(e) => updateStyles({ width: e.target.value })}
-                placeholder="100%"
+                placeholder="auto"
+                className="h-8 text-sm border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400"
+              />
+            </div>
+
+            {/* Max Width */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                  <Columns className="w-3 h-3" />
+                  Max Width
+                </Label>
+              </div>
+              <Input
+                value={block.styles?.maxWidth || ''}
+                onChange={(e) => updateStyles({ maxWidth: e.target.value || undefined })}
+                placeholder="none"
                 className="h-8 text-sm border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400"
               />
             </div>
@@ -562,6 +597,26 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                   </div>
                 )}
 
+                {/* Flex Wrap (if display is flex) */}
+                {block.styles?.display === 'flex' && (
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                      <Rows className="w-3 h-3" />
+                      Wrap
+                    </Label>
+                    <ChipGroup
+                      label=""
+                      options={[
+                        { value: 'nowrap', label: 'No Wrap' },
+                        { value: 'wrap', label: 'Wrap' },
+                        { value: 'wrap-reverse', label: 'Wrap Rev' },
+                      ]}
+                      value={block.styles?.flexWrap || 'nowrap'}
+                      onChange={(value) => updateStyles({ flexWrap: value })}
+                    />
+                  </div>
+                )}
+
                 {/* Justify Content */}
                 <div>
                   <Label className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
@@ -575,6 +630,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                       { value: 'center', label: 'Center' },
                       { value: 'flex-end', label: 'End' },
                       { value: 'space-between', label: 'Between' },
+                      { value: 'space-around', label: 'Around' },
                     ]}
                     value={block.styles?.justifyContent || 'flex-start'}
                     onChange={(value) => updateStyles({ justifyContent: value })}
@@ -599,6 +655,20 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                     onChange={(value) => updateStyles({ alignItems: value })}
                   />
                 </div>
+
+                {/* Gap */}
+                <div>
+                  <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                    <Move className="w-3 h-3" />
+                    Gap
+                  </Label>
+                  <Input
+                    value={block.styles?.gap || ''}
+                    onChange={(e) => updateStyles({ gap: e.target.value || undefined })}
+                    placeholder="e.g. 16px, 1rem"
+                    className="mt-2 h-8 text-sm border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  />
+                </div>
               </>
             )}
 
@@ -610,7 +680,16 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                       <Rows className="w-3 h-3" />
                       Height
                     </Label>
-                  <select className="h-7 px-2 text-xs border border-gray-200 rounded-none bg-white focus:outline-none focus:ring-1 focus:ring-gray-400">
+                  <select
+                    className="h-7 px-2 text-xs border border-gray-200 rounded-none bg-white focus:outline-none focus:ring-1 focus:ring-gray-400"
+                    value={block.styles?.height ? (block.styles.height === 'auto' ? 'Auto' : block.styles.height === 'min-content' ? 'Min Content' : block.styles.height === 'max-content' ? 'Max Content' : 'Custom') : 'Auto'}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'Auto') updateStyles({ height: 'auto' });
+                      else if (val === 'Min Content') updateStyles({ height: 'min-content' });
+                      else if (val === 'Max Content') updateStyles({ height: 'max-content' });
+                    }}
+                  >
                     <option>Auto</option>
                     <option>Min Content</option>
                     <option>Max Content</option>
@@ -622,6 +701,27 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                   onChange={(e) => updateStyles({ height: e.target.value })}
                   placeholder="auto"
                   className="h-8 text-sm border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400"
+                />
+              </div>
+            )}
+
+            {/* Overflow */}
+            {['container', 'columns', 'core/group'].includes(block.name) && (
+              <div>
+                <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                  <Square className="w-3 h-3" />
+                  Overflow
+                </Label>
+                <ChipGroup
+                  label=""
+                  options={[
+                    { value: 'visible', label: 'Visible' },
+                    { value: 'hidden', label: 'Hidden' },
+                    { value: 'auto', label: 'Auto' },
+                    { value: 'scroll', label: 'Scroll' },
+                  ]}
+                  value={block.styles?.overflow || 'visible'}
+                  onChange={(value) => updateStyles({ overflow: value })}
                 />
               </div>
             )}
@@ -669,7 +769,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
       </div>
 
       <Tabs defaultValue="content" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
+        <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-lg">
           <TabsTrigger 
             value="content"
             className="flex items-center gap-2 text-gray-600 data-[state=active]:text-black data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium px-3 py-2 rounded-md transition-all text-xs"
@@ -688,10 +788,35 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
           >
             <Code className="w-3 h-3" /> Advanced
           </TabsTrigger>
+          <TabsTrigger 
+            value="conditions"
+            className="flex items-center gap-2 text-gray-600 data-[state=active]:text-black data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium px-3 py-2 rounded-md transition-all text-xs"
+          >
+            <Settings className="w-3 h-3" /> Conditions
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="content" className="space-y-4 mt-4">
           <div className="bg-gray-50 rounded-none p-4 border border-gray-200">
+            {/* Variable insertion for blocks with text content */}
+            {typeof (block.content as Record<string, unknown>)?.value === 'string' && (
+              <div className="mb-4 pb-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold text-gray-800">
+                    Insert Variable
+                  </Label>
+                  <VariablePicker
+                    onInsert={(variable) => {
+                      const currentValue = (block.content as Record<string, unknown>)?.value as string || '';
+                      updateContent({ value: currentValue + variable });
+                    }}
+                  />
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Click a variable to append it to the block content below
+                </p>
+              </div>
+            )}
             {renderContentSettings()}
           </div>
         </TabsContent>
@@ -765,6 +890,26 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                   </div>
                 </div>
               </CollapsibleCard>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="conditions" className="space-y-4 mt-4">
+          <div className="bg-gray-50 rounded-none p-4 border border-gray-200">
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm font-semibold text-gray-800">
+                  Display Conditions
+                </Label>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Control when this block is visible. Add conditions to show or
+                  hide the block based on page type, user status, or URL.
+                </p>
+              </div>
+              <ConditionBuilder
+                conditions={displayConditions}
+                onChange={updateDisplayConditions}
+              />
             </div>
           </div>
         </TabsContent>

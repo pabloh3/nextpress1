@@ -152,7 +152,7 @@ function Router() {
           <Route
             path="/page-builder/template/:id"
             component={({ params }: any) => (
-              <PageBuilderEditor postId={params.id} type="page" />
+              <PageBuilderEditor postId={params.id} type="template" />
             )}
           />
           <Route path="/page-builder" component={() => <PageBuilderEditor />} />

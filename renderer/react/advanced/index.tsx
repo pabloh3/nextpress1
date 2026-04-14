@@ -241,3 +241,82 @@ export function TableBlock(props: BlockData) {
     </figure>
   );
 }
+
+/**
+ * Icon Block Component
+ * Renders an icon from various icon sets as an SVG placeholder for SSR.
+ * At SSR time, lucide icons render as inline SVGs; other sets render placeholders
+ * that hydrate client-side.
+ */
+export function IconBlock(props: BlockData) {
+  const {
+    iconSet,
+    iconName,
+    iconSize,
+    iconColor,
+    iconStrokeWidth,
+    link,
+    linkTarget,
+    label,
+    className,
+    style,
+    attributes,
+  } = props as Extract<BlockData, { blockName: "core/icon" }>;
+
+  const size = iconSize || 24;
+  const color = iconColor || "currentColor";
+  const strokeWidth = iconStrokeWidth || 2;
+
+  const mergedClassName = ["wp-block-icon", className]
+    .filter(Boolean)
+    .join(" ");
+
+  const iconStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: size,
+    height: size,
+    ...style,
+  };
+
+  // Render inline SVG placeholder for SSR
+  const svgContent = (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={String(strokeWidth)}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-label={label || undefined}
+      role={label ? "img" : "presentation"}
+      className={mergedClassName || undefined}
+      style={iconStyle}
+      data-icon-set={iconSet}
+      data-icon-name={iconName}
+      {...attributes}
+    >
+      <rect x="3" y="3" width="18" height="18" rx="2" opacity="0.15" />
+      <circle cx="12" cy="12" r="3" opacity="0.3" />
+    </svg>
+  );
+
+  if (link && link !== "#") {
+    return (
+      <a
+        href={link}
+        target={linkTarget}
+        rel={linkTarget === "_blank" ? "noopener noreferrer" : undefined}
+        title={label || undefined}
+        style={{ textDecoration: "none", display: "inline-flex" }}
+      >
+        {svgContent}
+      </a>
+    );
+  }
+
+  return svgContent;
+}

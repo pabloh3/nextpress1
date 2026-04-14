@@ -38,6 +38,7 @@ import type {
   TokenEntry,
   PageSeoSettings,
   PageDesignSettings,
+  PageIconSettings,
   PageOther,
   MetaTagEntry,
 } from '@shared/schema-types';
@@ -94,6 +95,7 @@ export default function PageSettingsModal({
   const pageOther = (page as { other?: PageOther })?.other;
   const currentSeo = pageOther?.seo;
   const currentDesign = pageOther?.design;
+  const currentIcons = pageOther?.icons;
 
   // General tab state
   const [title, setTitle] = useState((page as any)?.title ?? (page as any)?.name ?? '');
@@ -124,6 +126,10 @@ export default function PageSettingsModal({
   );
   const [textColor, setTextColor] = useState<TokenEntry | undefined>(currentDesign?.textColor);
 
+  // Icon settings state (pages only)
+  const [iconDefaultSet, setIconDefaultSet] = useState<string>(currentIcons?.defaultSet ?? 'lucide');
+  const [iconDefaultSize, setIconDefaultSize] = useState<number>(currentIcons?.defaultSize ?? 24);
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!page?.id) throw new Error('Page ID is required');
@@ -149,10 +155,20 @@ export default function PageSettingsModal({
             }
           : undefined;
 
+      // Build icon settings (pages only)
+      const iconSettings: PageIconSettings | undefined =
+        contentType === 'page'
+          ? {
+              defaultSet: iconDefaultSet as PageIconSettings['defaultSet'],
+              defaultSize: iconDefaultSize,
+            }
+          : undefined;
+
       // Build other field
       const other: PageOther = {
         seo: seoSettings,
         ...(designSettings && { design: designSettings }),
+        ...(iconSettings && { icons: iconSettings }),
       };
 
       // Build payload with all fields
@@ -443,6 +459,45 @@ export default function PageSettingsModal({
                     currentStyleValue={textColor?.style}
                     onChange={handleTextColorChange}
                   />
+                </div>
+
+                {/* Icon Settings */}
+                <div className="pt-4 border-t border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-3">Icons</h4>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="iconDefaultSet">Default Icon Set</Label>
+                      <Select value={iconDefaultSet} onValueChange={setIconDefaultSet}>
+                        <SelectTrigger id="iconDefaultSet">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="lucide">Lucide</SelectItem>
+                          <SelectItem value="all">All Sets</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500">
+                        Default icon set for new Icon and Button blocks on this page
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="iconDefaultSize">Default Icon Size</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="iconDefaultSize"
+                          type="number"
+                          value={iconDefaultSize}
+                          onChange={(e) => setIconDefaultSize(Number(e.target.value) || 24)}
+                          min={8}
+                          max={200}
+                          className="w-24 h-9"
+                        />
+                        <span className="text-sm text-gray-500">px</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
             )}

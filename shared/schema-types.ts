@@ -132,10 +132,26 @@ export interface PageDesignSettings {
   textColor?: TokenEntry;
 }
 
+/** Per-page icon settings stored in page.other.icons */
+export interface PageIconSettings {
+  /** Default icon set for new icon/button blocks on this page */
+  defaultSet: 'lucide' | 'react-icons' | 'svgl' | 'all';
+
+  /**
+   * When defaultSet is 'react-icons', optionally restrict to specific prefixes.
+   * Empty array or undefined = all react-icons sets.
+   */
+  allowedSets?: string[]; // e.g., ['lu', 'tb', 'fa6']
+
+  /** Default icon size for new icons on this page */
+  defaultSize?: number; // px, default 24
+}
+
 /** Structure for page.other jsonb field */
 export interface PageOther {
   seo?: PageSeoSettings;
   design?: PageDesignSettings;
+  icons?: PageIconSettings;
   [key: string]: unknown;
 }
 
@@ -232,4 +248,41 @@ export interface BlockConfig {
 		units?: Record<string, string>;
 		animation?: BlockAnimation | null;
 	}
+}
+
+// ─── Template Variables & Conditions ─────────────────────────────────────────
+
+/** A single variable definition for the UI picker */
+export interface VariableDefinition {
+  key: string;           // e.g., "title", "url", "name"
+  label: string;         // Human-readable: "Post Title"
+  description: string;   // Tooltip description
+  example?: string;      // Example value for preview
+}
+
+/** A namespace groups related variables together */
+export interface VariableNamespaceUI {
+  name: string;          // e.g., "site", "post", "author"
+  label: string;         // Human-readable: "Site", "Post", "Author"
+  description: string;   // Namespace description
+  variables: VariableDefinition[];
+}
+
+/** A single display condition for template/block visibility */
+export interface DisplayCondition {
+  id: string;            // Unique ID for the condition row
+  type: string;          // e.g., "is_home", "is_single", "post_in_category"
+  operator: "is" | "is_not";
+  value?: string;        // e.g., category slug, page slug, role name
+  logic?: "and" | "or";  // How this condition combines with the previous one
+}
+
+/** Condition type definition for the UI builder */
+export interface ConditionTypeDefinitionUI {
+  type: string;          // Machine key: "is_home"
+  label: string;         // Human-readable: "Is Homepage"
+  description: string;   // Tooltip description
+  hasValue: boolean;     // Does this condition need a value input?
+  valueType?: "text" | "select";
+  valueOptions?: { value: string; label: string }[];
 }

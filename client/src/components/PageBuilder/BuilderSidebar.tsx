@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import BlockLibrary from './BlockLibrary';
 import BlockSettings from './BlockSettings';
+import { TemplateLibrary } from './TemplateLibrary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Plus, Settings, Sidebar } from 'lucide-react';
+import type { BlockConfig } from '@shared/schema-types';
 
 export function BuilderSidebar({
   activeTab,
@@ -14,6 +16,7 @@ export function BuilderSidebar({
   setHoverHighlight,
   sidebarVisible,
   onToggleSidebar,
+  onInsertTemplate,
 }: {
   activeTab: 'blocks' | 'settings';
   setActiveTab: (tab: 'blocks' | 'settings') => void;
@@ -22,6 +25,7 @@ export function BuilderSidebar({
   setHoverHighlight: (area: 'padding' | 'margin' | null) => void;
   sidebarVisible: boolean;
   onToggleSidebar: () => void;
+  onInsertTemplate?: (blocks: BlockConfig[]) => void;
 }) {
   return (
     <div className="w-80 sm:w-80 lg:w-80 bg-white border-r border-gray-200 flex flex-col min-h-0 transition-all duration-300 ease-out shadow-sm">
@@ -58,6 +62,11 @@ export function BuilderSidebar({
             <ScrollArea className="h-full">
               <div className="max-w-full pr-2">
                 <BlockLibrary />
+                {onInsertTemplate && (
+                  <div className="mt-4 border border-gray-200 bg-white shadow-sm rounded-none">
+                    <TemplateLibrary onInsertTemplate={onInsertTemplate} />
+                  </div>
+                )}
               </div>
               <ScrollBar orientation="vertical" />
             </ScrollArea>

@@ -40,6 +40,13 @@ interface ButtonConfig extends BaseBlockData {
 	link?: string;
 	target?: "_blank" | "_self";
 	variant?: "primary" | "secondary" | "outline";
+	// Icon support
+	iconSet?: "lucide" | "react-icons" | "svgl";
+	iconName?: string;
+	iconSize?: number;
+	iconColor?: string;
+	iconPosition?: "left" | "right";
+	iconOnly?: boolean;
 }
 
 interface ButtonsConfig extends BaseBlockData {
@@ -220,6 +227,18 @@ interface MarkdownConfig extends BaseBlockData {
 	content: string;
 }
 
+interface IconConfig extends BaseBlockData {
+	blockName: "core/icon";
+	iconSet: "lucide" | "react-icons" | "svgl";
+	iconName: string;
+	iconSize?: number;
+	iconColor?: string;
+	iconStrokeWidth?: number;
+	link?: string;
+	linkTarget?: "_blank" | "_self";
+	label?: string;
+}
+
 // ============================================================================
 // LEGACY/SPECIAL BLOCKS
 // ============================================================================
@@ -257,4 +276,5 @@ export type BlockData =
 	| PreformattedConfig
 	| TableConfig
 	| MarkdownConfig
+	| IconConfig
 	| CounterConfig;

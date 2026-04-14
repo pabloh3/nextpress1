@@ -22,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Trash2, Pencil, Copy } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, Copy, Layout } from "lucide-react";
+import { useLocation } from "wouter";
 import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
 import { TemplateModal } from "@/components/Templates";
@@ -50,6 +51,7 @@ export default function Templates() {
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const { data: templatesData, isLoading } = useQuery<TemplatesApiResponse>({
     queryKey: ['/api/templates', { type: typeFilter !== 'all' ? typeFilter : undefined, page, per_page: 10 }],
@@ -111,6 +113,10 @@ export default function Templates() {
   const handleEdit = (template: Template) => {
     setTemplateToEdit(template);
     setEditModalOpen(true);
+  };
+
+  const handleEditInBuilder = (template: Template) => {
+    setLocation(`/page-builder/template/${template.id}`);
   };
 
   const handleDuplicate = (template: Template) => {
@@ -242,6 +248,14 @@ export default function Templates() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEditInBuilder(template)}
+                              title="Edit in builder"
+                            >
+                              <Layout className="w-4 h-4" />
+                            </Button>
                             <Button 
                               variant="ghost" 
                               size="sm"

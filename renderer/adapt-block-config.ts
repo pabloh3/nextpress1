@@ -227,9 +227,19 @@ function extractContentProps(
 				props.dropCap = content.dropCap || false;
 			} else if (blockName === "core/button" || blockName === "core/buttons") {
 				// Button-specific: link, target
-				props.link = (content as any).link;
-				props.target = (content as any).target;
+				props.link = (content as any).link || (content as any).url;
+				props.target = (content as any).target || (content as any).linkTarget;
 				props.variant = (content as any).variant;
+				// Icon support
+				const icon = (content as any).icon;
+				if (icon) {
+					props.iconSet = icon.iconSet;
+					props.iconName = icon.iconName;
+					props.iconSize = icon.size;
+					props.iconColor = icon.color;
+				}
+				props.iconPosition = (content as any).iconPosition || "left";
+				props.iconOnly = (content as any).iconOnly || false;
 			} else if (blockName === "core/list") {
 				// List-specific: ordered, start
 				props.ordered = (content as any).ordered || false;
@@ -316,7 +326,19 @@ function extractContentProps(
 			// Extract structured data based on block type
 			const data = content.data || {};
 
-			if (blockName === "core/columns") {
+			if (blockName === "core/icon") {
+				const icon = (data.icon as Record<string, unknown>) || {};
+				return {
+					iconSet: icon.iconSet || "lucide",
+					iconName: icon.iconName || "star",
+					iconSize: icon.size || 24,
+					iconColor: icon.color || "currentColor",
+					iconStrokeWidth: icon.strokeWidth || 2,
+					link: data.link || undefined,
+					linkTarget: data.linkTarget || undefined,
+					label: data.label || undefined,
+				};
+			} else if (blockName === "core/columns") {
 				return {
 					gap: data.gap,
 					minColumnWidth: data.minColumnWidth,

@@ -10,7 +10,7 @@ import AdminSidebar from '@/components/AdminSidebar';
 import PageBuilder from '@/components/PageBuilder/PageBuilder';
 import PublishDialog from '@/components/PageBuilder/PublishDialog';
 import { useToast } from '@/hooks/use-toast';
-import type { BlockConfig, Page, Post } from '@shared/schema-types';
+import type { BlockConfig, Page, Post, Template } from '@shared/schema-types';
 import { storeSlugToIdMapping, getPageIdFromSlug } from '@/lib/editorStorage';
 import {
   clearPageDraft,
@@ -66,8 +66,8 @@ function useMountEffect(effect: () => void | (() => void)) {
   useEffect(effect, []);
 }
 
-/** Unified editor type — supports both pages and posts */
-type EditorContentType = 'page' | 'post';
+/** Unified editor type — supports pages, posts, and templates */
+type EditorContentType = 'page' | 'post' | 'template';
 
 /**
  * Common shape used internally so PageBuilder receives a consistent interface.
@@ -96,12 +96,33 @@ const adaptPostToEditorData = (post: Post): EditorData =>
     // Post doesn't have these page-only fields but the type requires them
   }) as EditorData;
 
+/**
+ * Adapts a Template object to the Page shape expected by PageBuilder.
+ * Templates use `name` instead of `title`, have no slug/status/version.
+ */
+const adaptTemplateToEditorData = (template: Template): EditorData =>
+  ({
+    ...template,
+    title: template.name,
+    slug: '',
+    status: 'publish',
+    siteId: '',
+    version: 0,
+    history: [],
+    menuOrder: 0,
+    blogId: null,
+    parentId: null,
+    password: null,
+    other: (template.other as Record<string, unknown>) ?? {},
+  }) as unknown as EditorData;
+
 export default function PageBuilderEditor({
   postId,
   isSlug = false,
   type = 'page',
 }: PageBuilderEditorProps) {
   const isPost = type === 'post';
+  const isTemplate = type === 'template';
   const [, setLocation] = useLocation();
   const [pageState, dispatchPageState] = useReducer(pageStateReducer, initialPageState);
   const [isSaving, setIsSaving] = useState(false);
@@ -125,7 +146,7 @@ export default function PageBuilderEditor({
   const toastRef = useRef(toast);
 
   /** API base path driven by content type */
-  const apiBase = isPost ? '/api/posts' : '/api/pages';
+  const apiBase = isPost ? '/api/posts' : isTemplate ? '/api/templates' : '/api/pages';
 
   /** Derive resolvedPageId synchronously — getPageIdFromSlug is a sync localStorage call */
   const resolvedPageId = (() => {
@@ -140,16 +161,18 @@ export default function PageBuilderEditor({
     data: rawData,
     isLoading,
     error,
-  } = useQuery<Page | Post>({
+  } = useQuery<Page | Post | Template>({
     queryKey: [`${apiBase}/${resolvedPageId || postId}`],
     enabled: !!(resolvedPageId || postId),
   });
 
   /** Normalise raw API data into the EditorData shape */
   const data: EditorData | undefined = rawData
-    ? isPost
-      ? adaptPostToEditorData(rawData as Post)
-      : (rawData as Page)
+    ? isTemplate
+      ? adaptTemplateToEditorData(rawData as Template)
+      : isPost
+        ? adaptPostToEditorData(rawData as Post)
+        : (rawData as Page)
     : undefined;
 
   // Keep refs fresh every render for stable useMountEffect handlers
@@ -180,11 +203,14 @@ export default function PageBuilderEditor({
   if (dataMatchesCurrent && dataId !== prevDataId && data) {
     setPrevDataId(dataId);
 
-    // Load local draft — use post or page draft storage based on type
-    const localResult = isPost
-      ? loadPostDraft(dataId)
-      : loadPageDraft(dataId);
-    const localDraft = localResult.status ? localResult.data : null;
+    // Load local draft — skip for templates (they save directly)
+    let localDraft: { updatedAt?: unknown; [key: string]: unknown } | null = null;
+    if (!isTemplate) {
+      const localResult = isPost
+        ? loadPostDraft(dataId)
+        : loadPageDraft(dataId);
+      localDraft = localResult.status ? localResult.data : null;
+    }
 
     const toTs = (value: unknown) => {
       if (!value) return 0;
@@ -197,10 +223,10 @@ export default function PageBuilderEditor({
     const useLocal = localDraft && localTs > remoteTs;
     const source = useLocal ? localDraft : data;
 
-    const initialBlocks = Array.isArray(source.blocks) ? source.blocks : [];
-    const initialTitle = source.title || 'Untitled';
-    const initialSlug = source.slug || '';
-    const initialStatus = source.status || 'draft';
+    const initialBlocks = Array.isArray(source?.blocks) ? source.blocks : [];
+    const initialTitle = String(source?.title || 'Untitled');
+    const initialSlug = String(source?.slug || '');
+    const initialStatus = String(source?.status || 'draft');
 
     dispatchPageState({
       type: 'LOAD',
@@ -224,11 +250,13 @@ export default function PageBuilderEditor({
       storeSlugToIdMapping(data.slug, data.id);
     }
 
-    // Persist initial draft
-    if (isPost) {
-      savePostDraft(data.id, data);
-    } else {
-      savePageDraft(data.id, data);
+    // Persist initial draft (skip for templates)
+    if (!isTemplate) {
+      if (isPost) {
+        savePostDraft(data.id, data);
+      } else {
+        savePageDraft(data.id, data);
+      }
     }
   }
 
@@ -261,6 +289,10 @@ export default function PageBuilderEditor({
       ...override,
     };
     latestPageStateRef.current = next;
+
+    // Skip draft saves for templates — they save directly
+    if (isTemplate) return;
+
     if (draftSaveRef.current) clearTimeout(draftSaveRef.current);
     draftSaveRef.current = setTimeout(() => {
       // When inline-editing a post, save draft to post storage
@@ -435,6 +467,8 @@ export default function PageBuilderEditor({
   }
 
   if (error || !data) {
+    const backPath = isTemplate ? '/templates' : isPost ? '/posts' : '/pages';
+    const label = isTemplate ? 'Template' : isPost ? 'Post' : 'Page';
     return (
       <div className="flex h-screen">
         <AdminSidebar />
@@ -447,13 +481,13 @@ export default function PageBuilderEditor({
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  {isPost ? 'Post' : 'Page'} not found or failed to load.
+                  {label} not found or failed to load.
                 </p>
                 <Button
-                  onClick={() => setLocation(isPost ? '/posts' : '/pages')}
+                  onClick={() => setLocation(backPath)}
                   className="w-full">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to {isPost ? 'Posts' : 'Pages'}
+                  Back to {label}s
                 </Button>
               </CardContent>
             </Card>
@@ -478,12 +512,17 @@ export default function PageBuilderEditor({
       return;
     }
 
+    const label = isTemplate ? 'Template' : isPost ? 'Post' : 'Page';
     toast({
       title: 'Success',
-      description: `${isPost ? 'Post' : 'Page'} saved successfully`,
+      description: `${label} saved successfully`,
     });
 
-    if (isPost) {
+    if (isTemplate) {
+      // Templates don't use drafts — just invalidate the query
+      queryClient.invalidateQueries({ queryKey: [`${apiBase}/${postId}`] });
+      queryClient.invalidateQueries({ queryKey: [apiBase] });
+    } else if (isPost) {
       clearPostDraft(data.id);
     } else {
       clearPageDraft(data.id);
@@ -520,15 +559,17 @@ export default function PageBuilderEditor({
         return;
       }
 
-      const payload = isPost
-        ? { title: pageState.title, slug: pageState.slug, status: pageState.status, blocks: pageState.blocks }
-        : {
-            title: pageState.title,
-            slug: pageState.slug,
-            status: pageState.status,
-            blocks: pageState.blocks,
-            version: data.version ?? 0,
-          };
+      const payload = isTemplate
+        ? { name: pageState.title, blocks: pageState.blocks }
+        : isPost
+          ? { title: pageState.title, slug: pageState.slug, status: pageState.status, blocks: pageState.blocks }
+          : {
+              title: pageState.title,
+              slug: pageState.slug,
+              status: pageState.status,
+              blocks: pageState.blocks,
+              version: data.version ?? 0,
+            };
 
       const response = await apiRequest(
         'PUT',
@@ -537,8 +578,10 @@ export default function PageBuilderEditor({
       );
       const updated = await response.json();
 
-      // Persist and clear draft
-      if (isPost) {
+      // Persist and clear draft (skip for templates)
+      if (isTemplate) {
+        // Templates don't use drafts
+      } else if (isPost) {
         savePostDraft(updated.id, updated);
         clearPostDraft(updated.id);
       } else {
@@ -565,6 +608,14 @@ export default function PageBuilderEditor({
       return;
     }
     if (!data) return;
+    if (isTemplate) {
+      // Templates don't have a preview route yet
+      toast({
+        title: 'Preview',
+        description: 'Template preview is not available yet',
+      });
+      return;
+    }
     const previewPath = isPost
       ? `/preview/post/${data.id}`
       : `/preview/page/${data.id}`;
@@ -572,7 +623,7 @@ export default function PageBuilderEditor({
   };
 
   const handleBackToList = () => {
-    setLocation(isPost ? '/posts' : '/pages');
+    setLocation(isTemplate ? '/templates' : isPost ? '/posts' : '/pages');
   };
 
   /** Determine the label and back behavior based on inline editing state */
@@ -602,7 +653,7 @@ export default function PageBuilderEditor({
               <span className="text-sm text-gray-400 flex-shrink-0">
                 {isInlineEditing
                   ? 'Editing Post:'
-                  : `Editing ${isPost ? 'Post' : 'Page'}:`}
+                  : `Editing ${isTemplate ? 'Template' : isPost ? 'Post' : 'Page'}:`}
               </span>
               <Input
                 value={pageState.title}
@@ -633,13 +684,15 @@ export default function PageBuilderEditor({
               <Save className="w-4 h-4" />
               {isSaving ? 'Saving...' : 'Save'}
             </Button>
-            <PublishDialog
-              post={data}
-              blocks={pageState.blocks}
-              onPublished={handleSave}
-              disabled={isSaving}
-              contentType={type}
-            />
+            {!isTemplate && (
+              <PublishDialog
+                post={data}
+                blocks={pageState.blocks}
+                onPublished={handleSave}
+                disabled={isSaving}
+                contentType={isPost ? 'post' : 'page'}
+              />
+            )}
           </div>
         </div>
 
@@ -662,7 +715,7 @@ export default function PageBuilderEditor({
             }}
             onPageMetaChange={handlePageMetaChange}
             currentPostId={inlinePostId || (isPost ? data?.id : undefined)}
-            contentType={type}
+            contentType={isTemplate ? 'page' : type}
           />
         </div>
       </div>

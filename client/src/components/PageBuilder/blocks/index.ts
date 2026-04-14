@@ -24,6 +24,7 @@ import PullquoteBlock from './pullquote/PullquoteBlock';
 import PreformattedBlock from './preformatted/PreformattedBlock';
 import TableBlock from './table/TableBlock';
 import MarkdownBlock from './markdown/MarkdownBlock';
+import IconBlock from './icon/IconBlock';
 
 // Post blocks
 import PostTitleBlock from './post-title/PostTitleBlock';
@@ -64,6 +65,7 @@ if (import.meta.env.DEBUG_BUILDER) {
     PreformattedBlock,
     TableBlock,
     MarkdownBlock,
+    IconBlock,
     PostTitleBlock,
     PostExcerptBlock,
     PostFeaturedImageBlock,
@@ -103,6 +105,8 @@ export const blockRegistry: Record<string, BlockDefinition> = {
   'core/preformatted': PreformattedBlock,
   'core/table': TableBlock,
   'core/markdown': MarkdownBlock,
+  'core/icon': IconBlock,
+  'core/divider': DividerBlock,
 
   // Post blocks
   'post/title': PostTitleBlock,

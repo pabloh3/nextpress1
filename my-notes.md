@@ -14,3 +14,4 @@
 - Add Icon block Support to Page Builder
 - More layout options for blocks
 - Make block width and height more flexible
+- We will need a CLI that can be used for things like upgrading nextpress, uninstall or cleanup, installing themes, plugins, etc.

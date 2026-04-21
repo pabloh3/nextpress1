@@ -80,6 +80,37 @@ export const CONFIG = {
 } as const;
 
 /**
+ * Optional ACME / Let's Encrypt contact email for Caddy (set in deployment env).
+ * Prefer site `general.adminEmail` when present; this is a fallback when settings are not yet available.
+ */
+export function getOptionalCaddyAcmeEmail(): string | undefined {
+	const raw = process.env.CADDY_ACME_EMAIL?.trim();
+	return raw && raw.length > 0 ? raw : undefined;
+}
+
+/**
+ * Expected public IPv4 for domain verification (A records should include this).
+ * Set in deployment when the app should confirm DNS points at this machine.
+ */
+export function getOptionalPublicIpv4(): string | undefined {
+	const raw =
+		process.env.PUBLIC_IPV4?.trim() ||
+		process.env.SERVER_PUBLIC_IP?.trim();
+	return raw && raw.length > 0 ? raw : undefined;
+}
+
+/**
+ * Base URL to reach the Caddy reverse proxy from inside the app container (Host header probes).
+ */
+export function getCaddyInternalBaseUrl(): string {
+	const raw = process.env.CADDY_INTERNAL_URL?.trim();
+	if (raw && raw.length > 0) {
+		return raw.replace(/\/$/, "");
+	}
+	return "http://caddy:80";
+}
+
+/**
  * Get site settings with defaults
  * @param req - Express request object
  * @returns Site settings object

@@ -26,6 +26,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getZodSchema } from "@shared/zod-schema";
 import type { NewUser } from "@shared/schema-types";
 import { Eye, EyeOff } from "lucide-react";
+import { BrandedFormLayout } from "@/components/auth";
 
 type UserFormData = NewUser & { role?: string };
 
@@ -56,18 +57,16 @@ export default function Register() {
 		try {
 			const response = await apiRequest("POST", "/api/auth/register", data);
 			const user = await response.json();
-			
-			// Immediately set the user data in the query cache to update auth state
-			queryClient.setQueryData(['/api/auth/user'], user);
-			
+
+			queryClient.setQueryData(["/api/auth/user"], user);
+
 			toast({
 				title: "Success",
 				description: "Account created successfully",
 			});
-			
-			// Small delay to ensure state updates before navigation
-			await new Promise(resolve => setTimeout(resolve, 100));
-			
+
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
 			setLocation("/dashboard");
 		} catch (error) {
 			toast({
@@ -82,11 +81,15 @@ export default function Register() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-			<Card className="w-full max-w-md">
-				<CardHeader className="text-center">
-					<CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-					<p className="text-gray-600">Register for NextPress</p>
+		<BrandedFormLayout>
+			<Card className="w-full border-border/70 bg-card/95 shadow-lg shadow-black/[0.04] backdrop-blur-sm supports-[backdrop-filter]:bg-card/90 dark:shadow-black/25">
+				<CardHeader className="space-y-1 pb-2 text-center">
+					<CardTitle className="text-xl font-semibold tracking-tight">
+						Create account
+					</CardTitle>
+					<p className="text-sm text-muted-foreground">
+						Join this NextPress site
+					</p>
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
@@ -98,7 +101,12 @@ export default function Register() {
 									<FormItem>
 										<FormLabel>Username</FormLabel>
 										<FormControl>
-											<Input placeholder="Choose a username" {...field} />
+											<Input
+												placeholder="Choose a username"
+												autoComplete="username"
+												className="h-10"
+												{...field}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -114,7 +122,9 @@ export default function Register() {
 										<FormControl>
 											<Input
 												type="email"
-												placeholder="Enter your email"
+												placeholder="you@example.com"
+												autoComplete="email"
+												className="h-10"
 												{...field}
 											/>
 										</FormControl>
@@ -123,15 +133,20 @@ export default function Register() {
 								)}
 							/>
 
-							<div className="grid grid-cols-2 gap-4">
+							<div className="grid grid-cols-2 gap-3">
 								<FormField
 									control={form.control}
 									name="firstName"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>First Name</FormLabel>
+											<FormLabel>First name</FormLabel>
 											<FormControl>
-												<Input placeholder="First name" {...field} />
+												<Input
+													placeholder="First"
+													autoComplete="given-name"
+													className="h-10"
+													{...field}
+												/>
 											</FormControl>
 											<FormMessage />
 										</FormItem>
@@ -143,9 +158,14 @@ export default function Register() {
 									name="lastName"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Last Name</FormLabel>
+											<FormLabel>Last name</FormLabel>
 											<FormControl>
-												<Input placeholder="Last name" {...field} />
+												<Input
+													placeholder="Last"
+													autoComplete="family-name"
+													className="h-10"
+													{...field}
+												/>
 											</FormControl>
 											<FormMessage />
 										</FormItem>
@@ -163,14 +183,16 @@ export default function Register() {
 											<div className="relative">
 												<Input
 													type={showPassword ? "text" : "password"}
-													placeholder="Create a password"
+													placeholder="••••••••"
+													autoComplete="new-password"
+													className="h-10 pr-10"
 													{...field}
 												/>
 												<Button
 													type="button"
 													variant="ghost"
-													size="sm"
-													className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+													size="icon"
+													className="absolute right-0.5 top-1/2 h-9 w-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 													onClick={() => setShowPassword(!showPassword)}
 													aria-label={
 														showPassword ? "Hide password" : "Show password"
@@ -178,9 +200,9 @@ export default function Register() {
 													aria-pressed={showPassword}
 												>
 													{showPassword ? (
-														<EyeOff className="h-4 w-4" />
+														<EyeOff className="h-4 w-4" aria-hidden />
 													) : (
-														<Eye className="h-4 w-4" />
+														<Eye className="h-4 w-4" aria-hidden />
 													)}
 												</Button>
 											</div>
@@ -201,7 +223,7 @@ export default function Register() {
 											defaultValue={field.value}
 										>
 											<FormControl>
-												<SelectTrigger>
+												<SelectTrigger className="h-10">
 													<SelectValue placeholder="Select a role" />
 												</SelectTrigger>
 											</FormControl>
@@ -220,26 +242,25 @@ export default function Register() {
 								)}
 							/>
 
-							<Button
-								type="submit"
-								className="w-full bg-wp-blue hover:bg-wp-blue-dark"
-								disabled={isLoading}
-							>
-								{isLoading ? "Creating Account..." : "Create Account"}
+							<Button type="submit" className="w-full h-10 font-medium" disabled={isLoading}>
+								{isLoading ? "Creating account…" : "Create account"}
 							</Button>
 						</form>
 					</Form>
 
-					<div className="mt-6 text-center">
-						<p className="text-sm text-gray-600">
+					<div className="mt-6 border-t border-border/60 pt-6 text-center">
+						<p className="text-sm text-muted-foreground">
 							Already have an account?{" "}
-							<Link href="/login" className="text-wp-blue hover:underline">
-								Sign in here
+							<Link
+								href="/login"
+								className="font-medium text-primary underline-offset-4 hover:underline"
+							>
+								Sign in
 							</Link>
 						</p>
 					</div>
 				</CardContent>
 			</Card>
-		</div>
+		</BrandedFormLayout>
 	);
 }

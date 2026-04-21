@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
+import { DomainInputWithVerify } from '@/components/domain';
 
 /**
  * Settings structure matching server schema
@@ -705,16 +706,17 @@ export default function Settings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="siteUrl">Site URL</Label>
-                    <Input
+                    <DomainInputWithVerify
                       id="siteUrl"
+                      label="Site URL"
+                      inputMode="siteUrl"
                       value={formData.general.siteUrl}
-                      onChange={(e) => {
-                        updateGeneralField('siteUrl', e.target.value);
+                      onChange={(v) => {
+                        updateGeneralField('siteUrl', v);
                         clearFieldError('general.siteUrl');
                       }}
                       placeholder="https://example.com"
-                      className={getFieldError('general.siteUrl') ? 'border-red-500' : ''}
+                      className={getFieldError('general.siteUrl') ? '[&_input]:border-red-500' : ''}
                     />
                     {getFieldError('general.siteUrl') && (
                       <p className="text-sm text-red-500">

@@ -17,7 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Link, useLocation } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from 'lucide-react';
+import { BrandedFormLayout } from '@/components/auth';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -46,18 +47,16 @@ export default function Login() {
     try {
       const response = await apiRequest('POST', '/api/auth/login', data);
       const user = await response.json();
-      
-      // Immediately set the user data in the query cache to update auth state
+
       queryClient.setQueryData(['/api/auth/user'], user);
-      
+
       toast({
         title: 'Success',
         description: 'Logged in successfully',
       });
 
-      // Small delay to ensure state updates before navigation
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       setLocation('/dashboard');
     } catch (error) {
       toast({
@@ -71,11 +70,13 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">NextPress Login</CardTitle>
-          <p className="text-gray-600">Sign in to your account</p>
+    <BrandedFormLayout>
+      <Card className="w-full border-border/70 bg-card/95 shadow-lg shadow-black/[0.04] backdrop-blur-sm supports-[backdrop-filter]:bg-card/90 dark:shadow-black/25">
+        <CardHeader className="space-y-1 pb-2 text-center">
+          <CardTitle className="text-xl font-semibold tracking-tight">Sign in</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Username or email and password
+          </p>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -85,10 +86,12 @@ export default function Login() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username or Email</FormLabel>
+                    <FormLabel>Username or email</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter your username or email"
+                        placeholder="you@example.com"
+                        autoComplete="username"
+                        className="h-10"
                         {...field}
                       />
                     </FormControl>
@@ -103,50 +106,56 @@ export default function Login() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Password</FormLabel>
-                     <FormControl>
-                       <div className="relative">
-                         <Input
-                           type={showPassword ? "text" : "password"}
-                           placeholder="Enter your password"
-                           {...field}
-                         />
-                         <Button
-                           type="button"
-                           variant="ghost"
-                           size="sm"
-                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                           onClick={() => setShowPassword(!showPassword)}
-                           aria-label={showPassword ? "Hide password" : "Show password"}
-                           aria-pressed={showPassword}
-                         >
-                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                         </Button>
-                       </div>
-                     </FormControl>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          autoComplete="current-password"
+                          className="h-10 pr-10"
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0.5 top-1/2 h-9 w-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          aria-pressed={showPassword}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" aria-hidden />
+                          ) : (
+                            <Eye className="h-4 w-4" aria-hidden />
+                          )}
+                        </Button>
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <Button
-                type="submit"
-                className="w-full bg-wp-blue hover:bg-wp-blue-dark"
-                disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
+              <Button type="submit" className="w-full h-10 font-medium" disabled={isLoading}>
+                {isLoading ? 'Signing in…' : 'Sign in'}
               </Button>
             </form>
           </Form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link href="/register" className="text-wp-blue hover:underline">
-                Register here
+          <div className="mt-6 border-t border-border/60 pt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Don&apos;t have an account?{' '}
+              <Link
+                href="/register"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Create one
               </Link>
             </p>
           </div>
         </CardContent>
       </Card>
-    </div>
+    </BrandedFormLayout>
   );
 }

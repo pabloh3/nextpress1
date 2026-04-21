@@ -2,7 +2,8 @@ import { Router } from 'express';
 import type { Deps } from './shared/deps';
 import { asyncHandler } from './shared/async-handler';
 import { updateCaddyConfig } from '../utils/caddy';
-import { validateDomain } from '../utils/validate-domain';
+import { getCaddyTlsHostnames, validateDomain } from '../utils/validate-domain';
+import { verifyDomainReadiness } from '../utils/verify-domain-readiness';
 
 /**
  * Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 number
@@ -28,6 +29,7 @@ function validatePassword(password: string): { valid: boolean; message?: string 
  * 
  * Routes:
  * - GET /api/setup/status - Check if system is configured
+ * - GET /api/setup/verify-domain - DNS / IP / Caddy readiness (no auth; used by setup + settings UI)
  * - POST /api/setup - Complete initial setup (create admin + site)
  * 
  * @param deps - Injected dependencies (models, schemas)
@@ -43,6 +45,19 @@ export function createSetupRoutes(deps: Deps): Router {
   router.get('/status', asyncHandler(async (_req, res) => {
     const sites = await deps.models.sites.findMany();
     res.json({ isSetup: sites.length > 0 });
+  }));
+
+  /**
+   * GET /api/setup/verify-domain?q=
+   * Debounced domain checker for the UI (DNS A, optional PUBLIC_IPV4 match, optional Caddy Host probe).
+   */
+  router.get('/verify-domain', asyncHandler(async (req, res) => {
+    const raw = typeof req.query.q === 'string' ? req.query.q : '';
+    const result = await verifyDomainReadiness(raw);
+    if (!result.status) {
+      return res.status(400).json({ status: false, message: result.message });
+    }
+    res.json({ status: true, data: result.data });
   }));
 
   /**
@@ -79,13 +94,16 @@ export function createSetupRoutes(deps: Deps): Router {
       });
     }
 
-    // Validate domain resolves (blocks real domains without DNS, skips localhost/IPs)
-    const domainCheck = await validateDomain(domain);
-    if (!domainCheck.valid) {
-      return res.status(400).json({
-        error: 'Domain validation failed',
-        message: domainCheck.message,
-      });
+    // Validate every hostname Caddy will serve (apex + www for public DNS names)
+    const tlsHosts = getCaddyTlsHostnames(domain);
+    for (const host of tlsHosts) {
+      const domainCheck = await validateDomain(host);
+      if (!domainCheck.valid) {
+        return res.status(400).json({
+          error: 'Domain validation failed',
+          message: `${domainCheck.message} (host: ${host})`,
+        });
+      }
     }
 
     // Check if already setup
@@ -162,7 +180,7 @@ export function createSetupRoutes(deps: Deps): Router {
     }
 
     // Update Caddyfile
-    const caddyResult = await updateCaddyConfig(domain);
+    const caddyResult = await updateCaddyConfig(domain, { acmeEmail: email });
     console.log('Caddy update:', caddyResult.message);
 
     res.json({

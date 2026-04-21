@@ -3,8 +3,9 @@ import type { Deps } from './shared/deps';
 import { asyncHandler } from './shared/async-handler';
 import { safeTryAsync } from '../utils';
 import { partialSettingsSchema } from '@shared/settings-schema';
+import { getOptionalCaddyAcmeEmail } from '../config';
 import { updateCaddyConfig } from '../utils/caddy';
-import { validateDomain } from '../utils/validate-domain';
+import { getCaddyTlsHostnames, validateDomain } from '../utils/validate-domain';
 
 /**
  * Creates settings routes for site-wide configuration management
@@ -83,13 +84,23 @@ export function createSettingsRoutes(deps: Deps): Router {
           const newUrl = validationResult.data.general.siteUrl;
           
           if (oldUrl !== newUrl && newUrl) {
-            // Validate domain before updating Caddy config
-            const domainCheck = await validateDomain(newUrl);
-            if (!domainCheck.valid) {
-              return { status: false, message: domainCheck.message };
+            const tlsHosts = getCaddyTlsHostnames(newUrl);
+            for (const host of tlsHosts) {
+              const domainCheck = await validateDomain(host);
+              if (!domainCheck.valid) {
+                return { status: false, message: `${domainCheck.message} (host: ${host})` };
+              }
             }
 
-            const caddyResult = await updateCaddyConfig(newUrl);
+            const patchGeneral = validationResult.data.general;
+            const acmeFromPatch = patchGeneral?.adminEmail?.trim();
+            const acmeStored = oldSettings.general?.adminEmail?.trim();
+            const acmeEmail =
+              (acmeFromPatch && acmeFromPatch.length > 0 ? acmeFromPatch : undefined) ??
+              (acmeStored && acmeStored.length > 0 ? acmeStored : undefined) ??
+              getOptionalCaddyAcmeEmail();
+
+            const caddyResult = await updateCaddyConfig(newUrl, { acmeEmail });
             console.log('Settings Caddy update:', caddyResult.message);
 
             if (!caddyResult.success) {

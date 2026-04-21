@@ -30,6 +30,44 @@ function stripPort(domain: string): string {
 }
 
 /**
+ * Normalized hostname for DNS / Caddy (no scheme, no port).
+ */
+export function normalizeSiteHostname(domainOrUrl: string): string {
+  return stripPort(stripProtocol(domainOrUrl.trim()));
+}
+
+/**
+ * True when host is a plain IPv4 address (no TLS from Caddy ACME for this site shape).
+ */
+export function isIpv4Host(host: string): boolean {
+  return IPV4_REGEX.test(stripPort(host));
+}
+
+/**
+ * Hostnames that will be listed on the Caddy site line (apex + www for public DNS names).
+ * Localhost and IPv4 return a single host only.
+ */
+export function getCaddyTlsHostnames(domainOrUrl: string): string[] {
+  const host = normalizeSiteHostname(domainOrUrl);
+  if (!host) return [];
+  if (shouldSkipValidation(host)) return [host];
+  if (host.startsWith('www.')) {
+    const apex = host.slice(4);
+    return apex ? [host, apex] : [host];
+  }
+  return [host, `www.${host}`];
+}
+
+/**
+ * True when public DNS / ACME checks are skipped (localhost variants or plain IPv4).
+ */
+export function shouldSkipPublicDnsCheck(domainOrUrl: string): boolean {
+  const host = normalizeSiteHostname(domainOrUrl);
+  if (!host) return false;
+  return shouldSkipValidation(host);
+}
+
+/**
  * Validates that a domain has DNS A records configured.
  * 
  * Returns a result object indicating whether the domain resolves.
@@ -40,7 +78,7 @@ function stripPort(domain: string): string {
  * @returns Validation result with status and message
  */
 export async function validateDomain(domainOrUrl: string): Promise<{ valid: boolean; message: string }> {
-  const domain = stripProtocol(domainOrUrl);
+  const domain = normalizeSiteHostname(domainOrUrl);
 
   if (!domain) {
     return { valid: false, message: 'Domain is required' };

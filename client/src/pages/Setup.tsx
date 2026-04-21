@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,10 +12,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import { DomainInputWithVerify } from '@/components/domain';
+import { BrandedFormLayout } from '@/components/auth';
+import { cn } from '@/lib/utils';
 
-/**
- * Password requirements for validation
- */
 const PASSWORD_REQUIREMENTS = [
   { regex: /.{8,}/, label: 'At least 8 characters' },
   { regex: /[A-Z]/, label: 'One uppercase letter' },
@@ -31,6 +32,8 @@ export default function Setup() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     siteName: '',
     domain: '',
@@ -39,17 +42,14 @@ export default function Setup() {
     confirmPassword: '',
   });
 
-  // Check if already setup on mount
   useEffect(() => {
-    // Attempt to pre-fill domain using current window hostname
     try {
       const hostname = window.location.hostname;
-      // Skip generic localhosts since they usually aren't real domains, unless it's IP
       if (hostname && hostname !== 'localhost') {
-        setFormData(prev => ({ ...prev, domain: hostname }));
+        setFormData((prev) => ({ ...prev, domain: hostname }));
       }
-    } catch (e) {
-      // Ignore window object errors in edge cases
+    } catch {
+      // ignore
     }
 
     const checkSetupStatus = async () => {
@@ -65,25 +65,25 @@ export default function Setup() {
         setIsCheckingStatus(false);
       }
     };
-    checkSetupStatus();
+    void checkSetupStatus();
   }, [setLocation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    // Validate password requirements
     const failedRequirements = PASSWORD_REQUIREMENTS.filter(
-      req => !req.regex.test(formData.password)
+      (req) => !req.regex.test(formData.password),
     );
     if (failedRequirements.length > 0) {
-      setError(`Password requirements not met: ${failedRequirements.map(r => r.label).join(', ')}`);
+      setError(
+        `Password requirements not met: ${failedRequirements.map((r) => r.label).join(', ')}`,
+      );
       return;
     }
 
@@ -107,15 +107,16 @@ export default function Setup() {
         throw new Error(data.message || data.error || 'Setup failed');
       }
 
-      // Warn if Caddy configuration failed (SSL may not work until restart)
       if (data.caddySuccess === false) {
-        setError(`Setup complete but domain configuration had an issue: ${data.caddyStatus}. You may need to restart the server for HTTPS to work.`);
-        // Still redirect after a delay so user can read the warning
-        setTimeout(() => { window.location.href = '/login'; }, 5000);
+        setError(
+          `Setup completed, but domain configuration reported an issue: ${data.caddyStatus}. You may need to restart the proxy for HTTPS.`,
+        );
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 5000);
         return;
       }
 
-      // Redirect to login
       window.location.href = '/login';
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Setup failed';
@@ -125,157 +126,207 @@ export default function Setup() {
     }
   };
 
-  const updateField = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }));
-  };
+  const updateField =
+    (field: keyof typeof formData) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+    };
 
-  // Password strength indicator
-  const getPasswordStrength = () => {
-    const passed = PASSWORD_REQUIREMENTS.filter(req =>
-      req.regex.test(formData.password)
-    ).length;
-    return passed;
-  };
+  const getPasswordStrength = () =>
+    PASSWORD_REQUIREMENTS.filter((req) => req.regex.test(formData.password)).length;
 
   if (isCheckingStatus) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Spinner className="h-8 w-8" />
-      </div>
+      <BrandedFormLayout>
+        <div className="flex min-h-[12rem] w-full flex-col items-center justify-center gap-4 rounded-xl border border-border/60 bg-card/80 px-6 py-12 shadow-md">
+          <Spinner className="h-8 w-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Checking setup status…</p>
+        </div>
+      </BrandedFormLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome to NextPress</CardTitle>
-          <CardDescription>
-            Complete the setup to get started with your new site
+    <BrandedFormLayout>
+      <Card className="w-full border-border/70 bg-card/95 shadow-lg shadow-black/[0.04] backdrop-blur-sm supports-[backdrop-filter]:bg-card/90 dark:shadow-black/25">
+        <CardHeader className="space-y-1 pb-2 text-center">
+          <CardTitle className="text-xl font-semibold tracking-tight">
+            Welcome
+          </CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
+            Create your site and administrator account to finish installing NextPress.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/35 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+              >
                 {error}
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="siteName">Site Name</Label>
+              <Label htmlFor="siteName">Site name</Label>
               <Input
                 id="siteName"
-                placeholder="My Awesome Site"
+                placeholder="My site"
                 value={formData.siteName}
                 onChange={updateField('siteName')}
                 required
                 disabled={isLoading}
+                className="h-10"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="domain">Domain</Label>
-              <Input
-                id="domain"
-                placeholder="example.com"
-                value={formData.domain}
-                onChange={updateField('domain')}
-                required
-                disabled={isLoading}
-              />
-              <p className="text-xs text-gray-500">
-                Point your DNS A record to this server before setup
-              </p>
-            </div>
+            <DomainInputWithVerify
+              id="domain"
+              label="Domain"
+              inputMode="domain"
+              value={formData.domain}
+              onChange={(v) => {
+                setFormData((prev) => ({ ...prev, domain: v }));
+              }}
+              placeholder="example.com"
+              disabled={isLoading}
+              required
+            />
 
             <div className="space-y-2">
-              <Label htmlFor="email">Admin Email</Label>
+              <Label htmlFor="email">Admin email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="admin@example.com"
                 value={formData.email}
                 onChange={updateField('email')}
+                autoComplete="email"
                 required
                 disabled={isLoading}
+                className="h-10"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={updateField('password')}
-                required
-                disabled={isLoading}
-              />
-              {formData.password && (
-                <div className="space-y-1">
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={updateField('password')}
+                  autoComplete="new-password"
+                  required
+                  disabled={isLoading}
+                  className="h-10 pr-10"
+                  placeholder="••••••••"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0.5 top-1/2 h-9 w-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden />
+                  )}
+                </Button>
+              </div>
+              {formData.password ? (
+                <div className="space-y-2 pt-0.5">
                   <div className="flex gap-1">
-                    {[1, 2, 3, 4].map(i => (
+                    {[1, 2, 3, 4].map((i) => (
                       <div
                         key={i}
-                        className={`h-1 flex-1 rounded ${
+                        className={cn(
+                          'h-1 flex-1 rounded-full transition-colors',
                           i <= getPasswordStrength()
                             ? getPasswordStrength() >= 4
-                              ? 'bg-green-500'
+                              ? 'bg-emerald-500'
                               : getPasswordStrength() >= 2
-                              ? 'bg-yellow-500'
-                              : 'bg-red-500'
-                            : 'bg-gray-200'
-                        }`}
+                                ? 'bg-amber-500'
+                                : 'bg-red-500'
+                            : 'bg-muted',
+                        )}
                       />
                     ))}
                   </div>
-                  <ul className="text-xs text-gray-500 space-y-0.5">
-                    {PASSWORD_REQUIREMENTS.map(req => (
+                  <ul className="space-y-0.5 text-xs text-muted-foreground">
+                    {PASSWORD_REQUIREMENTS.map((req) => (
                       <li
                         key={req.label}
-                        className={req.regex.test(formData.password) ? 'text-green-600' : ''}
+                        className={cn(
+                          req.regex.test(formData.password) && 'font-medium text-emerald-700 dark:text-emerald-400',
+                        )}
                       >
                         {req.regex.test(formData.password) ? '✓' : '○'} {req.label}
                       </li>
                     ))}
                   </ul>
                 </div>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={updateField('confirmPassword')}
-                required
-                disabled={isLoading}
-              />
-              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                <p className="text-xs text-red-500">Passwords do not match</p>
-              )}
+              <Label htmlFor="confirmPassword">Confirm password</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={updateField('confirmPassword')}
+                  autoComplete="new-password"
+                  required
+                  disabled={isLoading}
+                  className="h-10 pr-10"
+                  placeholder="••••••••"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0.5 top-1/2 h-9 w-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                  aria-pressed={showConfirmPassword}
+                  disabled={isLoading}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden />
+                  )}
+                </Button>
+              </div>
+              {formData.confirmPassword && formData.password !== formData.confirmPassword ? (
+                <p className="text-xs text-destructive">Passwords do not match</p>
+              ) : null}
             </div>
 
             <Button
               type="submit"
-              className="w-full"
+              className="h-10 w-full font-medium"
               disabled={isLoading || getPasswordStrength() < 4}
             >
               {isLoading ? (
                 <>
                   <Spinner className="mr-2 h-4 w-4" />
-                  Setting up...
+                  Setting up…
                 </>
               ) : (
-                'Complete Setup'
+                'Complete setup'
               )}
             </Button>
           </form>
         </CardContent>
       </Card>
-    </div>
+    </BrandedFormLayout>
   );
 }

@@ -44,7 +44,7 @@ services:
       - dev_caddy_config:/etc/caddy
       - dev_caddy_data:/data
       - dev_caddy_config_files:/config
-    command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile --watch
     depends_on:
       - app
     networks:

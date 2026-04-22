@@ -24,7 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh 
 
 Default image is **`latest`** on Docker Hub. To pin a tag: `-- --version beta-v1.0.2` (same as `husseinkizz/nextpress:beta-v1.0.2`).
 
-**Alternative (CLI install):** from a checkout, `pnpm cli:build` then run from repo root so `docker-compose.prod.yml` is picked up, e.g. `sudo node packages/nextpress/dist/cli.js install`, or set `NEXTPRESS_COMPOSE_URL` to your deployed raw compose URL. See `packages/nextpress/README.md`.
+**Alternative (CLI install):** from a checkout, `pnpm cli:build` then run from repo root so `docker-compose.prod.yml` is picked up, e.g. `sudo node packages/cli/dist/cli.js install`, or set `NEXTPRESS_COMPOSE_URL` to your deployed raw compose URL. See `packages/cli/README.md`.
 
 ---
 

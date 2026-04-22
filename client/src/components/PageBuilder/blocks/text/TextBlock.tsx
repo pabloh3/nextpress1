@@ -41,10 +41,12 @@ interface TextRendererProps {
 
 function TextRenderer({ content, styles }: TextRendererProps) {
   const textContent = content?.kind === "text" ? content.value : "";
+  // Prefer block-level style controls from the sidebar.
+  // `content.textAlign` exists for legacy/compat, but it should not override user styles.
   const align =
+    (styles?.textAlign as string | undefined) ||
     (content?.textAlign as string) ||
-    (content?.align as string) ||
-    (styles?.textAlign as string | undefined);
+    (content?.align as string);
   const anchor = content?.anchor as string | undefined;
   const extraClass = (content?.className as string | undefined) || "";
   const dropCap = Boolean(content?.dropCap);

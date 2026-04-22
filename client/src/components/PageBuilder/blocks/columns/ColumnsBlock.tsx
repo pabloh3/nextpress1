@@ -323,19 +323,21 @@ function ColumnsRenderer({
 
   const childBlocks = children || [];
 
+  // Column child alignment: since each column is a vertical flex container,
+  // vertical alignment maps to `justifyContent` and horizontal alignment maps to `alignItems`.
   const columnAlignItems = {
+    stretch: "stretch",
+    left: "flex-start",
+    center: "center",
+    right: "flex-end",
+  }[columnHorizontalAlignment];
+
+  const columnJustifyContent = {
     top: "flex-start",
     center: "center",
     bottom: "flex-end",
     stretch: "stretch",
   }[columnVerticalAlignment];
-
-  const columnJustifyContent = {
-    left: "flex-start",
-    center: "center",
-    right: "flex-end",
-    stretch: "flex-start",
-  }[columnHorizontalAlignment];
 
   const actions = useBlockActions();
   const containerStyle = buildColumnsContainerStyle(data, layout, styles);
@@ -364,10 +366,7 @@ function ColumnsRenderer({
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  alignItems:
-                    columnHorizontalAlignment === "stretch"
-                      ? "stretch"
-                      : columnAlignItems,
+                  alignItems: columnAlignItems,
                   justifyContent: columnJustifyContent,
                   minHeight: "60px",
                   width: "100%",
@@ -394,10 +393,7 @@ function ColumnsRenderer({
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: columnJustifyContent,
-                      alignItems:
-                        columnHorizontalAlignment === "stretch"
-                          ? "stretch"
-                          : columnAlignItems,
+                      alignItems: columnAlignItems,
                       minHeight: "60px",
                       border: snapshot.isDraggingOver ? "2px solid #3b82f6" : "2px dashed #e2e8f0",
                       borderRadius: "4px",
@@ -460,11 +456,23 @@ export function ColumnsBlockComponent({
   onChange,
   isPreview,
 }: BlockComponentProps) {
-  const { content, styles, settings } = useBlockState<ColumnsContent>({
+  const { content, styles, settings, setSettings } = useBlockState<ColumnsContent>({
     value,
     getDefaultContent: () => DEFAULT_CONTENT,
     onChange,
   });
+
+  // Ensure columnLayout exists in settings so DnD can resolve column drop zones.
+  // Without this, the UI renders `default-col-1` but the drag handler can't map it
+  // back to a Columns block (it looks only at `settings.columnLayout`).
+  React.useEffect(() => {
+    const existing = settings?.columnLayout;
+    if (Array.isArray(existing) && existing.length > 0) return;
+    setSettings({
+      ...(settings || {}),
+      columnLayout: [{ columnId: "default-col-1", width: "100%", blockIds: [] }],
+    });
+  }, [settings, setSettings]);
 
   const columnLayout =
     (settings?.columnLayout as ColumnLayout[] | undefined) || [

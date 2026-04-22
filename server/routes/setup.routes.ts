@@ -154,6 +154,8 @@ export function createSetupRoutes(deps: Deps): Router {
 
     // Normalize domain for siteUrl
     const siteUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+    const siteBase = siteUrl.replace(/\/+$/, '');
+    const loginUrl = `${siteBase}/login`;
 
     // Create site (marked as default)
     const site = await deps.models.sites.create({
@@ -187,6 +189,7 @@ export function createSetupRoutes(deps: Deps): Router {
       success: true,
       message: 'Setup complete! You can now log in.',
       redirect: '/login',
+      loginUrl,
       caddySuccess: caddyResult.success,
       caddyStatus: caddyResult.message,
     });

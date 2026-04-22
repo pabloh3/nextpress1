@@ -1,6 +1,6 @@
 {
-  "name": "nextpress",
-  "version": "1.0.2",
+  "name": "nextpress-workspace",
+  "version": "1.0.3",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -16,7 +16,9 @@
     "test:jest": "jest",
     "db:push": "drizzle-kit push",
     "import:users": "tsx scripts/import-users.ts",
-    "verify:users": "tsx scripts/verify-users.ts"
+    "verify:users": "tsx scripts/verify-users.ts",
+    "cli:build": "pnpm --filter @nextpress-org/cli build",
+    "cli:dev": "pnpm --filter @nextpress-org/cli dev"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.11",

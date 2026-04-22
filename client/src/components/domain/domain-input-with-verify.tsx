@@ -9,10 +9,10 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
-	useDebouncedDomainVerify,
+	useDomainVerify,
 	hasBlockingDomainIssues,
 	type DomainReadinessData,
-} from "@/hooks/use-debounced-domain-verify";
+} from "@/hooks/use-domain-verify";
 
 export type DomainInputWithVerifyProps = {
 	id: string;
@@ -60,42 +60,37 @@ function DnsRows({ data }: { data: DomainReadinessData }) {
 function DomainSetupInstructions({ inputMode }: { inputMode: "domain" | "siteUrl" }) {
 	return (
 		<div className="space-y-3 text-sm text-muted-foreground max-w-sm">
-			<p className="font-medium text-foreground">Point DNS at this server</p>
+			<p className="font-medium text-foreground">Connect your domain</p>
 			<ol className="list-decimal pl-4 space-y-2">
 				<li>
-					In your DNS provider, add an <strong className="text-foreground">A</strong> record
-					for the apex (e.g. <code className="text-xs bg-muted px-1 rounded">example.com</code>)
-					to your server&apos;s public <strong className="text-foreground">IPv4</strong>.
+					In your domain provider settings, point your main domain (for example{" "}
+					<code className="text-xs bg-muted px-1 rounded">example.com</code>) to this
+					server&apos;s public internet address.
 				</li>
 				<li>
-					Add <code className="text-xs bg-muted px-1 rounded">www</code> as either an{" "}
-					<strong className="text-foreground">A</strong> record to the same IP or a{" "}
-					<strong className="text-foreground">CNAME</strong> to the apex. NextPress serves both
-					apex and <code className="text-xs bg-muted px-1 rounded">www</code> on the same site.
+					Point <code className="text-xs bg-muted px-1 rounded">www</code> to the same address,
+					or create an alias to your main domain. Both can open the same site.
 				</li>
 				<li>
-					Wait for DNS to propagate (often a few minutes, sometimes up to TTL).
+					Changes can take a little time to apply everywhere.
 				</li>
 				<li>
-					Keep ports <strong className="text-foreground">80</strong> and{" "}
-					<strong className="text-foreground">443</strong> open so Let&apos;s Encrypt can issue
-					certificates.
+					Keep standard web traffic allowed so HTTPS certificates can be issued and renewed.
 				</li>
 			</ol>
 			<p>
-				Optional: set <code className="text-xs bg-muted px-1 rounded">PUBLIC_IPV4</code> on the
-				server so checks confirm DNS matches this machine. Caddy routing is probed from the app
-				container (e.g. <code className="text-xs bg-muted px-1 rounded">CADDY_INTERNAL_URL</code>).
+				If results look wrong, confirm your domain points to this host, wait a short while, and
+				try again.
 			</p>
 			{inputMode === "siteUrl" ? (
 				<p>
-					Use a full URL including protocol, e.g.{" "}
+					Use a full address including protocol, for example{" "}
 					<code className="text-xs bg-muted px-1 rounded">https://example.com</code>.
 				</p>
 			) : (
 				<p>
-					Enter the bare hostname (e.g.{" "}
-					<code className="text-xs bg-muted px-1 rounded">example.com</code>) — no{" "}
+					Enter your domain alone, for example{" "}
+					<code className="text-xs bg-muted px-1 rounded">example.com</code>, without{" "}
 					<code className="text-xs bg-muted px-1 rounded">https://</code>.
 				</p>
 			)}
@@ -104,8 +99,8 @@ function DomainSetupInstructions({ inputMode }: { inputMode: "domain" | "siteUrl
 }
 
 /**
- * Reusable domain / site URL field with debounced verification (DNS, optional IP match, Caddy probe)
- * and an info popover for DNS + TLS setup guidance.
+ * Domain or site URL field with readiness checks after blur and short setup guidance in the info
+ * popover.
  */
 export function DomainInputWithVerify({
 	id,
@@ -118,7 +113,7 @@ export function DomainInputWithVerify({
 	className,
 	required,
 }: DomainInputWithVerifyProps) {
-	const verify = useDebouncedDomainVerify(value);
+	const { state: verify, verify: runVerify, reset: resetVerify } = useDomainVerify();
 	const borderIssue =
 		verify.kind === "ready" && hasBlockingDomainIssues(verify.data);
 
@@ -135,7 +130,7 @@ export function DomainInputWithVerify({
 							variant="ghost"
 							size="icon"
 							className="h-7 w-7 text-muted-foreground"
-							aria-label="How to configure your domain"
+							aria-label="How to connect your domain"
 							disabled={disabled}
 						>
 							<Info className="h-4 w-4" />
@@ -150,7 +145,13 @@ export function DomainInputWithVerify({
 			<Input
 				id={id}
 				value={value}
-				onChange={(e) => onChange(e.target.value)}
+				onChange={(e) => {
+					resetVerify();
+					onChange(e.target.value);
+				}}
+				onBlur={() => {
+					runVerify(value);
+				}}
 				placeholder={placeholder}
 				disabled={disabled}
 				required={required}
@@ -162,7 +163,7 @@ export function DomainInputWithVerify({
 				{verify.kind === "idle" ? null : verify.kind === "verifying" ? (
 					<span className="inline-flex items-center gap-2 text-foreground/80">
 						<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" aria-hidden />
-						Verifying DNS, IP match, and reverse proxy…
+						Checking your domain…
 					</span>
 				) : verify.kind === "error" ? (
 					<span className="text-red-600">{verify.message}</span>
@@ -181,7 +182,7 @@ export function DomainInputWithVerify({
 						</p>
 						<div>
 							<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-								DNS (A)
+								Domain records
 							</p>
 							<DnsRows data={verify.data} />
 						</div>
@@ -192,7 +193,7 @@ export function DomainInputWithVerify({
 								<CircleAlert className="h-3.5 w-3.5 shrink-0 text-red-600 mt-0.5" />
 							)}
 							<span>
-								<span className="font-medium text-foreground">IP match</span> —{" "}
+								<span className="font-medium text-foreground">Points here</span>,{" "}
 								{verify.data.ipMatch.message}
 							</span>
 						</div>
@@ -203,7 +204,7 @@ export function DomainInputWithVerify({
 								<CircleAlert className="h-3.5 w-3.5 shrink-0 text-red-600 mt-0.5" />
 							)}
 							<span>
-								<span className="font-medium text-foreground">Caddy / proxy</span> —{" "}
+								<span className="font-medium text-foreground">Secure site</span>,{" "}
 								{verify.data.caddy.message}
 							</span>
 						</div>

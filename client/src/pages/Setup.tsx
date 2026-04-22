@@ -23,6 +23,28 @@ const PASSWORD_REQUIREMENTS = [
   { regex: /[0-9]/, label: 'One number' },
 ];
 
+/** Time to allow routing and certificates to settle before opening the site domain. */
+const POST_SETUP_REDIRECT_MS = 8000;
+
+/**
+ * Builds `/login` on the configured site host so the browser does not stay on a raw address.
+ */
+function buildLoginUrlFromDomain(domain: string): string {
+  const raw = domain.trim();
+  if (!raw) {
+    return `${window.location.origin}/login`;
+  }
+  try {
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      const base = new URL(raw);
+      return `${base.origin}/login`;
+    }
+    return `https://${raw.replace(/\/+$/, '')}/login`;
+  } catch {
+    return `${window.location.origin}/login`;
+  }
+}
+
 /**
  * Setup Wizard page for initial system configuration.
  * Displayed when the system has no sites configured (fresh install).
@@ -34,6 +56,10 @@ export default function Setup() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [finishingSetup, setFinishingSetup] = useState<{
+    loginUrl: string;
+    httpsNote: boolean;
+  } | null>(null);
   const [formData, setFormData] = useState({
     siteName: '',
     domain: '',
@@ -82,12 +108,14 @@ export default function Setup() {
     );
     if (failedRequirements.length > 0) {
       setError(
-        `Password requirements not met: ${failedRequirements.map((r) => r.label).join(', ')}`,
+        `Please meet these password rules: ${failedRequirements.map((r) => r.label).join(', ')}`,
       );
       return;
     }
 
     setIsLoading(true);
+
+    let scheduledRedirect = false;
 
     try {
       const res = await fetch('/api/setup', {
@@ -101,28 +129,38 @@ export default function Setup() {
         }),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as {
+        message?: string;
+        error?: string;
+        loginUrl?: string;
+        caddySuccess?: boolean;
+      };
 
       if (!res.ok) {
         throw new Error(data.message || data.error || 'Setup failed');
       }
 
-      if (data.caddySuccess === false) {
-        setError(
-          `Setup completed, but domain configuration reported an issue: ${data.caddyStatus}. You may need to restart the proxy for HTTPS.`,
-        );
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 5000);
-        return;
-      }
+      const loginUrl =
+        typeof data.loginUrl === 'string' && data.loginUrl.length > 0
+          ? data.loginUrl
+          : buildLoginUrlFromDomain(formData.domain);
 
-      window.location.href = '/login';
+      scheduledRedirect = true;
+      setIsLoading(false);
+      setFinishingSetup({
+        loginUrl,
+        httpsNote: data.caddySuccess === false,
+      });
+      setTimeout(() => {
+        window.location.assign(loginUrl);
+      }, POST_SETUP_REDIRECT_MS);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Setup failed';
       setError(message);
     } finally {
-      setIsLoading(false);
+      if (!scheduledRedirect) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -139,8 +177,36 @@ export default function Setup() {
       <BrandedFormLayout>
         <div className="flex min-h-[12rem] w-full flex-col items-center justify-center gap-4 rounded-xl border border-border/60 bg-card/80 px-6 py-12 shadow-md">
           <Spinner className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Checking setup status…</p>
+          <p className="text-sm text-muted-foreground">One moment…</p>
         </div>
+      </BrandedFormLayout>
+    );
+  }
+
+  if (finishingSetup) {
+    return (
+      <BrandedFormLayout>
+        <Card className="w-full border-border/70 bg-card/95 shadow-lg shadow-black/[0.04] backdrop-blur-sm supports-[backdrop-filter]:bg-card/90 dark:shadow-black/25">
+          <CardHeader className="space-y-2 pb-2 text-center">
+            <CardTitle className="text-xl font-semibold tracking-tight">
+              Applying your domain
+            </CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
+              Waiting a few seconds so your site address can finish updating. Sign in opens next.
+            </CardDescription>
+            {finishingSetup.httpsNote ? (
+              <p className="text-center text-xs text-amber-800 dark:text-amber-200">
+                Secure access may need another minute. If the page does not load, try again shortly.
+              </p>
+            ) : null}
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4 pb-8 pt-2">
+            <Spinner className="h-8 w-8 text-muted-foreground" />
+            <p className="break-all text-center text-xs text-muted-foreground">
+              {finishingSetup.loginUrl}
+            </p>
+          </CardContent>
+        </Card>
       </BrandedFormLayout>
     );
   }
@@ -153,7 +219,7 @@ export default function Setup() {
             Welcome
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Create your site and administrator account to finish installing NextPress.
+            Name your site and create your account.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -266,7 +332,7 @@ export default function Setup() {
                           req.regex.test(formData.password) && 'font-medium text-emerald-700 dark:text-emerald-400',
                         )}
                       >
-                        {req.regex.test(formData.password) ? '✓' : '○'} {req.label}
+                        {req.label}
                       </li>
                     ))}
                   </ul>

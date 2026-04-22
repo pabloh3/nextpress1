@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 COMPOSE_URL="https://raw.githubusercontent.com/pabloh3/nextpress1/main/docker-compose.prod.yml"
 INSTALL_DIR="/opt/nextpress"
 DEFAULT_DOMAIN="nextpress.localhost"
-DEFAULT_VERSION="beta-v1.0.2"
+DEFAULT_VERSION="latest"
 # ============================================
 
 # Spinner for long-running commands (ASCII compatible)
@@ -69,7 +69,7 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: ./install.sh [OPTIONS]"
       echo ""
       echo "Options:"
-      echo "  --version <tag>  Specify NextPress version (default: latest)"
+      echo "  --version <tag>  Docker Hub image tag for husseinkizz/nextpress (default: latest)"
       echo "  -h, --help       Show this help message"
       echo ""
       echo "Examples:"

@@ -1,4 +1,4 @@
-# Nextpress v1.0.2 Beta
+# Nextpress Beta
 
 A self-hostable WordPress-compatible CMS built in JavaScript/TypeScript.
 
@@ -22,7 +22,9 @@ Deploy to any Linux server with a single command:
 curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | sudo bash
 ```
 
-To install a specific version, add: `-- --version beta-v1.0.1`
+Default image is **`latest`** on Docker Hub. To pin a tag: `-- --version beta-v1.0.2` (same as `husseinkizz/nextpress:beta-v1.0.2`).
+
+**Alternative (CLI install):** from a checkout, `pnpm cli:build` then run from repo root so `docker-compose.prod.yml` is picked up, e.g. `sudo node packages/nextpress/dist/cli.js install`, or set `NEXTPRESS_COMPOSE_URL` to your deployed raw compose URL. See `packages/nextpress/README.md`.
 
 ---
 

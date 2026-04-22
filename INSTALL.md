@@ -2,19 +2,15 @@
 
 ## Quick Install
 
-Run this one-liner to install NextPress (default version: `beta-v1.0.0`):
+Run this one-liner to install NextPress (default Docker Hub tag: `latest`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/ft-packaging/install.sh | sudo bash
 ```
 
-### Install Latest Version
+### Install a specific Hub tag
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/ft-packaging/install.sh | sudo bash -s -- --version latest
-```
-
-### Install Specific Version
+Omit `--version` for **`latest`**. To pin a release tag:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/ft-packaging/install.sh | sudo bash -s -- --version beta-v1.0.0
@@ -164,7 +160,7 @@ The `.env` file contains:
 |----------|-------------|
 | `POSTGRES_PASSWORD` | Database password (auto-generated) |
 | `SESSION_SECRET` | Session encryption key (auto-generated) |
-| `NEXTPRESS_VERSION` | Docker image tag (default: `beta-v1.0.0`) |
+| `NEXTPRESS_VERSION` | Docker Hub tag for `husseinkizz/nextpress` (installer default: `latest`) |
 
 ## Docker Image
 

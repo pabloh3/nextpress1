@@ -36,7 +36,7 @@ async function fetchFromUrl(
  * Resolves production compose YAML the same way your deploy flow expects:
  * 1. `NEXTPRESS_COMPOSE_URL` — pin to branch/tag raw URL after deploy
  * 2. `./docker-compose.prod.yml` under cwd — when you run the CLI from the repo root after `./deploy.sh`
- * 3. Default raw URL (main) — published `npx nextpress` behaviour
+ * 3. Default raw URL (main), same default as the published CLI package
  */
 export async function resolveComposeYaml(): Promise<ResolveComposeResult> {
 	const envUrl = process.env.NEXTPRESS_COMPOSE_URL?.trim();

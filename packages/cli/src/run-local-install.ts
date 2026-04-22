@@ -1,5 +1,10 @@
 import { mkdirSync } from "node:fs";
-import { COMPOSE_FILE, DEFAULT_VERSION } from "./constants.js";
+import {
+	COMPOSE_FILE,
+	DEFAULT_INSTALL_DIR,
+	DEFAULT_VERSION,
+	PUBLISHED_CLI_PACKAGE,
+} from "./constants.js";
 import { composeFileArgs } from "./compose-args.js";
 import { resolveInstallPath } from "./resolve-install-path.js";
 import { resolveComposeYaml } from "./resolve-compose-yaml.js";
@@ -40,8 +45,8 @@ function printPostInstallHints(installDir: string, version: string): void {
 	console.log(`  cd ${installDir} && docker compose -f ${COMPOSE_FILE} logs -f`);
 	console.log(`  cd ${installDir} && docker compose -f ${COMPOSE_FILE} down`);
 	console.log(`  cd ${installDir} && docker compose -f ${COMPOSE_FILE} up -d`);
-	console.log(`  npx nextpress -d ${installDir} upgrade`);
-	console.log(`  npx nextpress -d ${installDir} uninstall --yes\n`);
+	console.log(`  nextpress -d ${installDir} upgrade`);
+	console.log(`  nextpress -d ${installDir} uninstall --yes\n`);
 }
 
 /**
@@ -78,9 +83,28 @@ export async function runLocalInstall(
 	try {
 		mkdirSync(installDir, { recursive: true });
 	} catch (e) {
-		console.error(
-			`Could not create ${installDir}: ${e instanceof Error ? e.message : String(e)}. Try sudo or a writable --install-dir.`,
-		);
+		const msg = e instanceof Error ? e.message : String(e);
+		const code =
+			e && typeof e === "object" && "code" in e
+				? String((e as { code?: string }).code)
+				: "";
+		if (code === "EACCES" || code === "EPERM") {
+			console.error(
+				[
+					`Could not create ${installDir}: ${msg}.`,
+					"",
+					`Install under a directory you own (install the CLI once, then):`,
+					`  npm install -g ${PUBLISHED_CLI_PACKAGE}`,
+					`  nextpress install --install-dir "$HOME/nextpress"`,
+					"",
+					`Or use the default ${DEFAULT_INSTALL_DIR} on a server:`,
+					`  sudo npm install -g ${PUBLISHED_CLI_PACKAGE}`,
+					`  sudo nextpress install`,
+				].join("\n"),
+			);
+		} else {
+			console.error(`Could not create ${installDir}: ${msg}.`);
+		}
 		return 1;
 	}
 

@@ -54,7 +54,7 @@ export function runUninstall(installDir: string, argv: string[]): number {
 	if (!yes) {
 		console.error(
 			"Refusing to uninstall without --yes. This removes containers, named volumes, images, and the install directory.\n" +
-				`Run: npx nextpress uninstall --yes   (install dir: ${installDir})`,
+				`Run: nextpress uninstall --yes   (install dir: ${installDir}; use sudo if required)`,
 		);
 		return 1;
 	}

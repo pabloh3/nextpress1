@@ -16,15 +16,20 @@ This uses [PGlite](https://pglite.dev/) (embedded PostgreSQL) for development, s
 
 ## Self-Hosting
 
-Deploy to any Linux server with a single command:
+### NextPress CLI
+
+The [**`@nextpress-org/cli`**](https://www.npmjs.com/package/@nextpress-org/cli) package adds a **`nextpress`** command so you can **provision a server**, **refresh** it over time, **check** how it is doing, and **tear it down** when you need to, without hand-maintaining long shell recipes. Commands include **`install`**, **`upgrade`**, **`reload`**, **`restart`**, **`status`**, **`logs`**, and **`uninstall`**. Use **`install --version <tag>`** when you want a fixed release instead of the default **`latest`**.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | sudo bash
+sudo npm install -g @nextpress-org/cli
+sudo nextpress install
 ```
 
-Default image is **`latest`** on Docker Hub. To pin a tag: `-- --version beta-v1.0.2` (same as `husseinkizz/nextpress:beta-v1.0.2`).
+More options and notes are in [`packages/cli/README.md`](packages/cli/README.md).
 
-**Alternative (CLI install):** from a checkout, `pnpm cli:build` then run from repo root so `docker-compose.prod.yml` is picked up, e.g. `sudo node packages/cli/dist/cli.js install`, or set `NEXTPRESS_COMPOSE_URL` to your deployed raw compose URL. See `packages/cli/README.md`.
+*NextPress can be self-hosted anywhere Docker runs.*
+
+App image on Docker Hub: [https://hub.docker.com/r/husseinkizz/nextpress](https://hub.docker.com/r/husseinkizz/nextpress)
 
 ---
 

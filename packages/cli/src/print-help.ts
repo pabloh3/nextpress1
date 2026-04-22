@@ -1,12 +1,16 @@
-import { DEFAULT_INSTALL_DIR } from "./constants.js";
+import { DEFAULT_INSTALL_DIR, PUBLISHED_CLI_PACKAGE } from "./constants.js";
 
 /** CLI help text (keep in sync with implemented commands). */
 export function printHelp(): void {
+	const pkg = PUBLISHED_CLI_PACKAGE;
 	console.log(`
 nextpress — NextPress server CLI (pre-built Docker Hub images only; no image build on your server)
 
-Usage:
-  npx nextpress <command> [options]
+Recommended
+  sudo npm install -g ${pkg}
+  nextpress <command> [options]
+
+  Use sudo with nextpress when the default install dir (${DEFAULT_INSTALL_DIR}) or Docker needs root. Do not use "sudo npx" (root often has no npx on PATH).
 
 Global options:
   -d, --install-dir <path>   Install directory (default: ${DEFAULT_INSTALL_DIR})
@@ -28,10 +32,12 @@ Commands:
   uninstall --yes             docker compose down -v, remove NextPress images, delete install dir.
 
 Examples:
-  sudo npx nextpress install
-  sudo npx nextpress install --version beta-v1.0.2
-  cd /path/to/nextpress && sudo npx nextpress install
-  NEXTPRESS_COMPOSE_URL=https://raw.githubusercontent.com/org/nextpress/v1/docker-compose.prod.yml sudo -E npx nextpress install
-  npx nextpress -d /opt/nextpress upgrade
+  sudo npm install -g ${pkg}
+  sudo nextpress install
+  sudo nextpress install --version beta-v1.0.2
+  cd /path/to/nextpress && sudo nextpress install
+  NEXTPRESS_COMPOSE_URL=https://raw.githubusercontent.com/org/nextpress/v1/docker-compose.prod.yml sudo -E nextpress install
+  nextpress install --install-dir "$HOME/nextpress"
+  nextpress -d /opt/nextpress upgrade
 `.trim());
 }

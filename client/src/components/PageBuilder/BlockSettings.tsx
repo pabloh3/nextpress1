@@ -321,6 +321,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
   };
 
   const renderStyleSettings = () => {
+    const isColumnsBlock = block.name === "core/columns";
     return (
       <div className="space-y-6">
         {/* Typography */}
@@ -555,8 +556,10 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
               />
             </div>
             
-            {/* Display Type for Container Blocks */}
-            {['container', 'columns', 'core/group'].includes(block.name) && (
+            {/* Display Type for Layout-capable Blocks
+                NOTE: `core/columns` layout is controlled via its own Content settings to avoid conflicts.
+             */}
+            {['container', 'core/group'].includes(block.name) && (
               <>
                   <div>
                     <Label className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
@@ -577,7 +580,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                 </div>
 
                 {/* Flex Direction (if display is flex) */}
-                {block.styles?.display === 'flex' && (
+                {(block.styles?.display === 'flex' || block.styles?.display === 'inline-flex') && (
                   <div>
                     <Label className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <RotateCw className="w-3 h-3" />
@@ -598,7 +601,7 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                 )}
 
                 {/* Flex Wrap (if display is flex) */}
-                {block.styles?.display === 'flex' && (
+                {(block.styles?.display === 'flex' || block.styles?.display === 'inline-flex') && (
                   <div>
                     <Label className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <Rows className="w-3 h-3" />
@@ -657,7 +660,8 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                 </div>
 
                 {/* Gap */}
-                <div>
+                {!isColumnsBlock && (
+                  <div>
                   <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <Move className="w-3 h-3" />
                     Gap
@@ -668,7 +672,8 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
                     placeholder="e.g. 16px, 1rem"
                     className="mt-2 h-8 text-sm border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-gray-400"
                   />
-                </div>
+                  </div>
+                )}
               </>
             )}
 
@@ -706,7 +711,28 @@ export default function BlockSettings({ block, onUpdate, onHoverArea }: BlockSet
             )}
 
             {/* Overflow */}
-            {['container', 'columns', 'core/group'].includes(block.name) && (
+            {['container', 'core/group'].includes(block.name) && (
+              <div>
+                <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                  <Square className="w-3 h-3" />
+                  Overflow
+                </Label>
+                <ChipGroup
+                  label=""
+                  options={[
+                    { value: 'visible', label: 'Visible' },
+                    { value: 'hidden', label: 'Hidden' },
+                    { value: 'auto', label: 'Auto' },
+                    { value: 'scroll', label: 'Scroll' },
+                  ]}
+                  value={block.styles?.overflow || 'visible'}
+                  onChange={(value) => updateStyles({ overflow: value })}
+                />
+              </div>
+            )}
+
+            {/* For Columns, keep true dimensions here, but avoid duplicating layout controls. */}
+            {isColumnsBlock && (
               <div>
                 <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                   <Square className="w-3 h-3" />

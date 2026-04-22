@@ -36,8 +36,27 @@ export function ColumnsBlock(props: BlockData) {
     display: "flex",
     flexDirection: direction || "row",
     ...(gap ? { gap } : {}),
-    ...(verticalAlignment ? { alignItems: verticalAlignment } : {}),
-    ...(horizontalAlignment ? { justifyContent: horizontalAlignment } : {}),
+    ...(verticalAlignment
+      ? {
+          alignItems: {
+            top: "flex-start",
+            center: "center",
+            bottom: "flex-end",
+            stretch: "stretch",
+          }[verticalAlignment],
+        }
+      : {}),
+    ...(horizontalAlignment
+      ? {
+          justifyContent: {
+            left: "flex-start",
+            center: "center",
+            right: "flex-end",
+            "space-between": "space-between",
+            "space-around": "space-around",
+          }[horizontalAlignment],
+        }
+      : {}),
   };
 
   // Helper to render a single child block

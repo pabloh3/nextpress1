@@ -57,9 +57,13 @@ export function ParagraphBlock(props: BlockData) {
   const { content, textAlign, dropCap, className, style, attributes } =
     props as Extract<BlockData, { blockName: "core/paragraph" }>;
 
+  const effectiveTextAlign =
+    (style?.textAlign as React.CSSProperties["textAlign"] | undefined) ??
+    textAlign;
+
   const mergedClassName = [
     "wp-block-paragraph",
-    textAlign ? `has-text-align-${textAlign}` : "",
+    effectiveTextAlign ? `has-text-align-${effectiveTextAlign}` : "",
     dropCap ? "has-drop-cap" : "",
     className,
   ]
@@ -68,7 +72,7 @@ export function ParagraphBlock(props: BlockData) {
 
   const mergedStyle: React.CSSProperties = {
     ...style,
-    ...(textAlign ? { textAlign } : {}),
+    ...(effectiveTextAlign ? { textAlign: effectiveTextAlign } : {}),
   };
 
   return (

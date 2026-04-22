@@ -48,6 +48,16 @@ interface ButtonRendererProps {
   isPreview?: boolean;
 }
 
+function mapTextAlignToJustifyContent(
+  textAlign: React.CSSProperties["textAlign"] | undefined,
+): React.CSSProperties["justifyContent"] | undefined {
+  if (!textAlign) return undefined;
+  if (textAlign === "left") return "flex-start";
+  if (textAlign === "center") return "center";
+  if (textAlign === "right") return "flex-end";
+  return undefined;
+}
+
 function ButtonRenderer({ content, styles, isPreview }: ButtonRendererProps) {
   const textContent = content?.kind === 'text' ? content.value : '';
   const url = content?.url as string | undefined;
@@ -76,6 +86,15 @@ function ButtonRenderer({ content, styles, isPreview }: ButtonRendererProps) {
 
   const label = iconOnly && icon ? (title || textContent || undefined) : undefined;
 
+  const justifyFromTextAlign = mapTextAlignToJustifyContent(styles?.textAlign);
+  const justifyContent =
+    (styles?.justifyContent as React.CSSProperties["justifyContent"] | undefined) ??
+    justifyFromTextAlign ??
+    "center";
+  const alignItems =
+    (styles?.alignItems as React.CSSProperties["alignItems"] | undefined) ??
+    "center";
+
   return (
     <div className={wrapperClass} role="presentation" onClick={(e) => (isPreview ? undefined : e.preventDefault())}>
       <a
@@ -83,7 +102,13 @@ function ButtonRenderer({ content, styles, isPreview }: ButtonRendererProps) {
         target={linkTarget}
         rel={rel}
         title={label}
-        style={{ ...styles, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: iconElement && !iconOnly ? '6px' : undefined }}
+        style={{
+          ...styles,
+          display: "inline-flex",
+          alignItems,
+          justifyContent,
+          gap: iconElement && !iconOnly ? "6px" : undefined,
+        }}
         className={anchorClass}
       >
         {iconElement && iconPosition === 'left' && iconElement}

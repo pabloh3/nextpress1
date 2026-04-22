@@ -46,6 +46,10 @@ export function writeComposeFile(installDir: string, composeYaml: string): void 
  */
 export function writeInitialCaddyfile(installDir: string): void {
 	const dir = path.join(installDir, "caddy_config");
+	const caddyfilePath = path.join(dir, "Caddyfile");
 	mkdirSync(dir, { recursive: true });
-	writeFileSync(path.join(dir, "Caddyfile"), INITIAL_CADDYFILE, "utf8");
+	if (existsSync(caddyfilePath)) {
+		return;
+	}
+	writeFileSync(caddyfilePath, INITIAL_CADDYFILE, "utf8");
 }

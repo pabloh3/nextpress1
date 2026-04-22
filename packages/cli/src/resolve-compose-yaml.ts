@@ -6,6 +6,27 @@ export type ResolveComposeResult =
 	| { status: true; data: string; source: string }
 	| { status: false; message: string };
 
+function validateComposeYaml(
+	data: string,
+	sourceLabel: string,
+): ResolveComposeResult {
+	if (!data.trim()) {
+		return { status: false, message: `Empty response from ${sourceLabel}` };
+	}
+
+	if (/^\s*build\s*:/m.test(data)) {
+		return {
+			status: false,
+			message:
+				`${sourceLabel} contains a Compose build stanza. ` +
+				`nextpress install is Hub-only and will not use local docker builds. ` +
+				`Use a compose file whose services point at published images only.`,
+		};
+	}
+
+	return { status: true, data, source: sourceLabel };
+}
+
 async function fetchFromUrl(
 	url: string,
 	sourceLabel: string,
@@ -19,10 +40,11 @@ async function fetchFromUrl(
 			};
 		}
 		const data = await res.text();
-		if (!data.trim()) {
-			return { status: false, message: `Empty response from ${sourceLabel}` };
+		const validated = validateComposeYaml(data, sourceLabel);
+		if (!validated.status) {
+			return validated;
 		}
-		return { status: true, data, source: url };
+		return { status: true, data: validated.data, source: url };
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
 		return {
@@ -55,10 +77,11 @@ export async function resolveComposeYaml(): Promise<ResolveComposeResult> {
 	if (existsSync(cwdPath)) {
 		try {
 			const data = readFileSync(cwdPath, "utf8");
-			if (!data.trim()) {
-				return { status: false, message: `Empty file: ${cwdPath}` };
+			const validated = validateComposeYaml(data, cwdPath);
+			if (!validated.status) {
+				return validated;
 			}
-			return { status: true, data, source: cwdPath };
+			return { status: true, data: validated.data, source: cwdPath };
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
 			return { status: false, message: `Could not read ${cwdPath}: ${msg}` };

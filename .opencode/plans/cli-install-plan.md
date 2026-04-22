@@ -87,7 +87,7 @@ volumes:
 ```
 
 ### 2.3 Caddy Integration
-- **Default `Caddyfile`** (Created by `install.sh` initially):
+- **Default `Caddyfile`** (Created by the installer initially):
   ```caddyfile
   :80 {
     reverse_proxy app:5000
@@ -164,7 +164,7 @@ export const setupCheck = async (req, res, next) => {
   3. **Site**: Site Name, Domain Name.
   4. **Install**: Calls `POST /api/setup`. Show spinner. On success -> `window.location.href = '/login'`.
 
-## 5. The `install.sh` Script
+## 5. Installer Script Concept
 ```bash
 #!/bin/bash
 set -e
@@ -210,4 +210,4 @@ echo "Installation complete! Open your browser to setup."
 1.  **Backend**: Modify `initialize-default.ts`, create `setupCheck.ts`, create `setup.routes.ts`.
 2.  **Frontend**: Create `Setup.tsx`, update `App.tsx`.
 3.  **Infrastructure**: Create `Dockerfile`, `docker-compose.yml`.
-4.  **Script**: Create `install.sh`.
+4.  **Installer**: Create the installation entrypoint.

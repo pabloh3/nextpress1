@@ -25,7 +25,7 @@ sudo npm install -g @nextpress-org/cli
 sudo nextpress install
 ```
 
-More options and notes are in [`packages/cli/README.md`](packages/cli/README.md).
+If **`nextpress`** is **`command not found`**, your **`PATH`** probably omits npm’s global bin directory. On current npm versions, run **`npm prefix -g`** and add **`$(npm prefix -g)/bin`** to **`PATH`**. More options, troubleshooting, and version-check commands are in [`packages/cli/README.md`](packages/cli/README.md).
 
 *NextPress can be self-hosted anywhere Docker runs.*
 

@@ -25,6 +25,18 @@ sudo npm install -g @nextpress-org/cli
 
 Then run **`nextpress`**. Avoid **`sudo npx`**: root usually has no **`npx`** on **`PATH`**.
 
+### If `nextpress` is not found
+
+`npm install -g` puts the binary under npm's global prefix. If that bin directory is not on your **`PATH`**, the shell will report **`command not found`**. On current npm versions, run **`npm prefix -g`** and add **`$(npm prefix -g)/bin`** to **`PATH`** in **`~/.bashrc`** or **`~/.zshrc`**, then reload the shell or call the binary with its full path.
+
+After the binary is reachable, these version checks should work:
+
+```bash
+nextpress -v
+nextpress --version
+nextpress version
+```
+
 ```bash
 nextpress help
 
@@ -44,6 +56,8 @@ sudo nextpress uninstall --yes
 |----------|-----|
 | `NEXTPRESS_INSTALL_DIR` | Default path if you omit **`-d`**. |
 | `NEXTPRESS_COMPOSE_URL` | During **install**, use the compose definition from this URL. |
+
+Install remains **pull-only**. The CLI writes the compose file, runs **`docker compose pull`**, then **`docker compose up -d`**. If the resolved compose file contains **`build:`**, install stops instead of quietly implying a local image build flow.
 
 ---
 

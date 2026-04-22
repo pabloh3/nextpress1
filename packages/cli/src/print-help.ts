@@ -11,6 +11,8 @@ Recommended
   nextpress <command> [options]
 
   Use sudo with nextpress when the default install dir (${DEFAULT_INSTALL_DIR}) or Docker needs root. Do not use "sudo npx" (root often has no npx on PATH).
+  If nextpress is not found after npm install -g: add the npm global bin directory to your PATH.
+  On current npm versions, run "npm prefix -g" and add "$(npm prefix -g)/bin" to your PATH, then open a new terminal.
 
 Global options:
   -d, --install-dir <path>   Install directory (default: ${DEFAULT_INSTALL_DIR})
@@ -22,14 +24,16 @@ Compose resolution (install only), in order:
   3. Default public URL         Same main-branch compose as legacy curl installer.
 
 Commands:
-  install [--version <tag>]   Fetch compose YAML, write bootstrap + .env, then pull images and start (same as install.sh: never docker build).
+  install [--version <tag>]   Fetch compose YAML, write bootstrap + .env, then pull images and start (published-image flow; never docker build).
                               Default Hub tag is latest (husseinkizz/nextpress:latest). --version <tag> pins husseinkizz/nextpress:<tag>.
+                              Install rejects compose files that contain local build stanzas.
   upgrade                     docker compose pull && up -d (refresh pre-built images; still no build).
   reload                      Restart only the Caddy service.
   restart                     Restart all compose services.
   status                      docker compose ps
   logs [service...]           docker compose logs -f (optional service names)
   uninstall --yes             docker compose down -v, remove NextPress images, delete install dir.
+  version, -v, --version      Print this CLI package version.
 
 Examples:
   sudo npm install -g ${pkg}

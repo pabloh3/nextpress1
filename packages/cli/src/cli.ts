@@ -1,5 +1,6 @@
 import { parseGlobalArgv } from "./parse-global-argv.js";
 import { printHelp } from "./print-help.js";
+import { readCliPackageVersion } from "./read-cli-package-version.js";
 import { runInstall } from "./commands/install.js";
 import { runUpgrade } from "./commands/upgrade.js";
 import { runReload } from "./commands/reload.js";
@@ -21,7 +22,13 @@ const COMMANDS: Record<string, CommandFn> = {
 
 async function main(): Promise<number> {
 	const raw = process.argv.slice(2);
-	const { installDir, positionals } = parseGlobalArgv(raw);
+	const { installDir, positionals, error } = parseGlobalArgv(raw);
+
+	if (error) {
+		console.error(`${error}\n`);
+		printHelp();
+		return 1;
+	}
 
 	if (
 		positionals.length === 0 ||
@@ -35,6 +42,11 @@ async function main(): Promise<number> {
 
 	const command = positionals[0];
 	const subArgv = positionals.slice(1);
+
+	if (command === "-v" || command === "--version" || command === "version") {
+		console.log(readCliPackageVersion());
+		return 0;
+	}
 
 	if (command === "install") {
 		return runInstall(installDir, subArgv);

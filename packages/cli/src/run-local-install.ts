@@ -50,7 +50,7 @@ function printPostInstallHints(installDir: string, version: string): void {
 }
 
 /**
- * Install: same flow as `install.sh` — resolve compose, write bootstrap + `.env`, then `docker compose pull` and `up -d`.
+ * Install: resolve compose, write bootstrap + `.env`, then `docker compose pull` and `up -d`.
  * Uses only `image:` services from that YAML (no `docker compose build`, no `--build`).
  */
 export async function runLocalInstall(
@@ -65,7 +65,17 @@ export async function runLocalInstall(
 		return 1;
 	}
 
-	const { version: versionArg } = parseInstallArgv(argv);
+	const { version: versionArg, error } = parseInstallArgv(argv);
+	if (error) {
+		console.error(error);
+		return 1;
+	}
+	if (versionArg && sanitizeVersionTag(versionArg) !== versionArg) {
+		console.error(
+			"Invalid --version tag. Use only letters, numbers, dots, underscores, and dashes.",
+		);
+		return 1;
+	}
 	const version = versionArg
 		? sanitizeVersionTag(versionArg)
 		: DEFAULT_VERSION;

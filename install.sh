@@ -75,7 +75,9 @@ install_docker_if_missing() {
 }
 
 install_nextpress_command() {
+	local bin_dir
 	local tmp_file
+	bin_dir="$(dirname "$NEXTPRESS_BIN_PATH")"
 	tmp_file="$(mktemp)"
 
 	info "Downloading nextpress command from GitHub."
@@ -83,6 +85,7 @@ install_nextpress_command() {
 	chmod +x "$tmp_file"
 
 	info "Installing nextpress command to $NEXTPRESS_BIN_PATH."
+	as_root mkdir -p "$bin_dir"
 	as_root install -m 0755 "$tmp_file" "$NEXTPRESS_BIN_PATH"
 	rm -f "$tmp_file"
 }

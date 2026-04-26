@@ -1,6 +1,6 @@
-# nextpress cli
+# nextpress command
 
-Command-line interface for **self-hosting NextPress** on a server you control. One tool to **stand up** a production stack, **refresh** it, **inspect** it, and **remove** it when you are done, instead of copying ad hoc scripts between machines.
+Standalone command to make self hosting and managing nextpress easier.
 
 **What you can do**
 
@@ -13,29 +13,28 @@ Command-line interface for **self-hosting NextPress** on a server you control. O
 
 Docker Engine and Docker Compose version 2 (`docker compose version` must work).
 
-## Usage
+## Install
 
 Default install location is **`/opt/nextpress`**. Override with **`--install-dir`** / **`-d`**, or **`NEXTPRESS_INSTALL_DIR`**. When both are set, **`-d`** wins.
 
-Install the CLI globally so **`nextpress`** is on your **`PATH`**. You often use **`sudo`** for **`npm install -g`** and for **`install`** when the default directory needs root:
+Install NextPress and the standalone command from GitHub:
 
 ```bash
-sudo npm install -g @nextpress-org/cli
+curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | bash
 ```
 
-Then run **`nextpress`**. Avoid **`sudo npx`**: root usually has no **`npx`** on **`PATH`**.
+The installer checks for Docker Compose v2, writes **`/usr/local/bin/nextpress`**, makes it executable, verifies **`nextpress --version`**, and runs **`nextpress install`** before finishing.
 
-### If `nextpress` is not found
+If you already have Docker installed, the command is ready immediately. If Docker is missing, the installer uses Docker's official Linux installer. Set **`NEXTPRESS_SKIP_DOCKER_INSTALL=1`** to make missing Docker a hard failure instead.
 
-`npm install -g` puts the binary under npm's global prefix. If that bin directory is not on your **`PATH`**, the shell will report **`command not found`**. On current npm versions, run **`npm prefix -g`** and add **`$(npm prefix -g)/bin`** to **`PATH`** in **`~/.bashrc`** or **`~/.zshrc`**, then reload the shell or call the binary with its full path.
-
-After the binary is reachable, these version checks should work:
+Pass install options through bash when needed:
 
 ```bash
-nextpress -v
-nextpress --version
-nextpress version
+curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | bash -s -- --version beta-v1.0.2
+curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | bash -s -- -d "$HOME/nextpress"
 ```
+
+## Usage
 
 ```bash
 nextpress help
@@ -56,31 +55,14 @@ sudo nextpress uninstall --yes
 |----------|-----|
 | `NEXTPRESS_INSTALL_DIR` | Default path if you omit **`-d`**. |
 | `NEXTPRESS_COMPOSE_URL` | During **install**, use the compose definition from this URL. |
-
-Install remains **pull-only**. The CLI writes the compose file, runs **`docker compose pull`**, then **`docker compose up -d`**. If the resolved compose file contains **`build:`**, install stops instead of quietly implying a local image build flow.
+| `NEXTPRESS_RAW_BASE` | During **install.sh**, override the GitHub raw base URL. |
+| `NEXTPRESS_BIN_PATH` | During **install.sh**, override where the command is installed. |
+| `NEXTPRESS_SKIP_DOCKER_INSTALL` | During **install.sh**, fail instead of installing Docker when Docker is missing. |
 
 ---
 
-Package name on npm: **`@nextpress-org/cli`**. The executable name is **`nextpress`**. Monorepo workspace root: **`nextpress-workspace`**.
+The command source lives at **`scripts/nextpress`**. The bootstrap installer lives at the repo root: **`install.sh`**.
 
-## Publishing (maintainers)
+## Legacy npm package
 
-**VITE+** can replace **`npm`** with a shim so **`npm publish`** errors with **`Command publish not found`**. Prefer **`pnpm`** (this repo already uses it):
-
-```bash
-cd packages/cli
-pnpm publish --access public
-```
-
-Or call Node’s **`npm`** explicitly (example):
-
-```bash
-/usr/bin/npm publish --access public
-PATH="/usr/local/bin:/usr/bin:/bin" npm publish --access public
-```
-
-From the repo root:
-
-```bash
-pnpm --filter @nextpress-org/cli publish --access public
-```
+The older npm package was **`@nextpress-org/cli`**, but the recommended path is now the GitHub installer because it avoids npm global **`PATH`** issues on fresh servers.

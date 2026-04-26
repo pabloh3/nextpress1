@@ -1,0 +1,430 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly CLI_VERSION="nextpress standalone 0.1.0"
+readonly DEFAULT_INSTALL_DIR="/opt/nextpress"
+readonly DEFAULT_VERSION="latest"
+readonly COMPOSE_FILE="docker-compose.prod.yml"
+readonly DEFAULT_COMPOSE_SPEC_URL="https://raw.githubusercontent.com/pabloh3/nextpress1/main/docker-compose.prod.yml"
+
+INSTALL_DIR="${NEXTPRESS_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
+INSTALL_VERSION="$DEFAULT_VERSION"
+POSITIONALS=()
+
+info() {
+	printf '%s\n' "$*"
+}
+
+warn() {
+	printf '%s\n' "Warning: $*" >&2
+}
+
+fail() {
+	printf '%s\n' "Error: $*" >&2
+	exit 1
+}
+
+command_exists() {
+	command -v "$1" >/dev/null 2>&1
+}
+
+print_help() {
+	cat <<EOF
+nextpress - NextPress server CLI (pre-built Docker Hub images only; no image build on your server)
+
+Install the command:
+  curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | bash
+
+Global options:
+  -d, --install-dir <path>   Install directory (default: $DEFAULT_INSTALL_DIR)
+                             Override with env NEXTPRESS_INSTALL_DIR.
+
+Compose resolution (install only), in order:
+  1. NEXTPRESS_COMPOSE_URL     Fetch this URL.
+  2. ./docker-compose.prod.yml If present under the current working directory.
+  3. Default public URL         Main-branch compose from the NextPress GitHub repo.
+
+Commands:
+  install [--version <tag>]   Fetch compose YAML, write bootstrap + .env, then pull images and start.
+                              Default Hub tag is latest (husseinkizz/nextpress:latest).
+  upgrade                     docker compose pull && up -d.
+  reload                      Restart only the Caddy service.
+  restart                     Restart all compose services.
+  status                      docker compose ps.
+  logs [service...]           docker compose logs -f with optional service names.
+  uninstall --yes             docker compose down -v, remove NextPress images, delete install dir.
+  version, -v, --version      Print command version.
+
+Examples:
+  sudo nextpress install
+  sudo nextpress install --version beta-v1.0.2
+  nextpress install --install-dir "\$HOME/nextpress"
+  nextpress -d /opt/nextpress upgrade
+EOF
+}
+
+parse_global_args() {
+	while [ "$#" -gt 0 ]; do
+		case "$1" in
+			-d|--install-dir)
+				if [ "${2:-}" = "" ] || [[ "${2:-}" == -* ]]; then
+					fail "Missing value for $1. Use $1 <path>."
+				fi
+				INSTALL_DIR="$2"
+				shift 2
+				;;
+			*)
+				POSITIONALS+=("$1")
+				shift
+				;;
+		esac
+	done
+}
+
+resolve_install_dir() {
+	local raw="$1"
+	local resolved
+
+	raw="${raw%"${raw##*[![:space:]]}"}"
+	raw="${raw#"${raw%%[![:space:]]*}"}"
+
+	if [ "$raw" = "" ]; then
+		fail "Refusing to use an empty install directory."
+	fi
+
+	case "$raw" in
+		/*) resolved="$raw" ;;
+		*) resolved="$(pwd)/$raw" ;;
+	esac
+
+	while [ "${#resolved}" -gt 1 ] && [[ "$resolved" == */ ]]; do
+		resolved="${resolved%/}"
+	done
+
+	if [ "$resolved" = "/" ]; then
+		fail "Refusing to use root as the install directory."
+	fi
+
+	INSTALL_DIR="$resolved"
+}
+
+assert_docker_available() {
+	if ! docker compose version >/dev/null 2>&1; then
+		fail "Docker Compose v2 not found. Install Docker Engine + Compose plugin, then run this command again."
+	fi
+}
+
+assert_install_dir_exists() {
+	if [ ! -d "$INSTALL_DIR" ]; then
+		fail "Install directory not found: $INSTALL_DIR. Install first: nextpress install"
+	fi
+}
+
+sanitize_version_tag() {
+	local raw="$1"
+	if [[ ! "$raw" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+		fail "Invalid --version tag. Use only letters, numbers, dots, underscores, and dashes."
+	fi
+}
+
+parse_install_args() {
+	INSTALL_VERSION="$DEFAULT_VERSION"
+
+	while [ "$#" -gt 0 ]; do
+		case "$1" in
+			--version|-V)
+				if [ "${2:-}" = "" ] || [[ "${2:-}" == -* ]]; then
+					fail "Missing value for $1. Use $1 <tag>."
+				fi
+				sanitize_version_tag "$2"
+				INSTALL_VERSION="$2"
+				shift 2
+				;;
+			-*)
+				fail "Unknown install option: $1"
+				;;
+			*)
+				fail "Unexpected install argument: $1"
+				;;
+		esac
+	done
+}
+
+parse_uninstall_args() {
+	local yes="false"
+
+	while [ "$#" -gt 0 ]; do
+		case "$1" in
+			--yes|-y)
+				yes="true"
+				shift
+				;;
+			*)
+				fail "Unknown uninstall option: $1"
+				;;
+		esac
+	done
+
+	if [ "$yes" != "true" ]; then
+		fail "Refusing to uninstall without --yes. This removes containers, named volumes, images, and the install directory."
+	fi
+}
+
+validate_compose_file() {
+	local file="$1"
+	local source="$2"
+
+	if [ ! -s "$file" ]; then
+		fail "Empty compose file from $source."
+	fi
+
+	if grep -Eq '^[[:space:]]*build[[:space:]]*:' "$file"; then
+		fail "$source contains a Compose build stanza. nextpress install is Hub-only and only uses published images."
+	fi
+}
+
+resolve_compose_file() {
+	local target="$1"
+	local source
+
+	if [ "${NEXTPRESS_COMPOSE_URL:-}" != "" ]; then
+		source="NEXTPRESS_COMPOSE_URL"
+		curl -fsSL "$NEXTPRESS_COMPOSE_URL" -o "$target" || fail "Could not fetch compose from NEXTPRESS_COMPOSE_URL."
+		validate_compose_file "$target" "$source"
+		info "Using compose from: $NEXTPRESS_COMPOSE_URL"
+		return
+	fi
+
+	if [ -f "./$COMPOSE_FILE" ]; then
+		source="$(pwd)/$COMPOSE_FILE"
+		cp "./$COMPOSE_FILE" "$target"
+		validate_compose_file "$target" "$source"
+		info "Using compose from: $source"
+		return
+	fi
+
+	source="$DEFAULT_COMPOSE_SPEC_URL"
+	curl -fsSL "$DEFAULT_COMPOSE_SPEC_URL" -o "$target" || fail "Could not fetch compose from default URL."
+	validate_compose_file "$target" "$source"
+	info "Using compose from: $source"
+}
+
+generate_secret_hex() {
+	openssl rand -hex 16
+}
+
+generate_secret_base64() {
+	openssl rand -base64 32
+}
+
+write_or_update_env() {
+	local version="$1"
+	local env_path="$INSTALL_DIR/.env"
+	local tmp_path
+
+	if ! command_exists openssl; then
+		fail "openssl is required to generate install secrets."
+	fi
+
+	if [ ! -f "$env_path" ]; then
+		umask 077
+		cat > "$env_path" <<EOF
+POSTGRES_PASSWORD=$(generate_secret_hex)
+SESSION_SECRET=$(generate_secret_base64)
+NEXTPRESS_VERSION=$version
+EOF
+		info "Generated new .env with secrets."
+		return
+	fi
+
+	tmp_path="$(mktemp)"
+	if grep -q '^NEXTPRESS_VERSION=' "$env_path"; then
+		awk -v version="$version" 'BEGIN{done=0} /^NEXTPRESS_VERSION=/{print "NEXTPRESS_VERSION=" version; done=1; next} {print} END{if(done==0) print "NEXTPRESS_VERSION=" version}' "$env_path" > "$tmp_path"
+	else
+		cat "$env_path" > "$tmp_path"
+		printf '%s\n' "NEXTPRESS_VERSION=$version" >> "$tmp_path"
+	fi
+	cat "$tmp_path" > "$env_path"
+	rm -f "$tmp_path"
+	info "Updated NEXTPRESS_VERSION in existing .env."
+}
+
+write_initial_caddyfile() {
+	local caddy_dir="$INSTALL_DIR/caddy_config"
+	local caddy_file="$caddy_dir/Caddyfile"
+
+	mkdir -p "$caddy_dir"
+	if [ -f "$caddy_file" ]; then
+		return
+	fi
+
+	cat > "$caddy_file" <<'EOF'
+{
+  admin 0.0.0.0:2019
+  email info@nextpress.com
+}
+
+# Default HTTP catch-all on port 80
+:80 {
+  reverse_proxy app:5000
+}
+EOF
+}
+
+try_chown_to_sudo_user() {
+	if [ "${SUDO_USER:-}" = "" ] || [ "$SUDO_USER" = "root" ]; then
+		return
+	fi
+
+	if id "$SUDO_USER" >/dev/null 2>&1; then
+		chown -R "$SUDO_USER":"$SUDO_USER" "$INSTALL_DIR" || true
+	fi
+}
+
+compose() {
+	docker compose -f "$COMPOSE_FILE" "$@"
+}
+
+print_post_install_hints() {
+	local version="$1"
+
+	cat <<EOF
+
+============================================
+       Installation complete
+============================================
+
+NextPress $version is running (Docker Hub image + compose stack).
+
+Open the setup wizard in your browser using your server IP or hostname on port 80.
+
+Useful commands:
+  cd $INSTALL_DIR && docker compose -f $COMPOSE_FILE logs -f
+  cd $INSTALL_DIR && docker compose -f $COMPOSE_FILE down
+  cd $INSTALL_DIR && docker compose -f $COMPOSE_FILE up -d
+  nextpress -d $INSTALL_DIR upgrade
+  nextpress -d $INSTALL_DIR uninstall --yes
+EOF
+}
+
+run_install() {
+	parse_install_args "$@"
+
+	assert_docker_available
+	mkdir -p "$INSTALL_DIR"
+
+	info "Resolving docker-compose.prod.yml..."
+	resolve_compose_file "$INSTALL_DIR/$COMPOSE_FILE"
+	write_initial_caddyfile
+	write_or_update_env "$INSTALL_VERSION"
+	try_chown_to_sudo_user
+
+	info ""
+	info "Pulling images from Docker Hub..."
+	(cd "$INSTALL_DIR" && compose pull)
+
+	info ""
+	info "Starting services..."
+	(cd "$INSTALL_DIR" && compose up -d)
+
+	sleep 3
+	print_post_install_hints "$INSTALL_VERSION"
+}
+
+run_upgrade() {
+	assert_install_dir_exists
+
+	info "Upgrading stack in $INSTALL_DIR..."
+	(cd "$INSTALL_DIR" && compose pull)
+	(cd "$INSTALL_DIR" && compose up -d)
+}
+
+run_reload() {
+	assert_install_dir_exists
+
+	info "Reloading Caddy in $INSTALL_DIR..."
+	(cd "$INSTALL_DIR" && compose restart caddy)
+}
+
+run_restart() {
+	assert_install_dir_exists
+
+	info "Restarting all services in $INSTALL_DIR..."
+	(cd "$INSTALL_DIR" && compose restart)
+}
+
+run_status() {
+	assert_install_dir_exists
+	(cd "$INSTALL_DIR" && compose ps)
+}
+
+run_logs() {
+	assert_install_dir_exists
+	(cd "$INSTALL_DIR" && compose logs -f "$@")
+}
+
+run_uninstall() {
+	parse_uninstall_args "$@"
+	assert_install_dir_exists
+
+	if [ -f "$INSTALL_DIR/$COMPOSE_FILE" ]; then
+		info "Stopping stack and removing named volumes..."
+		(cd "$INSTALL_DIR" && compose down -v --remove-orphans) || warn "Compose down failed; continuing cleanup."
+	else
+		warn "No $COMPOSE_FILE found; skipping compose down."
+	fi
+
+	info "Removing NextPress images (best effort)..."
+	docker images -q husseinkizz/nextpress | xargs -r docker rmi -f >/dev/null 2>&1 || true
+
+	info "Removing install directory: $INSTALL_DIR"
+	rm -rf "$INSTALL_DIR" || sudo rm -rf "$INSTALL_DIR"
+
+	info ""
+	info "Uninstall finished."
+}
+
+main() {
+	parse_global_args "$@"
+	resolve_install_dir "$INSTALL_DIR"
+
+	local command="${POSITIONALS[0]:-help}"
+	local sub_args=("${POSITIONALS[@]:1}")
+
+	case "$command" in
+		help|--help|-h)
+			print_help
+			;;
+		version|--version|-v)
+			printf '%s\n' "$CLI_VERSION"
+			;;
+		install)
+			run_install "${sub_args[@]}"
+			;;
+		upgrade)
+			run_upgrade
+			;;
+		reload)
+			run_reload
+			;;
+		restart)
+			run_restart
+			;;
+		status)
+			run_status
+			;;
+		logs)
+			run_logs "${sub_args[@]}"
+			;;
+		uninstall)
+			run_uninstall "${sub_args[@]}"
+			;;
+		*)
+			printf '%s\n\n' "Unknown command: $command" >&2
+			print_help
+			exit 1
+			;;
+	esac
+}
+
+main "$@"

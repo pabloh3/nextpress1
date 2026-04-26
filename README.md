@@ -16,16 +16,15 @@ This uses [PGlite](https://pglite.dev/) (embedded PostgreSQL) for development, s
 
 ## Self-Hosting
 
-### NextPress CLI
+### NextPress Installer
 
-The [**`@nextpress-org/cli`**](https://www.npmjs.com/package/@nextpress-org/cli) package adds a **`nextpress`** command so you can **provision a server**, **refresh** it over time, **check** how it is doing, and **tear it down** when you need to, without hand-maintaining long shell recipes. Commands include **`install`**, **`upgrade`**, **`reload`**, **`restart`**, **`status`**, **`logs`**, and **`uninstall`**. Use **`install --version <tag>`** when you want a fixed release instead of the default **`latest`**.
+Install NextPress from the GitHub repo with one command. The installer adds the standalone **`nextpress`** command, provisions the server, and leaves the command available so you can **refresh** it over time, **check** how it is doing, and **tear it down** when you need to. Commands include **`install`**, **`upgrade`**, **`reload`**, **`restart`**, **`status`**, **`logs`**, and **`uninstall`**.
 
 ```bash
-sudo npm install -g @nextpress-org/cli
-sudo nextpress install
+curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | bash
 ```
 
-If **`nextpress`** is **`command not found`**, your **`PATH`** probably omits npm’s global bin directory. On current npm versions, run **`npm prefix -g`** and add **`$(npm prefix -g)/bin`** to **`PATH`**. More options, troubleshooting, and version-check commands are in [`packages/cli/README.md`](packages/cli/README.md).
+The installer checks for Docker Compose v2, installs the **`nextpress`** command into **`/usr/local/bin`**, verifies the command, and runs **`nextpress install`** before finishing. More options, troubleshooting, and command references are in [`packages/cli/README.md`](packages/cli/README.md).
 
 *NextPress can be self-hosted anywhere Docker runs.*
 

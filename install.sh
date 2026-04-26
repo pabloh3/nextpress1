@@ -24,6 +24,10 @@ as_root() {
 		return
 	fi
 
+	if "$@"; then
+		return
+	fi
+
 	if command_exists sudo; then
 		sudo "$@"
 		return

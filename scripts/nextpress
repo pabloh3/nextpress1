@@ -348,7 +348,10 @@ resolve_public_ip() {
 	fi
 
 	if [ -r /dev/tty ] && [ -w /dev/tty ]; then
-		prompt_public_ip
+		public_ip="$(prompt_public_ip 2>/dev/null || true)"
+		if [ "$public_ip" != "" ]; then
+			printf '%s\n' "$public_ip"
+		fi
 		return
 	fi
 
@@ -362,18 +365,18 @@ resolve_public_ip() {
 }
 
 prompt_public_ip() {
-	local access_answer
-	local public_ip
+	local access_answer=""
+	local public_ip=""
 
 	printf '%s' "Will you access this NextPress instance from another machine? [y/N]: " >/dev/tty
-	IFS= read -r access_answer </dev/tty || true
+	IFS= read -r access_answer </dev/tty || return 1
 	case "$access_answer" in
 		y|Y|yes|YES|Yes) ;;
 		*) return ;;
 	esac
 
 	printf '%s' "Enter the public IP or hostname for this server: " >/dev/tty
-	IFS= read -r public_ip </dev/tty || true
+	IFS= read -r public_ip </dev/tty || return 1
 	public_ip="$(printf '%s' "$public_ip" | awk '{$1=$1; print}')"
 	if [ "$public_ip" = "" ]; then
 		return

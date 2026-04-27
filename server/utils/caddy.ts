@@ -1,8 +1,8 @@
 import { promises as fs } from 'node:fs';
 import {
   getCaddyTlsHostnames,
-  isIpv4Host,
   normalizeSiteHostname,
+  shouldSkipPublicDnsCheck,
 } from './validate-domain';
 
 /**
@@ -24,8 +24,8 @@ export function buildCaddyfileContent(
 ): string {
   const hosts = getCaddyTlsHostnames(domainOrUrl);
   const primary = hosts[0] ?? normalizeSiteHostname(domainOrUrl);
-  const siteAddresses = isIpv4Host(primary)
-    ? `http://${primary}`
+  const siteAddresses = shouldSkipPublicDnsCheck(primary)
+    ? ':80'
     : hosts.join(', ');
 
   const acme = options?.acmeEmail ? sanitizeAcmeEmail(options.acmeEmail) : null;

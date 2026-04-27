@@ -338,7 +338,44 @@ docker_cmd() {
 	fail "Docker is not accessible. Install Docker or run with a user that can access Docker."
 }
 
-resolve_server_setup_url() {
+resolve_public_ip() {
+	local public_ip
+	local service_url
+
+	if [ "${NEXTPRESS_PUBLIC_IP:-}" != "" ]; then
+		printf '%s\n' "$NEXTPRESS_PUBLIC_IP"
+		return
+	fi
+
+	for service_url in "https://api.ipify.org" "https://ifconfig.me/ip"; do
+		public_ip="$(curl -fsS --max-time 3 "$service_url" 2>/dev/null | tr -d '[:space:]' || true)"
+		if [ "$public_ip" != "" ]; then
+			printf '%s\n' "$public_ip"
+			return
+		fi
+	done
+
+	prompt_public_ip
+}
+
+prompt_public_ip() {
+	local public_ip
+
+	if [ ! -r /dev/tty ] || [ ! -w /dev/tty ]; then
+		return
+	fi
+
+	printf '%s' "Could not detect public IP. Enter public IP or hostname for setup URL (press Enter to skip): " >/dev/tty
+	IFS= read -r public_ip </dev/tty || true
+	public_ip="$(printf '%s' "$public_ip" | awk '{$1=$1; print}')"
+	if [ "$public_ip" = "" ]; then
+		return
+	fi
+
+	printf '%s\n' "$public_ip"
+}
+
+resolve_private_ip() {
 	local server_ip
 
 	server_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
@@ -346,18 +383,17 @@ resolve_server_setup_url() {
 		server_ip="$(ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i == "src") {print $(i + 1); exit}}')"
 	fi
 
-	if [ "$server_ip" = "" ]; then
-		printf '%s\n' "http://YOUR_SERVER_IP:5000"
-		return
+	if [ "$server_ip" != "" ]; then
+		printf '%s\n' "$server_ip"
 	fi
-
-	printf 'http://%s:5000\n' "$server_ip"
 }
 
 print_post_install_hints() {
-	local server_url
+	local private_ip
+	local public_ip
 	local version="$1"
-	server_url="$(resolve_server_setup_url)"
+	public_ip="$(resolve_public_ip)"
+	private_ip="$(resolve_private_ip)"
 
 	cat <<EOF
 
@@ -368,8 +404,11 @@ print_post_install_hints() {
 NextPress $version is running (Docker Hub image + compose stack).
 
 Open the setup wizard in your browser:
-  Local:  $SETUP_URL
-  Server: $server_url
+  Local:   $SETUP_URL
+  Public:  http://${public_ip:-YOUR_SERVER_IP}:5000
+  Private: http://${private_ip:-PRIVATE_SERVER_IP}:5000
+
+If the public URL does not load, allow inbound TCP port 5000 in your cloud firewall.
 
 Useful commands:
   nextpress status

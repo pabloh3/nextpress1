@@ -39,8 +39,7 @@ services:
     restart: always
     command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile --watch
     ports:
-      - "80:80"
-      - "443:443"
+      - "5000:80"
     volumes:
       - ./caddy_config:/etc/caddy
       - caddy_data:/data

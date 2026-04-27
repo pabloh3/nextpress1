@@ -6,6 +6,7 @@ readonly DEFAULT_INSTALL_DIR="/opt/nextpress"
 readonly DEFAULT_VERSION="latest"
 readonly COMPOSE_FILE="docker-compose.prod.yml"
 readonly DEFAULT_COMPOSE_SPEC_URL="https://raw.githubusercontent.com/pabloh3/nextpress1/main/docker-compose.prod.yml"
+readonly SETUP_URL="http://nextpress.localhost:5000"
 
 INSTALL_DIR="${NEXTPRESS_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 INSTALL_VERSION="$DEFAULT_VERSION"
@@ -45,19 +46,19 @@ Compose resolution (install only), in order:
   3. Default public URL         Main-branch compose from the NextPress GitHub repo.
 
 Commands:
-  install [--version <tag>]   Fetch compose YAML, write bootstrap + .env, then pull images and start.
+  install [--version <tag>]   Fetch compose YAML, write bootstrap config, pull images, and start.
                               Default Hub tag is latest (husseinkizz/nextpress:latest).
-  upgrade                     docker compose pull && up -d.
+  upgrade                     Refresh NextPress services.
   reload                      Restart only the Caddy service.
-  restart                     Restart all compose services.
-  status                      docker compose ps.
-  logs [service...]           docker compose logs -f with optional service names.
-  uninstall --yes             docker compose down -v, remove NextPress images, delete install dir.
+  restart                     Restart all services.
+  status                      Show service status.
+  logs [service...]           Follow service logs with optional service names.
+  uninstall --yes             Stop services and remove the install.
   version, -v, --version      Print command version.
 
 Examples:
-  sudo nextpress install
-  sudo nextpress install --version beta-v1.0.2
+  nextpress install
+  nextpress install --version beta-v1.0.2
   nextpress install --install-dir "\$HOME/nextpress"
   nextpress -d /opt/nextpress upgrade
 EOF
@@ -109,9 +110,15 @@ resolve_install_dir() {
 }
 
 assert_docker_available() {
-	if ! docker compose version >/dev/null 2>&1; then
-		fail "Docker Compose v2 not found. Install Docker Engine + Compose plugin, then run this command again."
+	if docker compose version >/dev/null 2>&1; then
+		return
 	fi
+
+	if command_exists sudo && sudo docker compose version >/dev/null 2>&1; then
+		return
+	fi
+
+	fail "Docker Compose v2 not found. Install Docker Engine + Compose plugin, then run this command again."
 }
 
 assert_install_dir_exists() {
@@ -283,7 +290,7 @@ write_initial_caddyfile() {
   email info@nextpress.com
 }
 
-# Default HTTP catch-all on port 80
+# First-boot catch-all. Docker publishes this through http://nextpress.localhost:5000.
 :80 {
   reverse_proxy app:5000
 }
@@ -301,7 +308,31 @@ try_chown_to_sudo_user() {
 }
 
 compose() {
-	docker compose -f "$COMPOSE_FILE" "$@"
+	if docker compose version >/dev/null 2>&1; then
+		docker compose -f "$COMPOSE_FILE" "$@"
+		return
+	fi
+
+	if command_exists sudo; then
+		sudo docker compose -f "$COMPOSE_FILE" "$@"
+		return
+	fi
+
+	fail "Docker is not accessible. Install Docker or run with a user that can access Docker."
+}
+
+docker_cmd() {
+	if docker version >/dev/null 2>&1; then
+		docker "$@"
+		return
+	fi
+
+	if command_exists sudo; then
+		sudo docker "$@"
+		return
+	fi
+
+	fail "Docker is not accessible. Install Docker or run with a user that can access Docker."
 }
 
 print_post_install_hints() {
@@ -315,14 +346,15 @@ print_post_install_hints() {
 
 NextPress $version is running (Docker Hub image + compose stack).
 
-Open the setup wizard in your browser using your server IP or hostname on port 80.
+Open the setup wizard in your browser:
+  $SETUP_URL
 
 Useful commands:
-  cd $INSTALL_DIR && docker compose -f $COMPOSE_FILE logs -f
-  cd $INSTALL_DIR && docker compose -f $COMPOSE_FILE down
-  cd $INSTALL_DIR && docker compose -f $COMPOSE_FILE up -d
-  nextpress -d $INSTALL_DIR upgrade
-  nextpress -d $INSTALL_DIR uninstall --yes
+  nextpress status
+  nextpress logs
+  nextpress upgrade
+  nextpress restart
+  nextpress uninstall --yes
 EOF
 }
 
@@ -384,6 +416,9 @@ run_logs() {
 }
 
 run_uninstall() {
+	local image_id
+	local image_ids
+
 	parse_uninstall_args "$@"
 	assert_install_dir_exists
 
@@ -395,7 +430,10 @@ run_uninstall() {
 	fi
 
 	info "Removing NextPress images (best effort)..."
-	docker images -q husseinkizz/nextpress | xargs -r docker rmi -f >/dev/null 2>&1 || true
+	image_ids="$(docker_cmd images -q husseinkizz/nextpress || true)"
+	for image_id in $image_ids; do
+		docker_cmd rmi -f "$image_id" >/dev/null 2>&1 || true
+	done
 
 	info "Removing install directory: $INSTALL_DIR"
 	rm -rf "$INSTALL_DIR" || sudo rm -rf "$INSTALL_DIR"

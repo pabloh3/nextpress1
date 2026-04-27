@@ -338,8 +338,26 @@ docker_cmd() {
 	fail "Docker is not accessible. Install Docker or run with a user that can access Docker."
 }
 
+resolve_server_setup_url() {
+	local server_ip
+
+	server_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+	if [ "$server_ip" = "" ]; then
+		server_ip="$(ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i == "src") {print $(i + 1); exit}}')"
+	fi
+
+	if [ "$server_ip" = "" ]; then
+		printf '%s\n' "http://YOUR_SERVER_IP:5000"
+		return
+	fi
+
+	printf 'http://%s:5000\n' "$server_ip"
+}
+
 print_post_install_hints() {
+	local server_url
 	local version="$1"
+	server_url="$(resolve_server_setup_url)"
 
 	cat <<EOF
 
@@ -350,7 +368,8 @@ print_post_install_hints() {
 NextPress $version is running (Docker Hub image + compose stack).
 
 Open the setup wizard in your browser:
-  $SETUP_URL
+  Local:  $SETUP_URL
+  Server: $server_url
 
 Useful commands:
   nextpress status

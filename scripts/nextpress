@@ -347,6 +347,11 @@ resolve_public_ip() {
 		return
 	fi
 
+	if [ -r /dev/tty ] && [ -w /dev/tty ]; then
+		prompt_public_ip
+		return
+	fi
+
 	for service_url in "https://api.ipify.org" "https://ifconfig.me/ip"; do
 		public_ip="$(curl -fsS --max-time 3 "$service_url" 2>/dev/null | tr -d '[:space:]' || true)"
 		if [ "$public_ip" != "" ]; then
@@ -354,18 +359,20 @@ resolve_public_ip() {
 			return
 		fi
 	done
-
-	prompt_public_ip
 }
 
 prompt_public_ip() {
+	local access_answer
 	local public_ip
 
-	if [ ! -r /dev/tty ] || [ ! -w /dev/tty ]; then
-		return
-	fi
+	printf '%s' "Will you access this NextPress instance from another machine? [y/N]: " >/dev/tty
+	IFS= read -r access_answer </dev/tty || true
+	case "$access_answer" in
+		y|Y|yes|YES|Yes) ;;
+		*) return ;;
+	esac
 
-	printf '%s' "Could not detect public IP. Enter public IP or hostname for setup URL (press Enter to skip): " >/dev/tty
+	printf '%s' "Enter the public IP or hostname for this server: " >/dev/tty
 	IFS= read -r public_ip </dev/tty || true
 	public_ip="$(printf '%s' "$public_ip" | awk '{$1=$1; print}')"
 	if [ "$public_ip" = "" ]; then

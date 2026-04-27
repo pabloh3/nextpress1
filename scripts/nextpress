@@ -120,6 +120,25 @@ assert_install_dir_exists() {
 	fi
 }
 
+assert_install_dir_writable() {
+	local caddy_dir="$INSTALL_DIR/caddy_config"
+	local file
+
+	if [ ! -w "$INSTALL_DIR" ]; then
+		fail "Install directory is not writable: $INSTALL_DIR. Re-run with sudo or choose a writable --install-dir."
+	fi
+
+	for file in "$INSTALL_DIR/$COMPOSE_FILE" "$INSTALL_DIR/.env" "$caddy_dir/Caddyfile"; do
+		if [ -e "$file" ] && [ ! -w "$file" ]; then
+			fail "Install file is not writable: $file. Re-run with sudo or fix ownership."
+		fi
+	done
+
+	if [ -d "$caddy_dir" ] && [ ! -w "$caddy_dir" ]; then
+		fail "Caddy config directory is not writable: $caddy_dir. Re-run with sudo or fix ownership."
+	fi
+}
+
 sanitize_version_tag() {
 	local raw="$1"
 	if [[ ! "$raw" =~ ^[a-zA-Z0-9._-]+$ ]]; then
@@ -253,12 +272,12 @@ write_initial_caddyfile() {
 	local caddy_dir="$INSTALL_DIR/caddy_config"
 	local caddy_file="$caddy_dir/Caddyfile"
 
-	mkdir -p "$caddy_dir"
+	mkdir -p "$caddy_dir" || fail "Could not create Caddy config directory: $caddy_dir"
 	if [ -f "$caddy_file" ]; then
 		return
 	fi
 
-	cat > "$caddy_file" <<'EOF'
+	cat > "$caddy_file" <<'EOF' || fail "Could not write initial Caddyfile: $caddy_file"
 {
   admin 0.0.0.0:2019
   email info@nextpress.com
@@ -312,6 +331,7 @@ run_install() {
 
 	assert_docker_available
 	mkdir -p "$INSTALL_DIR" || fail "Could not create install directory: $INSTALL_DIR"
+	assert_install_dir_writable
 
 	info "Resolving docker-compose.prod.yml..."
 	resolve_compose_file "$INSTALL_DIR/$COMPOSE_FILE"

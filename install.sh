@@ -125,6 +125,11 @@ run_nextpress_install() {
 	install_dir="$(resolve_requested_install_dir "$@")"
 
 	info "Starting NextPress install."
+	if [ "$install_dir" = "/opt/nextpress" ]; then
+		as_root "$NEXTPRESS_BIN_PATH" install "$@"
+		return
+	fi
+
 	if [ "$(id -u)" -eq 0 ] || can_write_install_dir "$install_dir"; then
 		"$NEXTPRESS_BIN_PATH" install "$@"
 		return
@@ -160,7 +165,7 @@ can_write_install_dir() {
 	local probe="$dir"
 
 	if [ -d "$dir" ]; then
-		[ -w "$dir" ]
+		[ -w "$dir" ] && can_write_existing_install_files "$dir"
 		return
 	fi
 
@@ -169,6 +174,24 @@ can_write_install_dir() {
 	done
 
 	[ -d "$probe" ] && [ -w "$probe" ]
+}
+
+can_write_existing_install_files() {
+	local dir="$1"
+	local caddy_dir="$dir/caddy_config"
+	local file
+
+	for file in "$dir/docker-compose.prod.yml" "$dir/.env" "$caddy_dir/Caddyfile"; do
+		if [ -e "$file" ] && [ ! -w "$file" ]; then
+			return 1
+		fi
+	done
+
+	if [ -d "$caddy_dir" ] && [ ! -w "$caddy_dir" ]; then
+		return 1
+	fi
+
+	return 0
 }
 
 main() {

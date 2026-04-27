@@ -60,11 +60,11 @@ assert_linux() {
 }
 
 docker_compose_available() {
-	if docker compose version >/dev/null 2>&1; then
+	if docker info >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
 		return 0
 	fi
 
-	if [ "$(id -u)" -ne 0 ] && command_exists sudo && sudo docker compose version >/dev/null 2>&1; then
+	if [ "$(id -u)" -ne 0 ] && command_exists sudo && sudo docker info >/dev/null 2>&1 && sudo docker compose version >/dev/null 2>&1; then
 		return 0
 	fi
 

@@ -29,38 +29,41 @@ command_exists() {
 	command -v "$1" >/dev/null 2>&1
 }
 
+docker_accessible() {
+	docker info >/dev/null 2>&1
+}
+
+sudo_docker_accessible() {
+	command_exists sudo && sudo docker info >/dev/null 2>&1
+}
+
 print_help() {
 	cat <<EOF
-nextpress - NextPress server CLI (pre-built Docker Hub images only; no image build on your server)
+nextpress - self-host and manage a NextPress server
 
-Install the command:
+Install NextPress:
   curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | bash
 
-Global options:
-  -d, --install-dir <path>   Install directory (default: $DEFAULT_INSTALL_DIR)
-                             Override with env NEXTPRESS_INSTALL_DIR.
-
-Compose resolution (install only), in order:
-  1. NEXTPRESS_COMPOSE_URL     Fetch this URL.
-  2. ./docker-compose.prod.yml If present under the current working directory.
-  3. Default public URL         Main-branch compose from the NextPress GitHub repo.
+Options:
+  -d, --install-dir <path>   Install location (default: $DEFAULT_INSTALL_DIR)
+  --version <tag>            Install a specific NextPress version.
 
 Commands:
-  install [--version <tag>]   Fetch compose YAML, write bootstrap config, pull images, and start.
-                              Default Hub tag is latest (husseinkizz/nextpress:latest).
-  upgrade                     Refresh NextPress services.
-  reload                      Restart only the Caddy service.
-  restart                     Restart all services.
-  status                      Show service status.
-  logs [service...]           Follow service logs with optional service names.
-  uninstall --yes             Stop services and remove the install.
-  version, -v, --version      Print command version.
+  install                    Install and start NextPress.
+  upgrade                    Upgrade NextPress to the latest available image.
+  reload                     Reload the web router.
+  restart                    Restart NextPress services.
+  status                     Show service status.
+  logs [service...]          Follow service logs.
+  uninstall --yes            Stop services and remove this install.
+  version, -v, --version     Print command version.
 
 Examples:
   nextpress install
   nextpress install --version beta-v1.0.2
   nextpress install --install-dir "\$HOME/nextpress"
-  nextpress -d /opt/nextpress upgrade
+  nextpress upgrade
+  nextpress logs
 EOF
 }
 
@@ -110,11 +113,11 @@ resolve_install_dir() {
 }
 
 assert_docker_available() {
-	if docker compose version >/dev/null 2>&1; then
+	if docker_accessible && docker compose version >/dev/null 2>&1; then
 		return
 	fi
 
-	if command_exists sudo && sudo docker compose version >/dev/null 2>&1; then
+	if sudo_docker_accessible && sudo docker compose version >/dev/null 2>&1; then
 		return
 	fi
 
@@ -308,12 +311,12 @@ try_chown_to_sudo_user() {
 }
 
 compose() {
-	if docker compose version >/dev/null 2>&1; then
+	if docker_accessible && docker compose version >/dev/null 2>&1; then
 		docker compose -f "$COMPOSE_FILE" "$@"
 		return
 	fi
 
-	if command_exists sudo; then
+	if sudo_docker_accessible; then
 		sudo docker compose -f "$COMPOSE_FILE" "$@"
 		return
 	fi
@@ -322,12 +325,12 @@ compose() {
 }
 
 docker_cmd() {
-	if docker version >/dev/null 2>&1; then
+	if docker_accessible; then
 		docker "$@"
 		return
 	fi
 
-	if command_exists sudo; then
+	if sudo_docker_accessible; then
 		sudo docker "$@"
 		return
 	fi
@@ -436,7 +439,17 @@ run_uninstall() {
 	done
 
 	info "Removing install directory: $INSTALL_DIR"
-	rm -rf "$INSTALL_DIR" || sudo rm -rf "$INSTALL_DIR"
+	if ! rm -rf "$INSTALL_DIR" 2>/dev/null; then
+		if command_exists sudo; then
+			sudo rm -rf "$INSTALL_DIR"
+		else
+			fail "Could not remove install directory: $INSTALL_DIR. Re-run with sudo or remove it manually."
+		fi
+	fi
+
+	if [ -d "$INSTALL_DIR" ]; then
+		fail "Could not remove install directory: $INSTALL_DIR. Re-run with sudo or remove it manually."
+	fi
 
 	info ""
 	info "Uninstall finished."

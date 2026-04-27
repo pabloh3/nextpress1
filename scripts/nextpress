@@ -311,7 +311,7 @@ run_install() {
 	parse_install_args "$@"
 
 	assert_docker_available
-	mkdir -p "$INSTALL_DIR"
+	mkdir -p "$INSTALL_DIR" || fail "Could not create install directory: $INSTALL_DIR"
 
 	info "Resolving docker-compose.prod.yml..."
 	resolve_compose_file "$INSTALL_DIR/$COMPOSE_FILE"

@@ -18,22 +18,39 @@ command_exists() {
 	command -v "$1" >/dev/null 2>&1
 }
 
+require_sudo() {
+	if [ "$(id -u)" -eq 0 ]; then
+		return
+	fi
+
+	if ! command_exists sudo; then
+		fail "This step needs root permissions. Re-run as root or install sudo."
+	fi
+
+	if sudo -n true >/dev/null 2>&1; then
+		return
+	fi
+
+	if [ -r /dev/tty ] && sudo -v </dev/tty; then
+		return
+	fi
+
+	fail "Root permissions are required. Re-run as root, or run: curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | sudo bash"
+}
+
 as_root() {
 	if [ "$(id -u)" -eq 0 ]; then
 		"$@"
 		return
 	fi
 
-	if "$@"; then
-		return
-	fi
+	require_sudo
+	sudo "$@"
+}
 
-	if command_exists sudo; then
-		sudo "$@"
-		return
-	fi
-
-	fail "This step needs root permissions. Re-run as root or install sudo."
+can_write_directory() {
+	local dir="$1"
+	mkdir -p "$dir" >/dev/null 2>&1 && [ -w "$dir" ]
 }
 
 assert_linux() {
@@ -85,8 +102,13 @@ install_nextpress_command() {
 	chmod +x "$tmp_file"
 
 	info "Installing nextpress command to $NEXTPRESS_BIN_PATH."
-	as_root mkdir -p "$bin_dir"
-	as_root install -m 0755 "$tmp_file" "$NEXTPRESS_BIN_PATH"
+	if [ "$(id -u)" -eq 0 ] || can_write_directory "$bin_dir"; then
+		mkdir -p "$bin_dir"
+		install -m 0755 "$tmp_file" "$NEXTPRESS_BIN_PATH"
+	else
+		as_root mkdir -p "$bin_dir"
+		as_root install -m 0755 "$tmp_file" "$NEXTPRESS_BIN_PATH"
+	fi
 	rm -f "$tmp_file"
 }
 
@@ -99,8 +121,54 @@ verify_nextpress_command() {
 }
 
 run_nextpress_install() {
+	local install_dir
+	install_dir="$(resolve_requested_install_dir "$@")"
+
 	info "Starting NextPress install."
+	if [ "$(id -u)" -eq 0 ] || can_write_install_dir "$install_dir"; then
+		"$NEXTPRESS_BIN_PATH" install "$@"
+		return
+	fi
+
 	as_root "$NEXTPRESS_BIN_PATH" install "$@"
+}
+
+resolve_requested_install_dir() {
+	local install_dir="${NEXTPRESS_INSTALL_DIR:-/opt/nextpress}"
+
+	while [ "$#" -gt 0 ]; do
+		case "$1" in
+			-d|--install-dir)
+				if [ "${2:-}" != "" ]; then
+					install_dir="$2"
+					shift 2
+					continue
+				fi
+				;;
+		esac
+		shift
+	done
+
+	case "$install_dir" in
+		/*) printf '%s\n' "$install_dir" ;;
+		*) printf '%s\n' "$(pwd)/$install_dir" ;;
+	esac
+}
+
+can_write_install_dir() {
+	local dir="$1"
+	local probe="$dir"
+
+	if [ -d "$dir" ]; then
+		[ -w "$dir" ]
+		return
+	fi
+
+	while [ "$probe" != "/" ] && [ ! -d "$probe" ]; do
+		probe="$(dirname "$probe")"
+	done
+
+	[ -d "$probe" ] && [ -w "$probe" ]
 }
 
 main() {

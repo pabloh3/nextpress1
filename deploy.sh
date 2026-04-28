@@ -242,12 +242,30 @@ docker compose down 2>/dev/null || true
 print_success "docker compose down completed"
 
 # ============================================
-# Step 5: Build & Start with Docker Compose
+# Step 5: Build, migrate, and start with Docker Compose
 # ============================================
-print_step "5/9" "Docker Compose build & start..."
+print_step "5/9" "Docker Compose build, migrate, and start..."
 
-if ! docker compose up -d --build; then
-  print_error "docker compose up failed"
+if ! docker compose build app; then
+  print_error "docker compose build failed"
+  exit 1
+fi
+print_success "App image built"
+
+if ! docker compose up -d postgres; then
+  print_error "Postgres start failed"
+  exit 1
+fi
+print_success "Postgres started"
+
+if ! docker compose run --rm --no-deps app pnpm drizzle-kit migrate; then
+  print_error "Database migration failed"
+  exit 1
+fi
+print_success "Database migrations applied"
+
+if ! docker compose up -d app caddy; then
+  print_error "App start failed"
   exit 1
 fi
 print_success "Containers started"

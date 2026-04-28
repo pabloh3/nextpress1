@@ -18,13 +18,19 @@ This uses [PGlite](https://pglite.dev/) (embedded PostgreSQL) for development, s
 
 ### NextPress Installer
 
-Install NextPress from the GitHub repo with one command. The installer adds the standalone **`nextpress`** command, provisions the server, and leaves the command available so you can **refresh** it over time, **check** how it is doing, and **tear it down** when you need to. Commands include **`install`**, **`upgrade`**, **`reload`**, **`restart`**, **`status`**, **`logs`**, and **`uninstall`**.
+Install NextPress from the GitHub repo with one command. The installer adds the standalone **`nextpress`** command, provisions the server, and leaves the command available for install, upgrade, status, logs, restart, reload, and uninstall operations.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh | bash
 ```
 
-The installer checks for Docker Compose v2, installs the **`nextpress`** command into **`/usr/local/bin`**, verifies the command, and runs **`nextpress install`** before finishing. More options, troubleshooting, and command references are in [`packages/cli/README.md`](packages/cli/README.md).
+The installer checks for Docker Compose v2, installs the **`nextpress`** command into **`/usr/local/bin`**, verifies the command, and runs **`nextpress install`** before finishing.
+
+References:
+
+- [`docs/cli-usage.md`](docs/cli-usage.md), command usage and options.
+- [`docs/upgrade-flow.md`](docs/upgrade-flow.md), schema-aware upgrades and override mode.
+- [`packages/cli/README.md`](packages/cli/README.md), command package notes.
 
 *NextPress can be self-hosted anywhere Docker runs.*
 

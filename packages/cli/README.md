@@ -1,13 +1,13 @@
 # nextpress command
 
-Standalone command to make self hosting and managing nextpress easier.
+Standalone command to self-host and manage NextPress.
 
 **What you can do**
 
-- **Install** a fresh instance (default **`latest`**, or **`--version`** / **`-V`** with a tag you trust).
-- **Upgrade** in place when you want a newer build.
-- **Operate** day to day: **status**, **logs**, **restart**, **reload** when routing or TLS changes.
-- **Uninstall** with **`--yes`** / **`-y`** when you want the stack and install paths removed.
+- **Install** a fresh instance, using **`latest`** by default or **`--version`** / **`-V`** with a specific tag.
+- **Upgrade** in place with schema checks and database backup before migrations.
+- **Operate** day to day with **`status`**, **`logs`**, **`restart`**, and **`reload`**.
+- **Uninstall** with **`--yes`** / **`-y`** when you want the stack and install path removed.
 
 ## Requirements
 
@@ -39,15 +39,19 @@ curl -fsSL https://raw.githubusercontent.com/pabloh3/nextpress1/main/install.sh 
 ```bash
 nextpress help
 
-sudo nextpress install
-sudo nextpress install --version beta-v1.0.2
+nextpress install
+nextpress install --version beta-v1.0.2
 
-nextpress -d /opt/nextpress upgrade
+nextpress upgrade
+nextpress upgrade --version beta-v1.0.2
+nextpress upgrade --override --yes
 nextpress status
 nextpress logs
 nextpress reload
-sudo nextpress uninstall --yes
+nextpress uninstall --yes
 ```
+
+Upgrade behavior is documented in [`../../docs/upgrade-flow.md`](../../docs/upgrade-flow.md). Full command usage is documented in [`../../docs/cli-usage.md`](../../docs/cli-usage.md).
 
 ### Optional configuration
 
@@ -55,6 +59,7 @@ sudo nextpress uninstall --yes
 |----------|-----|
 | `NEXTPRESS_INSTALL_DIR` | Default path if you omit **`-d`**. |
 | `NEXTPRESS_COMPOSE_URL` | During **install**, use the compose definition from this URL. |
+| `NEXTPRESS_PUBLIC_IP` | Public address shown in install output. |
 | `NEXTPRESS_RAW_BASE` | During **install.sh**, override the GitHub raw base URL. |
 | `NEXTPRESS_BIN_PATH` | During **install.sh**, override where the command is installed. |
 | `NEXTPRESS_SKIP_DOCKER_INSTALL` | During **install.sh**, fail instead of installing Docker when Docker is missing. |

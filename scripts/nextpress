@@ -5,11 +5,15 @@ readonly CLI_VERSION="nextpress standalone 0.1.0"
 readonly DEFAULT_INSTALL_DIR="/opt/nextpress"
 readonly DEFAULT_VERSION="latest"
 readonly COMPOSE_FILE="docker-compose.prod.yml"
+readonly RELEASE_CONFIG_FILE="nextpress.config.json"
+readonly BACKUP_DIR="backups"
 readonly DEFAULT_COMPOSE_SPEC_URL="https://raw.githubusercontent.com/pabloh3/nextpress1/main/docker-compose.prod.yml"
 readonly SETUP_URL="http://nextpress.localhost"
 
 INSTALL_DIR="${NEXTPRESS_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 INSTALL_VERSION="$DEFAULT_VERSION"
+UPGRADE_OVERRIDE="false"
+UPGRADE_YES="false"
 POSITIONALS=()
 
 info() {
@@ -51,6 +55,10 @@ Options:
 Commands:
   install                    Install and start NextPress.
   upgrade                    Upgrade NextPress to the latest available image.
+  upgrade --latest           Explicitly upgrade to the latest image.
+  upgrade --version <tag>    Upgrade to a specific NextPress version.
+  upgrade --override         Reset incompatible database state after backup.
+  upgrade --override --yes   Run override mode without a confirmation prompt.
   reload                     Reload the web router.
   restart                    Restart NextPress services.
   status                     Show service status.
@@ -63,6 +71,8 @@ Examples:
   nextpress install --version beta-v1.0.2
   nextpress install --install-dir "\$HOME/nextpress"
   nextpress upgrade
+  nextpress upgrade --version beta-v1.0.2
+  nextpress upgrade --override --yes
   nextpress logs
 EOF
 }
@@ -179,6 +189,43 @@ parse_install_args() {
 	done
 }
 
+parse_upgrade_args() {
+	INSTALL_VERSION="$DEFAULT_VERSION"
+	UPGRADE_OVERRIDE="false"
+	UPGRADE_YES="false"
+
+	while [ "$#" -gt 0 ]; do
+		case "$1" in
+			--latest)
+				INSTALL_VERSION="$DEFAULT_VERSION"
+				shift
+				;;
+			--version|-V)
+				if [ "${2:-}" = "" ] || [[ "${2:-}" == -* ]]; then
+					fail "Missing value for $1. Use $1 <tag>."
+				fi
+				sanitize_version_tag "$2"
+				INSTALL_VERSION="$2"
+				shift 2
+				;;
+			--override)
+				UPGRADE_OVERRIDE="true"
+				shift
+				;;
+			--yes|-y)
+				UPGRADE_YES="true"
+				shift
+				;;
+			-*)
+				fail "Unknown upgrade option: $1"
+				;;
+			*)
+				fail "Unexpected upgrade argument: $1"
+				;;
+		esac
+	done
+}
+
 parse_uninstall_args() {
 	local yes="false"
 
@@ -278,6 +325,19 @@ EOF
 	info "Updated NEXTPRESS_VERSION in existing .env."
 }
 
+load_install_env() {
+	local env_path="$INSTALL_DIR/.env"
+
+	if [ ! -f "$env_path" ]; then
+		fail "Missing install environment file: $env_path"
+	fi
+
+	POSTGRES_PASSWORD="$(awk -F= '/^POSTGRES_PASSWORD=/{print substr($0, index($0, "=") + 1); exit}' "$env_path")"
+	if [ "${POSTGRES_PASSWORD:-}" = "" ]; then
+		fail "Missing POSTGRES_PASSWORD in $env_path"
+	fi
+}
+
 write_initial_caddyfile() {
 	local caddy_dir="$INSTALL_DIR/caddy_config"
 	local caddy_file="$caddy_dir/Caddyfile"
@@ -336,6 +396,154 @@ docker_cmd() {
 	fi
 
 	fail "Docker is not accessible. Install Docker or run with a user that can access Docker."
+}
+
+app_image() {
+	printf '%s\n' "husseinkizz/nextpress:${INSTALL_VERSION}"
+}
+
+read_json_value() {
+	local file="$1"
+	local key="$2"
+
+	if [ ! -f "$file" ]; then
+		return 1
+	fi
+
+	awk -v key="$key" '
+		$0 ~ "\"" key "\"" {
+			sub(/^[^:]*:[[:space:]]*/, "")
+			sub(/[[:space:]]*,?[[:space:]]*$/, "")
+			gsub(/^"|"$/, "")
+			print
+			exit
+		}
+	' "$file"
+}
+
+read_config_value() {
+	local file="$1"
+	local key="$2"
+	local value
+
+	value="$(read_json_value "$file" "$key" || true)"
+	if [ "$value" = "" ]; then
+		fail "Missing $key in $file."
+	fi
+
+	printf '%s\n' "$value"
+}
+
+copy_release_config_from_image() {
+	local image="$1"
+	local target="$2"
+	local container_id
+
+	container_id="$(docker_cmd create "$image" 2>/dev/null)" || fail "Could not inspect release config from image: $image"
+	docker_cmd cp "$container_id:/app/$RELEASE_CONFIG_FILE" "$target" >/dev/null || {
+		docker_cmd rm -f "$container_id" >/dev/null 2>&1 || true
+		fail "Release image does not include $RELEASE_CONFIG_FILE: $image"
+	}
+	docker_cmd rm -f "$container_id" >/dev/null 2>&1 || true
+}
+
+write_legacy_installed_config() {
+	local config_path="$INSTALL_DIR/$RELEASE_CONFIG_FILE"
+
+	if [ -f "$config_path" ]; then
+		return
+	fi
+
+	cat > "$config_path" <<'EOF' || fail "Could not write legacy schema config."
+{
+  "schemaVersion": "legacy",
+  "previousSchemaVersion": "legacy",
+  "schemaPath": "shared/schema.ts",
+  "hasSchemaChanges": false
+}
+EOF
+}
+
+copy_installed_config() {
+	local source="$1"
+	cp "$source" "$INSTALL_DIR/$RELEASE_CONFIG_FILE" || fail "Could not update installed schema config."
+}
+
+cleanup_target_config() {
+	local config_path="${1:-}"
+	if [ "$config_path" != "" ]; then
+		rm -f "$config_path"
+	fi
+}
+
+create_db_backup() {
+	local backup_dir="$INSTALL_DIR/$BACKUP_DIR"
+	local backup_path
+	local timestamp
+
+	timestamp="$(date +%Y%m%d%H%M%S)"
+	backup_path="$backup_dir/nextpress-db-$timestamp.sql"
+	mkdir -p "$backup_dir" || fail "Could not create backup directory: $backup_dir"
+
+	info "Creating database backup: $backup_path"
+	if ! compose exec -T postgres pg_dump -U postgres nextpress > "$backup_path"; then
+		rm -f "$backup_path"
+		fail "Database backup failed; refusing to continue."
+	fi
+
+	info "Database backup created: $backup_path"
+}
+
+confirm_override() {
+	if [ "$UPGRADE_YES" = "true" ]; then
+		return
+	fi
+
+	if [ ! -r /dev/tty ] || [ ! -w /dev/tty ]; then
+		fail "Refusing override without an interactive terminal. Re-run with --override --yes if you accept data reset."
+	fi
+
+	local answer=""
+	printf '%s' "Override may reset existing database state after backup. Continue? Type yes: " >/dev/tty
+	IFS= read -r answer </dev/tty || fail "Could not read override confirmation."
+	if [ "$answer" != "yes" ]; then
+		fail "Override cancelled."
+	fi
+}
+
+reset_database_volume() {
+	local container_id
+	local volume_name
+
+	info "Resetting database volume for override upgrade..."
+
+	container_id="$(compose ps -q postgres || true)"
+	if [ "$container_id" != "" ]; then
+		volume_name="$(docker_cmd inspect --format '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Name}}{{end}}{{end}}' "$container_id")"
+	fi
+
+	compose down --remove-orphans
+
+	if [ "${volume_name:-}" = "" ]; then
+		fail "Could not determine database volume name for override reset."
+	fi
+
+	docker_cmd volume rm "$volume_name" >/dev/null 2>&1 || warn "Could not remove database volume: $volume_name. It may already be absent."
+}
+
+ensure_postgres_running() {
+	info "Starting database service..."
+	compose up -d postgres
+	info "Waiting for database to become healthy..."
+	compose exec -T postgres pg_isready -U postgres >/dev/null || sleep 3
+	compose exec -T postgres pg_isready -U postgres >/dev/null || fail "Database did not become ready."
+}
+
+run_schema_migrations() {
+	local image="${1:-$(app_image)}"
+
+	info "Applying database migrations from $image..."
+	compose run --rm --no-deps app pnpm drizzle-kit migrate
 }
 
 resolve_public_ip() {
@@ -431,6 +639,7 @@ EOF
 
 run_install() {
 	parse_install_args "$@"
+	local target_config
 
 	assert_docker_available
 	mkdir -p "$INSTALL_DIR" || fail "Could not create install directory: $INSTALL_DIR"
@@ -441,10 +650,21 @@ run_install() {
 	write_initial_caddyfile
 	write_or_update_env "$INSTALL_VERSION"
 	try_chown_to_sudo_user
+	load_install_env
 
 	info ""
 	info "Pulling images from Docker Hub..."
 	(cd "$INSTALL_DIR" && compose pull)
+
+	info ""
+	target_config="$(mktemp)"
+	trap 'cleanup_target_config "$target_config"' RETURN
+	(cd "$INSTALL_DIR" && copy_release_config_from_image "$(app_image)" "$target_config")
+	(cd "$INSTALL_DIR" && ensure_postgres_running)
+	(cd "$INSTALL_DIR" && run_schema_migrations "$(app_image)")
+	copy_installed_config "$target_config"
+	cleanup_target_config "$target_config"
+	trap - RETURN
 
 	info ""
 	info "Starting services..."
@@ -455,11 +675,86 @@ run_install() {
 }
 
 run_upgrade() {
-	assert_install_dir_exists
+	parse_upgrade_args "$@"
+	local current_config
+	local current_schema_version
+	local has_schema_changes
+	local previous_schema_version
+	local target_config
+	local target_schema_version
 
-	info "Upgrading stack in $INSTALL_DIR..."
-	(cd "$INSTALL_DIR" && compose pull)
+	assert_install_dir_exists
+	assert_docker_available
+	load_install_env
+	write_legacy_installed_config
+
+	info "Upgrading stack in $INSTALL_DIR to $INSTALL_VERSION..."
+	if [ "${NEXTPRESS_SKIP_IMAGE_PULL:-}" = "true" ]; then
+		info "Skipping image pull because NEXTPRESS_SKIP_IMAGE_PULL=true."
+	else
+		info "Pulling image: $(app_image)"
+		docker_cmd pull "$(app_image)"
+	fi
+
+	target_config="$(mktemp)"
+	trap 'cleanup_target_config "$target_config"' RETURN
+	(cd "$INSTALL_DIR" && copy_release_config_from_image "$(app_image)" "$target_config")
+	current_config="$INSTALL_DIR/$RELEASE_CONFIG_FILE"
+	current_schema_version="$(read_config_value "$current_config" "schemaVersion")"
+	target_schema_version="$(read_config_value "$target_config" "schemaVersion")"
+	previous_schema_version="$(read_config_value "$target_config" "previousSchemaVersion")"
+	has_schema_changes="$(read_config_value "$target_config" "hasSchemaChanges")"
+
+	if [ "$current_schema_version" = "$target_schema_version" ]; then
+		info "Schema is already at $target_schema_version."
+		write_or_update_env "$INSTALL_VERSION"
+		copy_installed_config "$target_config"
+		cleanup_target_config "$target_config"
+		trap - RETURN
+		(cd "$INSTALL_DIR" && compose up -d)
+		info "Upgrade complete. Schema is now $target_schema_version."
+		return
+	fi
+
+	if [ "$has_schema_changes" = "true" ] && [ "$current_schema_version" != "$previous_schema_version" ]; then
+		if [ "$UPGRADE_OVERRIDE" != "true" ]; then
+			rm -f "$target_config"
+			trap - RETURN
+			fail "Schema upgrade expects $previous_schema_version but this install is on $current_schema_version. Upgrade through the required intermediate version, or rerun with --override if you accept database reset."
+		fi
+		(cd "$INSTALL_DIR" && ensure_postgres_running)
+		(cd "$INSTALL_DIR" && create_db_backup)
+		confirm_override
+		(cd "$INSTALL_DIR" && reset_database_volume)
+		write_or_update_env "$INSTALL_VERSION"
+		load_install_env
+		(cd "$INSTALL_DIR" && ensure_postgres_running)
+		(cd "$INSTALL_DIR" && run_schema_migrations "$(app_image)")
+		copy_installed_config "$target_config"
+		cleanup_target_config "$target_config"
+		trap - RETURN
+		(cd "$INSTALL_DIR" && compose up -d)
+		info "Override upgrade complete. Schema is now $target_schema_version."
+		return
+	fi
+
+	if [ "$has_schema_changes" = "true" ]; then
+		(cd "$INSTALL_DIR" && ensure_postgres_running)
+		(cd "$INSTALL_DIR" && create_db_backup)
+		write_or_update_env "$INSTALL_VERSION"
+		load_install_env
+		(cd "$INSTALL_DIR" && run_schema_migrations "$(app_image)")
+	else
+		info "No schema changes declared for this release."
+		write_or_update_env "$INSTALL_VERSION"
+		load_install_env
+	fi
+
+	copy_installed_config "$target_config"
+	cleanup_target_config "$target_config"
+	trap - RETURN
 	(cd "$INSTALL_DIR" && compose up -d)
+	info "Upgrade complete. Schema is now $target_schema_version."
 }
 
 run_reload() {
@@ -541,7 +836,7 @@ main() {
 			run_install "${sub_args[@]}"
 			;;
 		upgrade)
-			run_upgrade
+			run_upgrade "${sub_args[@]}"
 			;;
 		reload)
 			run_reload

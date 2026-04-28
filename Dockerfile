@@ -40,7 +40,9 @@ COPY --from=builder /app/dist ./dist
 
 # Copy files needed for drizzle migrations
 COPY drizzle.config.ts ./
+COPY migrations ./migrations
 COPY shared ./shared
+COPY nextpress.config.json ./
 
 # Create uploads directory
 RUN mkdir -p uploads
@@ -48,5 +50,5 @@ RUN mkdir -p uploads
 # Expose the application port
 EXPOSE 5000
 
-# Run migrations then start the server
-CMD ["sh", "-c", "pnpm drizzle-kit push && node dist/index.js"]
+# Schema updates are applied by the nextpress CLI before app startup.
+CMD ["node", "dist/index.js"]

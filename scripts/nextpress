@@ -531,9 +531,20 @@ copy_installed_config() {
 
 cleanup_target_config() {
 	local config_path="${1:-}"
-	if [ "$config_path" != "" ]; then
-		rm -f "$config_path"
+	if [ "$config_path" = "" ]; then
+		return
 	fi
+
+	if rm -f "$config_path" 2>/dev/null; then
+		return
+	fi
+
+	if command_exists sudo; then
+		sudo rm -f "$config_path" || warn "Could not remove temporary schema config: $config_path"
+		return
+	fi
+
+	warn "Could not remove temporary schema config: $config_path"
 }
 
 create_db_backup() {

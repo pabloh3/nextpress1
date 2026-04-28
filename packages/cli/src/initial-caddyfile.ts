@@ -4,7 +4,7 @@ export const INITIAL_CADDYFILE = `{
   email info@nextpress.ai
 }
 
-# First-boot catch-all. Docker publishes this through http://nextpress.localhost:5000.
+# First-boot catch-all. Docker publishes this through http://nextpress.localhost.
 :80 {
   reverse_proxy app:5000
 }

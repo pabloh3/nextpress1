@@ -410,15 +410,73 @@ read_json_value() {
 		return 1
 	fi
 
-	awk -v key="$key" '
-		$0 ~ "\"" key "\"" {
-			sub(/^[^:]*:[[:space:]]*/, "")
-			sub(/[[:space:]]*,?[[:space:]]*$/, "")
-			gsub(/^"|"$/, "")
-			print
-			exit
-		}
-	' "$file"
+	if [ -r "$file" ]; then
+		awk -v key="$key" '
+			$0 ~ "\"" key "\"" {
+				sub(/^[^:]*:[[:space:]]*/, "")
+				sub(/[[:space:]]*,?[[:space:]]*$/, "")
+				gsub(/^"|"$/, "")
+				print
+				exit
+			}
+		' "$file"
+		return
+	fi
+
+	if command_exists sudo; then
+		sudo awk -v key="$key" '
+			$0 ~ "\"" key "\"" {
+				sub(/^[^:]*:[[:space:]]*/, "")
+				sub(/[[:space:]]*,?[[:space:]]*$/, "")
+				gsub(/^"|"$/, "")
+				print
+				exit
+			}
+		' "$file"
+		return
+	fi
+
+	return 1
+}
+
+chmod_schema_config() {
+	local file="$1"
+
+	if chmod 0644 "$file" 2>/dev/null; then
+		return
+	fi
+
+	if command_exists sudo; then
+		sudo chmod 0644 "$file" || fail "Could not set readable permissions on $file."
+		return
+	fi
+
+	fail "Could not set readable permissions on $file."
+}
+
+write_schema_config_file() {
+	local target="$1"
+	local tmp_path
+
+	tmp_path="$(mktemp)"
+	cat > "$tmp_path" <<'EOF' || fail "Could not prepare schema config: $target"
+{
+  "schemaVersion": "legacy",
+  "previousSchemaVersion": "legacy",
+  "schemaPath": "shared/schema.ts",
+  "hasSchemaChanges": false
+}
+EOF
+
+	if ! cp "$tmp_path" "$target" 2>/dev/null; then
+		if command_exists sudo; then
+			sudo cp "$tmp_path" "$target" || fail "Could not write schema config: $target"
+		else
+			fail "Could not write schema config: $target"
+		fi
+	fi
+	rm -f "$tmp_path"
+	chmod_schema_config "$target"
 }
 
 read_config_value() {
@@ -454,19 +512,21 @@ write_legacy_installed_config() {
 		return
 	fi
 
-	cat > "$config_path" <<'EOF' || fail "Could not write legacy schema config."
-{
-  "schemaVersion": "legacy",
-  "previousSchemaVersion": "legacy",
-  "schemaPath": "shared/schema.ts",
-  "hasSchemaChanges": false
-}
-EOF
+	write_schema_config_file "$config_path"
 }
 
 copy_installed_config() {
 	local source="$1"
-	cp "$source" "$INSTALL_DIR/$RELEASE_CONFIG_FILE" || fail "Could not update installed schema config."
+	local target="$INSTALL_DIR/$RELEASE_CONFIG_FILE"
+
+	if ! cp "$source" "$target" 2>/dev/null; then
+		if command_exists sudo; then
+			sudo cp "$source" "$target" || fail "Could not update installed schema config."
+		else
+			fail "Could not update installed schema config."
+		fi
+	fi
+	chmod_schema_config "$target"
 }
 
 cleanup_target_config() {

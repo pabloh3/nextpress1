@@ -116,7 +116,7 @@ export default function Templates() {
   };
 
   const handleEditInBuilder = (template: Template) => {
-    setLocation(`/page-builder/template/${template.id}`);
+    setLocation(`/admin/page-builder/template/${template.id}`);
   };
 
   const handleDuplicate = (template: Template) => {

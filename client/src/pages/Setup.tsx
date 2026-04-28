@@ -27,21 +27,21 @@ const PASSWORD_REQUIREMENTS = [
 const POST_SETUP_REDIRECT_MS = 8000;
 
 /**
- * Builds `/login` on the configured site host so the browser does not stay on a raw address.
+ * Builds `/admin/login` on the configured site host so the browser does not stay on a raw address.
  */
 function buildLoginUrlFromDomain(domain: string): string {
   const raw = domain.trim();
   if (!raw) {
-    return `${window.location.origin}/login`;
+    return `${window.location.origin}/admin/login`;
   }
   try {
     if (raw.startsWith('http://') || raw.startsWith('https://')) {
       const base = new URL(raw);
-      return `${base.origin}/login`;
+      return `${base.origin}/admin/login`;
     }
-    return `https://${raw.replace(/\/+$/, '')}/login`;
+    return `https://${raw.replace(/\/+$/, '')}/admin/login`;
   } catch {
-    return `${window.location.origin}/login`;
+    return `${window.location.origin}/admin/login`;
   }
 }
 
@@ -83,7 +83,7 @@ export default function Setup() {
         const res = await fetch('/api/setup/status');
         const data = await res.json();
         if (data.isSetup) {
-          setLocation('/login');
+          setLocation('/admin/login');
         }
       } catch {
         // If check fails, show the form anyway

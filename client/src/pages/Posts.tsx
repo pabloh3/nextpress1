@@ -65,7 +65,7 @@ export default function Posts() {
 
   /** Navigate to the page builder to edit a post */
   const handleEdit = (postId: string) => {
-    setLocation(`/page-builder/post/${postId}`);
+    setLocation(`/admin/page-builder/post/${postId}`);
   };
 
   /** Open the create post dialog (blog selection + title) */

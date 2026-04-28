@@ -55,7 +55,7 @@ describe('SiteMenu', () => {
     const settingsItem = screen.getByText('Settings');
     await user.click(settingsItem);
 
-    expect(mockSetLocation).toHaveBeenCalledWith('/settings');
+    expect(mockSetLocation).toHaveBeenCalledWith('/admin/settings');
   });
 
   test('navigates to /themes when Themes is clicked', async () => {
@@ -72,7 +72,7 @@ describe('SiteMenu', () => {
     const themesItem = screen.getByText('Themes');
     await user.click(themesItem);
 
-    expect(mockSetLocation).toHaveBeenCalledWith('/themes');
+    expect(mockSetLocation).toHaveBeenCalledWith('/admin/themes');
   });
 
   test('navigates to /media when Media Library is clicked', async () => {
@@ -89,7 +89,7 @@ describe('SiteMenu', () => {
     const mediaItem = screen.getByText('Media Library');
     await user.click(mediaItem);
 
-    expect(mockSetLocation).toHaveBeenCalledWith('/media');
+    expect(mockSetLocation).toHaveBeenCalledWith('/admin/media');
   });
 
   test('displays correct icons for menu items', async () => {

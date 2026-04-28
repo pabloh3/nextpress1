@@ -108,7 +108,7 @@ describe('BlogMenu', () => {
     const postItem = screen.getByText('First Blog Post');
     await user.click(postItem);
 
-    expect(mockSetLocation).toHaveBeenCalledWith('/posts/post-1/edit');
+    expect(mockSetLocation).toHaveBeenCalledWith('/admin/posts/post-1/edit');
   });
 
   test('opens create dialog when Create New Post is clicked', async () => {

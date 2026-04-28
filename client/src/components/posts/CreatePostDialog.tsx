@@ -168,7 +168,7 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
 
       toast({ title: "Post created", description: "Opening editor..." });
       handleClose(false);
-      setLocation(`/page-builder/post/${post.id}`);
+      setLocation(`/admin/page-builder/post/${post.id}`);
     } catch (err) {
       console.error("Error creating post:", err);
       toast({

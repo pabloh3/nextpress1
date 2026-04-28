@@ -37,7 +37,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold text-wp-gray">Dashboard</h1>
             <div className="flex items-center space-x-3">
-              <Link href="/posts">
+              <Link href="/admin/posts">
                 <Button className="bg-wp-blue hover:bg-wp-blue-dark text-white">
                   <Plus className="w-4 h-4 mr-2" />
                   Add New Post
@@ -59,12 +59,12 @@ export default function Dashboard() {
               Your WordPress-compatible CMS built with Node.js and React. All WordPress APIs, hooks, and database operations are preserved.
             </p>
             <div className="flex space-x-4">
-              <Link href="/posts">
+              <Link href="/admin/posts">
                 <Button className="bg-white text-wp-blue hover:bg-gray-100">
                   Create Your First Post
                 </Button>
               </Link>
-              <Link href="/themes">
+              <Link href="/admin/themes">
                 <Button variant="outline" className="border-blue-300 text-black hover:bg-white hover:text-black">
                   Browse Themes
                 </Button>
@@ -136,7 +136,7 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
-                      No posts yet. <Link href="/posts" className="text-wp-blue hover:underline">Create your first post</Link>
+                      No posts yet. <Link href="/admin/posts" className="text-wp-blue hover:underline">Create your first post</Link>
                     </div>
                   )}
                 </CardContent>
@@ -167,7 +167,7 @@ export default function Dashboard() {
                       <Button className="flex-1 bg-wp-blue hover:bg-wp-blue-dark text-white">
                         Customize
                       </Button>
-                      <Link href="/themes" className="flex-1">
+                      <Link href="/admin/themes" className="flex-1">
                         <Button variant="outline" className="w-full border-gray-300 hover:border-gray-400 text-gray-700">
                           Change
                         </Button>
@@ -208,10 +208,10 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="p-6 space-y-3">
                   {[
-                    { icon: Plus, label: "Create New Post", href: "/posts" },
-                    { icon: FileUp, label: "Add New Page", href: "/pages" },
-                    { icon: UserPlus, label: "Add New User", href: "/users" },
-                    { icon: Download, label: "Install Plugin", href: "/plugins" },
+                    { icon: Plus, label: "Create New Post", href: "/admin/posts" },
+                    { icon: FileUp, label: "Add New Page", href: "/admin/pages" },
+                    { icon: UserPlus, label: "Add New User", href: "/admin/users" },
+                    { icon: Download, label: "Install Plugin", href: "/admin/plugins" },
                   ].map((action, index) => {
                     const Icon = action.icon;
                     return (

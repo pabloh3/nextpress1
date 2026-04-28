@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Link, useLocation } from 'wouter';
+import { useLocation } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { Eye, EyeOff } from 'lucide-react';
 import { BrandedFormLayout } from '@/components/auth';
@@ -57,7 +57,7 @@ export default function Login() {
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      setLocation('/dashboard');
+      setLocation('/admin/dashboard');
     } catch (error) {
       toast({
         title: 'Error',
@@ -143,17 +143,6 @@ export default function Login() {
             </form>
           </Form>
 
-          <div className="mt-6 border-t border-border/60 pt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Don&apos;t have an account?{' '}
-              <Link
-                href="/register"
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                Create one
-              </Link>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </BrandedFormLayout>

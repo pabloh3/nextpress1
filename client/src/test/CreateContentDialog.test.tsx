@@ -96,7 +96,7 @@ describe('CreateContentDialog', () => {
     fireEvent.change(input, { target: { value: 'My New Page' } });
     fireEvent.click(createButton);
     
-    expect(mockSetLocation).toHaveBeenCalledWith('/pages?create=true&title=My%20New%20Page');
+    expect(mockSetLocation).toHaveBeenCalledWith('/admin/pages?create=true&title=My%20New%20Page');
   });
 
   test('navigates to post creation form with title when create is clicked', () => {
@@ -107,7 +107,7 @@ describe('CreateContentDialog', () => {
     fireEvent.change(input, { target: { value: 'My New Post' } });
     fireEvent.click(createButton);
     
-    expect(mockSetLocation).toHaveBeenCalledWith('/posts/new?title=My%20New%20Post');
+    expect(mockSetLocation).toHaveBeenCalledWith('/admin/posts/new?title=My%20New%20Post');
   });
 
   test('encodes title with special characters in URL', () => {
@@ -119,7 +119,7 @@ describe('CreateContentDialog', () => {
     fireEvent.click(createButton);
     
     expect(mockSetLocation).toHaveBeenCalledWith(
-      '/pages?create=true&title=Title%20with%20spaces%20%26%20symbols!'
+      '/admin/pages?create=true&title=Title%20with%20spaces%20%26%20symbols!'
     );
   });
 
@@ -173,7 +173,7 @@ describe('CreateContentDialog', () => {
     fireEvent.change(input, { target: { value: 'My New Page' } });
     fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
     
-    expect(mockSetLocation).toHaveBeenCalledWith('/pages?create=true&title=My%20New%20Page');
+    expect(mockSetLocation).toHaveBeenCalledWith('/admin/pages?create=true&title=My%20New%20Page');
   });
 
   test('does not create content when Enter is pressed with empty input', () => {

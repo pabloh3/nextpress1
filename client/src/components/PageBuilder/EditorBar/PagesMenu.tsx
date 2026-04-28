@@ -37,11 +37,11 @@ export function PagesMenu({ children, currentPageId }: PagesMenuProps) {
 
   const handlePageSelect = (pageId: string) => {
     setShowCommand(false);
-    window.location.href = `/page-builder/page/${pageId}`;
+    window.location.href = `/admin/page-builder/page/${pageId}`;
   };
 
   const handleCreateNew = () => {
-    setLocation("/pages?create=true");
+    setLocation("/admin/pages?create=true");
   };
 
   const getStatusColor = (status: string) => {

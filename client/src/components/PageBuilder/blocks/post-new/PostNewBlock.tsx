@@ -79,7 +79,7 @@ function PostNewRenderer({ content, styles, isPreview }: PostNewRendererProps) {
       return;
     }
     // In preview, navigate to new post creation
-    window.location.href = '/page-builder/new';
+    window.location.href = '/admin/page-builder';
   };
 
   if (variant === 'button') {

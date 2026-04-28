@@ -119,7 +119,7 @@ describe('PagesMenu', () => {
     const pageItem = screen.getByText('Home Page');
     await user.click(pageItem);
 
-    expect(hrefValue).toBe('/page-builder/page/page-1');
+    expect(hrefValue).toBe('/admin/page-builder/page/page-1');
   });
 
   test('navigates to create when Create New Page is clicked', async () => {
@@ -132,7 +132,7 @@ describe('PagesMenu', () => {
     const createItem = screen.getByText('Create New Page');
     await user.click(createItem);
 
-    expect(mockSetLocation).toHaveBeenCalledWith('/pages?create=true');
+    expect(mockSetLocation).toHaveBeenCalledWith('/admin/pages?create=true');
   });
 
   test('highlights current page in command palette', async () => {

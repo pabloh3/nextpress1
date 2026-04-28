@@ -38,7 +38,7 @@ export function BlogMenu({ children, currentPostId, blogId }: BlogMenuProps) {
 
   const handlePostSelect = (postId: string) => {
     setShowCommand(false);
-    setLocation(`/posts/${postId}/edit`);
+    setLocation(`/admin/posts/${postId}/edit`);
   };
 
   const handleCreateNew = () => {

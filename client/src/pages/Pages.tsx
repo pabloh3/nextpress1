@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, Eye, Pencil } from "lucide-react";
+import { Plus, Search, Trash2, Eye, Pencil, Home } from "lucide-react";
 import AdminTopBar from "@/components/AdminTopBar";
 import AdminSidebar from "@/components/AdminSidebar";
 import { CreatePageModal } from "@/components/Pages/CreatePageModal";
@@ -30,6 +30,11 @@ interface PagesApiResponse {
   page: number;
   per_page: number;
   total_pages: number;
+}
+
+interface OptionApiResponse {
+  name: string;
+  value: string;
 }
 
 export default function Pages() {
@@ -52,15 +57,25 @@ export default function Pages() {
     if (createParam === 'true') {
       setCreateModalOpen(true);
       // Clean up URL
-      const newUrl = titleParam 
-        ? `/pages?title=${encodeURIComponent(titleParam)}`
-        : '/pages';
+      const newUrl = titleParam
+        ? `/admin/pages?title=${encodeURIComponent(titleParam)}`
+        : '/admin/pages';
       setLocation(newUrl, { replace: true });
     }
   }, [location, setLocation]);
 
   const { data: pagesData, isLoading } = useQuery<PagesApiResponse>({
     queryKey: ['/api/pages', { status: 'any', page, per_page: 10 }],
+  });
+
+  const { data: homepageOption } = useQuery<OptionApiResponse | null>({
+    queryKey: ['/api/options/homepage_page_slug'],
+    queryFn: async () => {
+      const response = await fetch('/api/options/homepage_page_slug');
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error('Failed to load homepage setting');
+      return response.json() as Promise<OptionApiResponse>;
+    },
   });
 
   const deleteMutation = useMutation({
@@ -78,6 +93,39 @@ export default function Pages() {
       toast({
         title: "Error",
         description: "Failed to delete page",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const homepageMutation = useMutation({
+    mutationFn: async (targetPage: Page) => {
+      if (targetPage.status !== 'publish') {
+        throw new Error('Only published pages can be set as the homepage');
+      }
+      if (!targetPage.slug) {
+        throw new Error('Page slug is required to set the homepage');
+      }
+
+      const response = await apiRequest('POST', '/api/options', {
+        name: 'homepage_page_slug',
+        value: targetPage.slug,
+      });
+      return response.json() as Promise<OptionApiResponse>;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Homepage updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/options/homepage_page_slug'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/homepage'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/pages'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update homepage",
         variant: "destructive",
       });
     },
@@ -110,7 +158,11 @@ export default function Pages() {
   };
 
   const handlePageBuilder = (pageId: string) => {
-    setLocation(`/page-builder/page/${pageId}`);
+    setLocation(`/admin/page-builder/page/${pageId}`);
+  };
+
+  const handleSetHomepage = (targetPage: Page) => {
+    homepageMutation.mutate(targetPage);
   };
 
   const getStatusBadge = (status: string) => {
@@ -126,6 +178,7 @@ export default function Pages() {
   const filteredPages = pagesData?.pages?.filter((page: Page) =>
     page.title.toLowerCase().includes(search.toLowerCase())
   ) || [];
+  const homepageSlug = homepageOption?.value;
 
   return (
     <div className="min-h-screen bg-wp-gray-light">
@@ -193,6 +246,9 @@ export default function Pages() {
                               {(page.other as any)?.isBlogPage && (
                                 <Badge variant="outline" className="text-xs font-normal text-blue-600 border-blue-300">Blog</Badge>
                               )}
+                              {page.slug === homepageSlug && (
+                                <Badge variant="outline" className="text-xs font-normal text-green-700 border-green-300">Homepage</Badge>
+                              )}
                             </div>
                           </div>
                         </TableCell>
@@ -224,6 +280,19 @@ export default function Pages() {
                               title="Edit with Page Builder"
                             >
                               <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleSetHomepage(page)}
+                              title={page.status === 'publish' ? 'Set as homepage' : 'Publish page before setting homepage'}
+                              disabled={
+                                page.status !== 'publish' ||
+                                page.slug === homepageSlug ||
+                                homepageMutation.isPending
+                              }
+                            >
+                              <Home className="w-4 h-4" />
                             </Button>
                             <Button 
                               variant="ghost" 

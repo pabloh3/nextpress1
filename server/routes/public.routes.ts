@@ -78,30 +78,21 @@ export function createPublicRoutes(deps: Deps): Router {
   );
 
   /**
-   * GET /api/public/homepage - Get homepage content
-   * Returns a published page marked as homepage or the first published page.
-   * Checks for 'homepage_page_slug' option first, then falls back to first published page.
+   * GET /api/public/homepage - Get configured homepage content.
+   * Only returns a page when an admin selected a published homepage.
    */
   router.get(
     '/homepage',
     asyncHandler(async (_req, res) => {
       const { err, result } = await safeTryAsync(async () => {
-        // First try to get a page specifically marked as homepage (we'll add this option later)
         const homepage = await models.options.getOption('homepage_page_slug');
-        let page: any;
 
-        if (homepage && homepage.value) {
-          page = await models.pages.findBySlug(homepage.value);
+        if (!homepage?.value) {
+          return res.status(404).json({ message: 'No homepage has been configured' });
         }
 
-        // If no specific homepage set, try to get the first published page
-        if (!page) {
-          page = await models.pages.findFirst([
-            { where: 'status', equals: 'publish' },
-          ]);
-        }
-
-        if (!page) {
+        const page = await models.pages.findBySlug(homepage.value);
+        if (!page || page.status !== 'publish') {
           return res.status(404).json({ message: 'No homepage content found' });
         }
 

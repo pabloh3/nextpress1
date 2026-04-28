@@ -187,7 +187,7 @@ export function CreatePageModal({
       queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
 
       // Navigate to the new page in editor
-      setLocation(`/page-builder/page/${newPage.id}?mode=builder`);
+      setLocation(`/admin/page-builder/page/${newPage.id}?mode=builder`);
 
       // Reset form and close dialog
       resetForm();

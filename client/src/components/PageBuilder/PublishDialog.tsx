@@ -109,6 +109,10 @@ export default function PublishDialog({
         queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
         queryClient.invalidateQueries({ queryKey: [`/api/posts/${post?.id}`] });
       }
+
+      if (isPage) {
+        window.setTimeout(() => window.location.reload(), 250);
+      }
     },
     onError: (error: any) => {
       toast({
@@ -197,7 +201,11 @@ export default function PublishDialog({
           size="sm"
           variant={isPublished ? "outline" : "default"}
           disabled={disabled || !post}
-          className="flex items-center gap-2"
+          className={`flex items-center gap-2 ${
+            isPublished
+              ? 'border-green-600 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800'
+              : ''
+          }`}
           data-testid="button-publish"
         >
           {isPublished ? (

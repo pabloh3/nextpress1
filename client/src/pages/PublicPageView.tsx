@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Helmet } from "react-helmet";
-import BlockRenderer from "@/components/PageBuilder/BlockRenderer";
+import PublicBlockRenderer from "@/components/PageBuilder/PublicBlockRenderer";
+import Landing from "@/pages/Landing";
 import { getGoogleFontUrl } from "@shared/google-fonts";
 import type { Post } from "@shared/schema-types";
 import type { BlockConfig } from "@shared/schema-types";
@@ -54,15 +55,15 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="max-w-4xl mx-auto px-6 py-12">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="space-y-3 mt-8">
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+      <div className="min-h-screen bg-[#cbd6e2]">
+        <div className="mx-auto flex min-h-screen max-w-4xl items-center justify-center px-6 py-12">
+          <div className="w-full animate-pulse space-y-5">
+            <div className="h-10 rounded bg-black/10 sm:h-14"></div>
+            <div className="h-4 rounded bg-black/10"></div>
+            <div className="h-4 w-4/5 rounded bg-black/10"></div>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2">
+              <div className="h-32 rounded-2xl bg-white/35"></div>
+              <div className="h-32 rounded-2xl bg-white/35"></div>
             </div>
           </div>
         </div>
@@ -71,19 +72,20 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
   }
 
   if (error || !data) {
+    if (type === 'homepage') {
+      return <Landing />;
+    }
+
     return (
       <div className="min-h-screen bg-white">
         <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
             <h2 className="text-xl text-gray-600 mb-8">
-              {type === 'homepage' ? 'No homepage content found' : `${type.charAt(0).toUpperCase() + type.slice(1)} not found`}
+              {`${type.charAt(0).toUpperCase() + type.slice(1)} not found`}
             </h2>
             <p className="text-gray-500 mb-8">
-              {type === 'homepage' 
-                ? 'No published page has been set as the homepage.' 
-                : `The ${type} you're looking for doesn't exist or hasn't been published yet.`
-              }
+              {`The ${type} you're looking for doesn't exist or hasn't been published yet.`}
             </p>
             <a 
               href="/" 
@@ -109,7 +111,11 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
   // SEO meta information
   const metaTitle = seo?.metaTitle || `${data.title} | Your Site`;
   const metaDescription = seo?.metaDescription || data.excerpt || `Read ${data.title} on our website.`;
-  const canonicalUrl = seo?.canonicalUrl || `${window.location.origin}/${type}/${data.slug}`;
+  const canonicalUrl =
+    seo?.canonicalUrl ||
+    (type === 'homepage'
+      ? `${window.location.origin}/`
+      : `${window.location.origin}/${type}/${data.slug}`);
   const googleFontUrl = getGoogleFontUrl(design?.fontFamily);
 
   return (
@@ -224,15 +230,7 @@ export default function PublicPageView({ slug: propSlug, type = 'page' }: Public
                 }}
               >
                 {blocks.map((block) => (
-                  <div key={block.id} className="block-container">
-                    <BlockRenderer
-                      block={block}
-                      isSelected={false}
-                      isPreview={true}
-                      onDuplicate={() => {}}
-                      onDelete={() => {}}
-                    />
-                  </div>
+                  <PublicBlockRenderer key={block.id} block={block} />
                 ))}
               </div>
             )}

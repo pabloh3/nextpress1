@@ -101,19 +101,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     express.static(path.join(__dirname, '../../dist/public/vendor'))
   );
 
-  // Admin static assets
-  app.use(
-    '/admin/assets',
-    express.static(path.join(__dirname, '../../dist/public/assets'))
-  );
+  if (app.get('env') !== 'development') {
+    // Admin static assets
+    app.use(
+      '/admin/assets',
+      express.static(path.join(__dirname, '../../dist/public/assets'))
+    );
 
-  // Admin SPA routes
-  app.get('/admin', (_req, res) => {
-    res.sendFile(path.join(__dirname, '../../dist/public/index.html'));
-  });
-  app.get('/admin/*', (_req, res) => {
-    res.sendFile(path.join(__dirname, '../../dist/public/index.html'));
-  });
+    // Admin SPA routes
+    app.get('/admin', (_req, res) => {
+      res.sendFile(path.join(__dirname, '../../dist/public/index.html'));
+    });
+    app.get('/admin/*', (_req, res) => {
+      res.sendFile(path.join(__dirname, '../../dist/public/index.html'));
+    });
+  }
 
   // Serve uploaded files
   app.use('/uploads', express.static(deps.uploadDir));

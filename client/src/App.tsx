@@ -1,29 +1,37 @@
+import { lazy, Suspense } from 'react';
 import { Switch, Route } from 'wouter';
 import { queryClient } from './lib/queryClient';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
-import NotFound from '@/pages/not-found';
-import Dashboard from '@/pages/Dashboard';
-import Posts from '@/pages/Posts';
-import Pages from '@/pages/Pages';
-import Media from '@/pages/Media';
-import Comments from '@/pages/Comments';
-import Themes from '@/pages/Themes';
-import Users from '@/pages/Users';
-import Settings from '@/pages/Settings';
-import Landing from '@/pages/Landing';
-import Home from '@/pages/Home';
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
-import PageBuilderEditor from '@/pages/PageBuilderEditor';
-import Templates from '@/pages/Templates';
-import Plugins from '@/pages/Plugins';
-import PreviewPage from '@/pages/PreviewPage';
 import { Spinner } from '@/components/ui/spinner';
 import PublicPageView from '@/pages/PublicPageView';
-import Setup from '@/pages/Setup';
+
+const NotFound = lazy(() => import('@/pages/not-found'));
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const Posts = lazy(() => import('@/pages/Posts'));
+const Pages = lazy(() => import('@/pages/Pages'));
+const Media = lazy(() => import('@/pages/Media'));
+const Comments = lazy(() => import('@/pages/Comments'));
+const Themes = lazy(() => import('@/pages/Themes'));
+const Users = lazy(() => import('@/pages/Users'));
+const Settings = lazy(() => import('@/pages/Settings'));
+const Login = lazy(() => import('@/pages/Login'));
+const Register = lazy(() => import('@/pages/Register'));
+const PageBuilderEditor = lazy(() => import('@/pages/PageBuilderEditor'));
+const Templates = lazy(() => import('@/pages/Templates'));
+const Plugins = lazy(() => import('@/pages/Plugins'));
+const PreviewPage = lazy(() => import('@/pages/PreviewPage'));
+const Setup = lazy(() => import('@/pages/Setup'));
+
+function RouteFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Spinner className="h-12 w-12 text-wp-blue" />
+    </div>
+  );
+}
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -64,13 +72,14 @@ function Router() {
   }
 
   return (
+    <Suspense fallback={<RouteFallback />}>
     <Switch>
       {/* Setup route - redirects to login if already setup */}
       <Route path="/setup" component={Setup} />
       
       {/* Auth routes - always available */}
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
+      <Route path="/admin/login" component={Login} />
+      <Route path="/admin/register" component={Register} />
 
       {/* Preview routes - available to everyone */}
       <Route
@@ -105,6 +114,7 @@ function Router() {
           <PublicPageView slug={params.slug} type="post" />
         )}
       />
+      <Route path="/" component={() => <PublicPageView type="homepage" />} />
 
       {/* Conditional routes based on auth state */}
       {isLoading ? (
@@ -113,31 +123,30 @@ function Router() {
         </div>
       ) : !isAuthenticated ? (
         <>
-          {/* Try to show homepage content from page builder, fallback to Landing */}
-          <Route
-            path="/"
-            component={() => (
-              <Landing />
-            )}
-          />
+          <Route path="/admin" component={Login} />
           <Route component={NotFound} />
         </>
       ) : (
         <>
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/posts" component={Posts} />
-          <Route path="/pages" component={Pages} />
-          <Route path="/media" component={Media} />
-          <Route path="/comments" component={Comments} />
-          <Route path="/themes" component={Themes} />
-          <Route path="/templates" component={Templates} />
-          <Route path="/plugins" component={Plugins} />
-          <Route path="/users" component={Users} />
-          <Route path="/settings" component={Settings} />
-           <Route path="/home" component={Home} />
-           <Route path="/" component={Home} />
+          <Route path="/admin" component={Dashboard} />
+          <Route path="/admin/dashboard" component={Dashboard} />
+          <Route path="/admin/posts" component={Posts} />
+          <Route path="/admin/pages" component={Pages} />
+          <Route path="/admin/media" component={Media} />
+          <Route path="/admin/comments" component={Comments} />
+          <Route path="/admin/themes" component={Themes} />
+          <Route path="/admin/templates" component={Templates} />
+          <Route path="/admin/plugins" component={Plugins} />
+          <Route path="/admin/users" component={Users} />
+          <Route path="/admin/settings" component={Settings} />
           <Route
-            path="/page-builder/:type/:id"
+            path="/admin/page-builder/template/:id"
+            component={({ params }: any) => (
+              <PageBuilderEditor postId={params.id} type="template" />
+            )}
+          />
+          <Route
+            path="/admin/page-builder/:type/:id"
             component={({ params }: any) => {
               const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
               return (
@@ -149,17 +158,12 @@ function Router() {
               );
             }}
           />
-          <Route
-            path="/page-builder/template/:id"
-            component={({ params }: any) => (
-              <PageBuilderEditor postId={params.id} type="template" />
-            )}
-          />
-          <Route path="/page-builder" component={() => <PageBuilderEditor />} />
+          <Route path="/admin/page-builder" component={() => <PageBuilderEditor />} />
           <Route component={NotFound} />
         </>
       )}
     </Switch>
+    </Suspense>
   );
 }
 

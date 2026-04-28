@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -53,6 +53,11 @@ interface PageSettingsModalProps {
   contentType?: 'page' | 'post';
 }
 
+interface OptionApiResponse {
+  name: string;
+  value: string;
+}
+
 const FONT_OPTIONS = [
   { value: 'system-ui', label: 'System Default' },
   { value: 'Inter, sans-serif', label: 'Inter' },
@@ -91,6 +96,17 @@ export default function PageSettingsModal({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const { data: homepageOption } = useQuery<OptionApiResponse | null>({
+    queryKey: ['/api/options/homepage_page_slug'],
+    queryFn: async () => {
+      const response = await fetch('/api/options/homepage_page_slug');
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error('Failed to load homepage setting');
+      return response.json() as Promise<OptionApiResponse>;
+    },
+    enabled: open && contentType === 'page' && !isTemplate,
+  });
+
   // Extract current other field data
   const pageOther = (page as { other?: PageOther })?.other;
   const currentSeo = pageOther?.seo;
@@ -107,6 +123,7 @@ export default function PageSettingsModal({
   const [parentId, setParentId] = useState((page as any)?.parentId ?? '');
   const [menuOrder, setMenuOrder] = useState((page as any)?.menuOrder ?? 0);
   const [templateId, setTemplateId] = useState((page as any)?.templateId ?? '');
+  const [setAsHomepage, setSetAsHomepage] = useState(false);
 
   // SEO tab state
   const [metaTitle, setMetaTitle] = useState(currentSeo?.metaTitle ?? '');
@@ -133,6 +150,9 @@ export default function PageSettingsModal({
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!page?.id) throw new Error('Page ID is required');
+      if ((setAsHomepage || isCurrentHomepage) && status !== 'publish') {
+        throw new Error('Publish this page before setting it as the homepage');
+      }
 
       // Build SEO settings
       const seoSettings: PageSeoSettings = {
@@ -196,7 +216,16 @@ export default function PageSettingsModal({
           : `/api/pages/${page.id}`;
 
       const response = await apiRequest('PUT', endpoint, payload);
-      return response.json();
+      const updatedPage = await response.json();
+
+      if (contentType === 'page' && (setAsHomepage || isCurrentHomepage) && slug) {
+        await apiRequest('POST', '/api/options', {
+          name: 'homepage_page_slug',
+          value: slug,
+        });
+      }
+
+      return updatedPage;
     },
     onSuccess: (data) => {
       // Notify parent of meta changes for main save button
@@ -216,6 +245,8 @@ export default function PageSettingsModal({
           ? ['/api/posts']
           : ['/api/pages'];
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['/api/options/homepage_page_slug'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/homepage'] });
 
       toast({
         title: 'Success',
@@ -233,6 +264,11 @@ export default function PageSettingsModal({
       });
     },
   });
+
+  const originalSlug = (page as { slug?: string } | undefined)?.slug ?? '';
+  const homepageSlug = homepageOption?.value;
+  const isCurrentHomepage =
+    contentType === 'page' && Boolean(originalSlug) && originalSlug === homepageSlug;
 
   const handleSave = () => {
     saveMutation.mutate();
@@ -311,6 +347,25 @@ export default function PageSettingsModal({
                   </SelectContent>
                 </Select>
               </div>
+
+              {contentType === 'page' && !isTemplate && (
+                <div className="flex items-center justify-between rounded-md border border-gray-200 p-3">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="setAsHomepage">Homepage</Label>
+                    <p className="text-xs text-gray-500">
+                      {isCurrentHomepage
+                        ? 'This page is currently used for the domain root.'
+                        : 'Use this published page as the domain homepage.'}
+                    </p>
+                  </div>
+                  <Switch
+                    id="setAsHomepage"
+                    checked={isCurrentHomepage || setAsHomepage}
+                    disabled={isCurrentHomepage}
+                    onCheckedChange={setSetAsHomepage}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="featuredImage">Featured Image URL</Label>

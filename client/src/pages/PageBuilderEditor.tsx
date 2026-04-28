@@ -269,9 +269,9 @@ export default function PageBuilderEditor({
   useMountEffect(() => {
     if (!isPost && data && postId && !isSlug && data.slug) {
       const currentPath = window.location.pathname;
-      const slugPath = `/page-builder/page/${data.slug}`;
+      const slugPath = `/admin/page-builder/page/${data.slug}`;
       const isUUIDPath =
-        /^\/page-builder\/page\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        /^\/admin\/page-builder\/page\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
           currentPath,
         );
       if (isUUIDPath && currentPath !== slugPath) {
@@ -467,7 +467,7 @@ export default function PageBuilderEditor({
   }
 
   if (error || !data) {
-    const backPath = isTemplate ? '/templates' : isPost ? '/posts' : '/pages';
+    const backPath = isTemplate ? '/admin/templates' : isPost ? '/admin/posts' : '/admin/pages';
     const label = isTemplate ? 'Template' : isPost ? 'Post' : 'Page';
     return (
       <div className="flex h-screen">
@@ -623,7 +623,7 @@ export default function PageBuilderEditor({
   };
 
   const handleBackToList = () => {
-    setLocation(isTemplate ? '/templates' : isPost ? '/posts' : '/pages');
+    setLocation(isTemplate ? '/admin/templates' : isPost ? '/admin/posts' : '/admin/pages');
   };
 
   /** Determine the label and back behavior based on inline editing state */

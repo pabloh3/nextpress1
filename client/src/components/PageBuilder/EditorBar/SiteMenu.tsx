@@ -27,15 +27,15 @@ export function SiteMenu({ children }: SiteMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        <DropdownMenuItem onClick={() => handleNavigation('/settings')}>
+        <DropdownMenuItem onClick={() => handleNavigation('/admin/settings')}>
           <Settings2 className="w-4 h-4" />
           Settings
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleNavigation('/themes')}>
+        <DropdownMenuItem onClick={() => handleNavigation('/admin/themes')}>
           <Palette className="w-4 h-4" />
           Themes
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleNavigation('/media')}>
+        <DropdownMenuItem onClick={() => handleNavigation('/admin/media')}>
           <Image className="w-4 h-4" />
           Media Library
         </DropdownMenuItem>

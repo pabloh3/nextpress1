@@ -13,7 +13,7 @@ export default function NotFound() {
   const { isAuthenticated } = useAuth();
 
   // Determine home route based on authentication status
-  const homeRoute = isAuthenticated ? "/home" : "/";
+  const homeRoute = isAuthenticated ? "/admin/dashboard" : "/";
 
   /**
    * Handle back navigation
